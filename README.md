@@ -2,9 +2,9 @@
 
 #  SGP - Sistema de Geração e Correção de Provas
 
-**Plataforma web componentizada para criação flexível de avaliações, embaralhamento dinâmico de versões, impressão com gabarito OMR integrado e correção automatizada via leitura de QR Code.**
+**Plataforma web componentizada para criação flexível de avaliações, embaralhamento dinâmico de versões, impressão de caderno frente e verso com folha de respostas OMR destacável e correção automatizada via leitura de QR Code.**
 
- **Link do sistema que vai ser hospedado:** https://sgp-catolica.vercel.app
+ **Link do sistema hospedado:** https://sgp-catolica-next.vercel.app/
 
 ![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
@@ -23,98 +23,124 @@
 
 ##  Equipe
 
-| Nome completo | Papel / principais frentes no projeto |
+| Nome completo | Papel / Principais frentes no projeto |
 |---|---|
-| Agenor Alvise| Front-end das telas de aplicação, geração de layout OMR, Jest e CI/CD |
-| JOHNATAN VARGAS DA FONSECA | Front-end de autenticação, banco de questões, turmas e manipulação de mocks |
-| Eric Ricardo lang:
-| Erick Andreas Pontecelli:
-| Edinei Junio Machado: Levantamento de requisitos, arquitetura em camadas, documentação e Git |
+| **Agenor Alvise** | Front-end das telas de aplicação, diagramação para impressão frente/verso, gabaritos OMR, testes unitários com Jest e pipeline de CI/CD |
+| **Johnatan Vargas da Fonseca** | Front-end do módulo de turmas, banco de questões e manipulação de mocks de dados |
+| **Eric Ricardo Lang** | Modelagem das entidades de dados, regras de validação de formulários e mapeamento de componentes |
+| **Erick Andreas Pontecelli** | Estruturação dos algoritmos de embaralhamento determinístico e matrizes de resposta OMR |
+| **Edinei Junio Machado** | Levantamento de requisitos com o cliente Samuel, arquitetura em camadas, documentação e gestão do Git |
 
 ---
 
 ##  Sumário
 
-- 1. Visão Geral
-- 2. Requisitos
-- 2.1 Funcionais (RF)
-- 2.2 Não Funcionais (RNF)
-- 3. Telas do Sistema
-- 4. Stack Tecnológica
-- 5. Estrutura de Pastas
-- 6. Como Executar o Projeto
-- 7. Testes e CI/CD
-- 8. Equipe e Contribuições
+- [1. Visão Geral e Objetivo](#1-visão-geral-e-objetivo)
+- [2. Escopo do Projeto](#2-escopo-do-projeto)
+- [3. Requisitos do Sistema](#3-requisitos-do-sistema)
+- [3.1 Requisitos Funcionais (RF)](#31-requisitos-funcionais-rf)
+- [3.2 Requisitos Não Funcionais (RNF)](#32-requisitos-não-funcionais-rnf)
+- [4. Telas do Sistema](#4-telas-do-sistema)
+- [5. Stack Tecnológica](#5-stack-tecnológica)
+- [6. Estrutura de Pastas](#6-estrutura-de-pastas)
+- [7. Como Executar o Projeto](#7-como-executar-o-projeto)
+- [8. Testes e CI/CD](#8-testes-e-cicd)
+- [9. Equipe e Contribuições](#9-equipe-e-contribuições)
 
 ---
 
-## 1. Visão Geral
+## 1. Visão Geral e Objetivo
 
-O **SGP (Sistema de Geração e Correção de Provas)** foi concebido para eliminar o trabalho repetitivo de correção manual enfrentado pelo corpo docente do Centro Universitário Católica SC[cite: 1, 2]. 
+### Contexto e Cliente
+O **SGP (Sistema de Geração e Correção de Provas)** foi concebido para atender às demandas do docente **Samuel** e do corpo acadêmico do Centro Universitário Católica SC, eliminando a sobrecarga de trabalho manual na aplicação e correção de grandes volumes de avaliações (200 a 400 provas por ciclo).
 
-A plataforma viabiliza a criação de avaliações com até 20 questões e pontuações personalizadas, gera versões embaralhadas aleatoriamente (na ordem de questões e na disposição das alternativas de A a E)[cite: 1, 2], emite folhas de resposta com marcadores ópticos e QR Code exclusivo para identificação nominal ou anônima[cite: 1, 3], além de produzir relatórios estatísticos e diagnósticos pedagógicos de distratores[cite: 1, 2].
+### Objetivo
+Automatizar integralmente o fluxo avaliativo institucional:
+1. **Montagem Flexível:** Composição de provas com banco de até 20 questões e pontuações personalizadas.
+2. **Diagramação e Impressão Inteligente:** Geração de cadernos de questões em formato **frente e verso** acompanhados de folha de respostas/gabarito OMR destacável com inserção de página em branco no verso (em caso de página ímpar), permitindo que o aluno entregue apenas o gabarito e leve o caderno para casa.
+3. **Embaralhamento Determinístico:** Alternância independente da ordem de questões e alternativas por versão.
+4. **Correção e Diagnóstico Pedagógico:** Leitura automatizada via QR Code e processamento no backend de estatísticas de erros/acertos, diagnóstico de distratores e acompanhamento contínuo de notas (N1, N2 e N3).
 
 ---
 
-## 2. Requisitos
+## 2. Escopo do Projeto
 
-### 2.1 Funcionais (RF)
+### O que está no escopo:
+* **Banco de Questões e Provas:** Cadastro e manutenção de questões objetivas (2 a 5 alternativas) e discursivas.
+* **Gestão de Turmas e Matrículas:** Administração de turmas ativas com auto-matrícula por código de convite (`inviteCode`).
+* **Motor de Impressão e Paginação:**
+  * Diagramação do caderno de questões frente e verso para o aluno levar para casa.
+  * Folha de respostas/gabarito OMR gerada separadamente do caderno.
+  * Inserção automática de página em branco no verso do gabarito caso o número de páginas seja ímpar.
+* **Embaralhamento e QR Code:** Embaralhamento independente de questões e alternativas por versão com persistência da matriz de layout e QR Code nominal ou anônimo.
+* **Módulo Estatístico e Relatórios:**
+  * Métricas de acertos e erros gerais calculadas no backend por questão.
+  * Diagnóstico pedagógico das alternativas incorretas mais marcadas (análise de distratores).
+  * Histórico contínuo de notas por aluno discriminado por avaliação e etapas (N1, N2 e N3).
+  * Exportação de notas e dados em arquivo `.csv`.
+
+---
+
+## 3. Requisitos do Sistema
+
+### 3.1 Requisitos Funcionais (RF)
 
 | Código | Requisito |
 |---|---|
-| **RF01** | O sistema deve autenticar usuários separando docentes (`@catolicasc.org.br`) e estudantes (`@catolicasc.edu.br`)[cite: 1]. |
-| **RF02** | O sistema deve permitir ao professor gerenciar questões objetivas (2 a 5 alternativas com uma correta) e discursivas[cite: 1]. |
-| **RF03** | O sistema deve permitir a criação de turmas com código de convite (`inviteCode`) auto-regenerável[cite: 1]. |
-| **RF04** | O sistema deve permitir a composição de provas com até 20 questões e pontuação individual livre[cite: 1]. |
-| **RF05** | O sistema deve associar uma prova a uma turma criando instâncias de aplicação independentes[cite: 1]. |
-| **RF06** | O sistema deve permitir a geração de caderno consolidado com múltiplas versões em layout pronto para impressão[cite: 1]. |
-| **RF07** | O sistema deve aplicar embaralhamento independente para questões e alternativas por versão[cite: 1, 2]. |
-| **RF08** | O sistema deve materializar e persistir a matriz de layout embaralhado de cada versão[cite: 1]. |
-| **RF09** | O sistema deve suportar geração com identificação prévia do aluno (QR Code nominal) ou anônima[cite: 1]. |
-| **RF10** | O sistema deve gerar cartões-resposta padronizados com marcadores de calibração para leitura óptica (OMR)[cite: 1, 3]. |
-| **RF11** | O sistema deve permitir publicação de gabarito e cálculo automático de notas objetivas[cite: 1]. |
-| **RF12** | O sistema deve suportar exportação de relatórios de notas em arquivo `.csv`[cite: 1, 2]. |
-| **RF13** | O sistema deve gerar análise pedagógica identificando as alternativas incorretas mais assinaladas pela turma[cite: 2]. |
-| **RF14** | O sistema deve garantir a anonimização de dados sob demanda em conformidade com a LGPD[cite: 1]. |
+| **RF01** | O sistema deve autenticar usuários separando domínios institucionais: docentes (`@catolicasc.org.br`) e estudantes (`@catolicasc.edu.br`). |
+| **RF02** | O sistema deve permitir o gerenciamento de questões objetivas (2 a 5 alternativas) e discursivas com pontuações personalizadas. |
+| **RF03** | O sistema deve permitir a criação de turmas com código de convite (`inviteCode`) auto-regenerável para auto-matrícula. |
+| **RF04** | O sistema deve permitir a composição de provas com até 20 questões. |
+| **RF05** | O sistema deve aplicar embaralhamento determinístico e independente para questões e alternativas por versão gerada. |
+| **RF06** | O sistema deve materializar e persistir no banco de dados a matriz de layout de cada versão (`ExamVersion.layout`). |
+| **RF07** | O sistema deve gerar a folha de respostas/gabarito OMR separada do caderno descritivo de questões. |
+| **RF08** | O sistema deve diagramar o caderno de questões em formato frente e verso para que o estudante possa levá-lo após a prova. |
+| **RF09** | O motor de impressão deve inserir automaticamente uma página em branco após o gabarito se este ocupar página ímpar. |
+| **RF10** | A folha de respostas deve conter marcadores de calibração nos cantos e QR Code identificador (nominal ou anônimo). |
+| **RF11** | O backend deve processar e calcular estatísticas gerais de acertos e erros por questão. |
+| **RF12** | O sistema deve identificar o distrator mais assinalado em cada questão para diagnóstico pedagógico docente. |
+| **RF13** | O sistema deve manter o histórico evolutivo de notas do aluno por prova e por etapa avaliativa (N1, N2 e N3). |
+| **RF14** | O sistema deve suportar exportação de notas e relatórios em arquivo `.csv`. |
+| **RF15** | O sistema deve garantir a anonimização de dados sob demanda em conformidade com a LGPD. |
 
-### 2.2 Não Funcionais (RNF)
+### 3.2 Requisitos Não Funcionais (RNF)
 
 | Código | Requisito |
 |---|---|
-| **RNF01** | **Arquitetura em 5 Camadas:** O backend segue o fluxo estrutural `Rota → Controle → Serviço → Repositório → Model`[cite: 4]. |
-| **RNF02** | **Desempenho:** Resposta da API p95 < 300ms[cite: 1]. |
-| **RNF03** | **Disponibilidade:** Disponibilidade de 99,5%[cite: 1]. |
-| **RNF04** | **Operação Offline:** Suporte a cache de gabarito e fila de sincronização com deduplicação via `clientCorrectionId`[cite: 1]. |
-| **RNF05** | **Confiabilidade OMR:** Taxa de erro na leitura óptica inferior a 1% em condições normais[cite: 1]. |
-| **RNF06** | **Segurança:** Isolamento restrito de acesso a dados entre estudantes[cite: 1, 5]. |
+| **RNF01** | **Arquitetura em 5 Camadas:** O backend segue o fluxo estrutural `Rota → Controle → Serviço → Repositório → Model`. |
+| **RNF02** | **Desempenho:** Tempo de resposta da API p95 < 300ms. |
+| **RNF03** | **Disponibilidade:** Mínimo de 99,5% de disponibilidade mensal. |
+| **RNF04** | **Operação Offline:** Suporte a cache de gabarito e sincronização idempotente via `clientCorrectionId`. |
+| **RNF05** | **Confiabilidade OMR:** Taxa de erro na leitura óptica inferior a 1% sob condições regulares. |
+| **RNF06** | **Segurança:** Isolamento estrito de acesso e visualização de notas entre estudantes. |
 
 ---
 
-## 3. Telas do Sistema
+## 4. Telas do Sistema
 
-### 3.1 Banco de Questões
+### 4.1 Banco de Questões
 ![Banco de Questões](docs/telas/tela-questoes.png)
-*Listagem de questões cadastradas com filtros, badges de tags e pontuações individuais.*
+*Listagem de questões cadastradas com filtros por enunciado/tags, badges e pontuações individuais.*
 
-### 3.2 Gestão de Turmas
+### 4.2 Gestão de Turmas
 ![Gestão de Turmas](docs/telas/tela-turmas.png)
-*Administração de turmas ativas, alunos matriculados e código de convite para auto-matrícula.*
+*Administração de turmas ativas, estudantes matriculados e código de convite institucional.*
 
-### 3.3 Configuração da Prova & Embaralhamento
+### 4.3 Configuração da Prova & Montador Split-Screen
 ![Configuração de Aplicação](docs/telas/tela-aplicacao.png)
-*Painel de parametrização de versões, embaralhamento de alternativas e identificação nominal.*
+*Painel de parametrização de versões, regras de embaralhamento, paginação e cálculo de nota em tempo real.*
 
-### 3.4 Folha de Resposta & Gabarito OMR
+### 4.4 Folha de Resposta & Gabarito OMR
 ![Folha de Resposta](docs/telas/tela-gabarito.png)
-*Layout de impressão com marcadores de calibração, QR Code exclusivo e grade de respostas.*
+*Layout de impressão com marcadores de calibração, QR Code nominal e caderno descritivo frente/verso.*
 
-### 3.5 Relatório de Notas e Análise Pedagógica
+### 4.5 Relatório de Notas, Distratores e Histórico N1/N2/N3
 ![Relatórios e Análise](docs/telas/tela-relatorios.png)
-*Consolidação de notas corrigidas, exportação em planilha CSV e diagnóstico de distratores[cite: 3].*
+*Consolidação de notas corrigidas, exportação em `.csv`, diagnóstico de distratores e evolução semestral.*
 
 ---
 
-## 4. Stack Tecnológica
+## 5. Stack Tecnológica
 
 ![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
@@ -122,41 +148,40 @@ A plataforma viabiliza a criação de avaliações com até 20 questões e pontu
 ![Jest](https://img.shields.io/badge/Jest-C21325?style=flat-square&logo=jest&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white)
 
-* **Next.js 14 (App Router):** Framework React para interface e rotas de API server-side[cite: 3].
-* **TypeScript:** Tipagem estática para entidades, layouts e serviços[cite: 3].
-* **Tailwind CSS:** Estilização com design system adaptado às regras de impressão (`@media print`)[cite: 3].
-* **Jest & Testing Library:** Execução de testes unitários automatizados[cite: 3].
-* **Lucide React:** Biblioteca de ícones utilitários[cite: 3].
+* **Next.js 14 (App Router):** Framework React full-stack para interfaces e rotas server-side.
+* **TypeScript:** Tipagem estática em modelos de domínio, layouts e serviços.
+* **Tailwind CSS:** Design system responsivo com regras utilitárias para impressão física (`@media print`).
+* **Jest & Testing Library:** Execução de testes unitários automatizados.
+* **Lucide React:** Biblioteca de ícones utilitários minimalistas.
 
 ---
 
-## 5. Estrutura de Pastas
-
+## 6. Estrutura de Pastas
 sgp-catolica-next/
 ├── .github/
 │   └── workflows/
-│       └── ci-cd.yml          # Pipeline automatizado de CI/CD no GitHub Actions
+│       └── ci-cd.yml          # Pipeline de CI/CD automatizado no GitHub Actions
 ├── docs/
 │   ├── adr/                   # Decisões Arquiteturais (N2/N3)
-│   ├── api/                   # Especificação dos endpoints
-│   ├── arquitetura/           # Diagramas de camadas
-│   ├── modelo-dados/          # Modelagem MER/DER
-│   ├── telas/                 # Capturas de tela para validação e documentação
+│   ├── api/                   # Especificações técnicas de endpoints
+│   ├── arquitetura/           # Diagramas da arquitetura em 5 camadas
+│   ├── modelo-dados/          # Modelagem conceitual e lógica (MER/DER)
+│   ├── telas/                 # Capturas de tela para documentação
 │   └── uml/                   # Diagramas UML (Casos de Uso e Classes)
 ├── src/
 │   ├── app/
 │   │   ├── api/exams/generate/# Rota de API Next.js para geração de versões
-│   │   ├── globals.css        # Estilos globais Tailwind
+│   │   ├── globals.css        # Estilos globais Tailwind e regras print media
 │   │   ├── layout.tsx         # Root Layout da aplicação
 │   │   └── page.tsx           # Aplicação SPA componentizada com todas as abas
 │   ├── components/
-│   │   ├── layout/            # Cabeçalho e navegação
+│   │   ├── layout/            # Cabeçalho institucional e navegação lateral
 │   │   └── omr/               # Componente de renderização do gabarito OMR
-│   ├── controllers/           # Camada de controle e validação de entrada
+│   ├── controllers/           # Camada de controle e validação de requisições
 │   ├── models/                # Entidades e estruturação de layouts
-│   ├── repositories/          # Isolamento de dados
-│   ├── services/              # Regras de negócio e embaralhamento determinístico
-│   └── types/                 # Interfaces e tipos TypeScript
+│   ├── repositories/          # Isolamento e abstração de dados
+│   ├── services/              # Regras de negócio, embaralhamento e estatísticas
+│   └── types/                 # Interfaces e contratos TypeScript
 ├── tests/
 │   └── services/
 │       └── ExamService.test.ts # Testes unitários com Jest
@@ -165,34 +190,32 @@ sgp-catolica-next/
 └── README.md
 
 
-## 6. Como Executar o Projeto
+---
+
+## 7. Como Executar o Projeto
 
 ### Pré-requisitos
-* Node.js v20.x ou superior instalado[cite: 3].
+* Node.js v20.x ou superior instalado.
 * NPM (gerenciador de pacotes).
 
-### Passos
+### Passos de Instalação
 
-1. Clone o repositório ou acesse a pasta do projeto:
+1. Clone o repositório ou acesse a pasta raiz:
    ```bash
    cd sgp-catolica-next
-
-
-    1.  Instale as dependências:
+Instale as dependências:
 
 Bash
 npm install
-
-    2. Inicie o servidor de desenvolvimento:
+Inicie o servidor de desenvolvimento:
 
 Bash
 npm run dev
-
-    3. Acesse no navegador:
+Acesse no navegador:
 
 http://localhost:3000
-7. Testes e CI/CD
-O projeto conta com suíte de testes unitários cobrindo as regras centrais de negócio do serviço ExamService (limite de 20 questões, formato do payload do QR Code e embaralhamento de alternativas)[cite: 1]:
+8. Testes e CI/CD
+O projeto conta com suíte de testes unitários cobrindo as regras centrais de negócio do serviço ExamService (limite de 20 questões por prova, payload de identificação do QR Code e integridade do embaralhamento):
 
 Bash
 # Executar todos os testes
@@ -202,17 +225,19 @@ npm test
 npm run test:coverage
 A esteira de integração contínua (CI/CD) via GitHub Actions valida a cada push ou pull request na branch main:
 
-Instalação limpa de dependências (npm ci).
+Instalação de dependências (npm install).
 
 Execução e aprovação da suíte de testes unitários com Jest.
 
 Compilação da build de produção do Next.js (npm run build).
 
-8. Equipe e Contribuições
-Agenor Alvise: Construção das interfaces de montagem de prova, visualização do gabarito para impressão, testes com Jest e CI/CD[cite: 3].
+9. Equipe e Contribuições
+Agenor Alvise: Front-end das telas de aplicação, diagramação para impressão frente/verso, gabaritos OMR, testes unitários com Jest e pipeline de CI/CD.
 
-JOHNATAN VARGAS DA FONSECA: Desenvolvimento da tela de gestão de turmas, banco de questões e estrutura de dados mockados[cite: 3].
+Johnatan Vargas da Fonseca: Front-end do módulo de turmas, banco de questões e manipulação de mocks de dados.
 
-Eric Ricardo lang:
-Erick Andreas Pontecelli:
-Edinei Junio Machado: Levantamento de requisitos, arquitetura em camadas, elaboração do README.md e organização do Git[cite: 3].
+Eric Ricardo Lang: Modelagem das entidades de dados, regras de validação de formulários e mapeamento de componentes.
+
+Erick Andreas Pontecelli: Estruturação dos algoritmos de embaralhamento determinístico e matrizes de resposta OMR.
+
+Edinei Junio Machado: Levantamento de requisitos com o cliente Samuel, arquitetura em camadas, documentação e gestão do Git.
