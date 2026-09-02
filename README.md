@@ -27,7 +27,7 @@
 |---|---|
 | **Agenor Alvise** | Front-end das telas de aplicação, diagramação para impressão frente/verso, gabaritos OMR, testes unitários com Jest e pipeline de CI/CD |
 | **Johnatan Vargas da Fonseca** | Front-end do módulo de turmas, banco de questões e manipulação de mocks de dados |
-| **Eric Ricardo Lang** | Modelagem das entidades de dados, regras de validação de formulários e mapeamento de componentes |
+| **Eric Ricardo Lange** | Modelagem das entidades de dados, regras de validação de formulários e mapeamento de componentes |
 | **Erick Andreas Pontecelli** | Estruturação dos algoritmos de embaralhamento determinístico e matrizes de resposta OMR |
 | **Edinei Junio Machado** | Levantamento de requisitos com o cliente Samuel, arquitetura em camadas, documentação e gestão do Git |
 
@@ -157,37 +157,36 @@ Automatizar integralmente o fluxo avaliativo institucional:
 ---
 
 ## 6. Estrutura de Pastas
+
+```text
 sgp-catolica-next/
 ├── .github/
-│   └── workflows/
-│       └── ci-cd.yml          # Pipeline de CI/CD automatizado no GitHub Actions
+│   └── workflows/                 # Fluxos de CI/CD do GitHub Actions
 ├── docs/
-│   ├── adr/                   # Decisões Arquiteturais (N2/N3)
-│   ├── api/                   # Especificações técnicas de endpoints
-│   ├── arquitetura/           # Diagramas da arquitetura em 5 camadas
-│   ├── modelo-dados/          # Modelagem conceitual e lógica (MER/DER)
-│   ├── telas/                 # Capturas de tela para documentação
-│   └── uml/                   # Diagramas UML (Casos de Uso e Classes)
+│   └── telas/                     # Capturas de tela da aplicação
 ├── src/
 │   ├── app/
-│   │   ├── api/exams/generate/# Rota de API Next.js para geração de versões
-│   │   ├── globals.css        # Estilos globais Tailwind e regras print media
-│   │   ├── layout.tsx         # Root Layout da aplicação
-│   │   └── page.tsx           # Aplicação SPA componentizada com todas as abas
+│   │   ├── api/exams/generate/
+│   │   │   └── route.ts           # Rota de API para geração de versões
+│   │   ├── globals.css            # Estilos globais e regras de impressão
+│   │   ├── layout.tsx             # Layout raiz da aplicação
+│   │   └── page.tsx               # Página principal da aplicação
 │   ├── components/
-│   │   ├── layout/            # Cabeçalho institucional e navegação lateral
-│   │   └── omr/               # Componente de renderização do gabarito OMR
-│   ├── controllers/           # Camada de controle e validação de requisições
-│   ├── models/                # Entidades e estruturação de layouts
-│   ├── repositories/          # Isolamento e abstração de dados
-│   ├── services/              # Regras de negócio, embaralhamento e estatísticas
-│   └── types/                 # Interfaces e contratos TypeScript
-├── tests/
+│   │   ├── auth/                  # Componentes de autenticação
+│   │   ├── layout/                # Cabeçalho e navegação
+│   │   └── omr/                   # Renderização da folha OMR
+│   ├── controllers/               # Controle e validação de requisições
+│   ├── models/                    # Entidades e modelos de domínio
+│   ├── repositories/              # Acesso e abstração de dados
+│   ├── services/                  # Regras de negócio e embaralhamento
+│   └── types/                     # Interfaces e contratos TypeScript
+├── __tests__/
 │   └── services/
-│       └── ExamService.test.ts # Testes unitários com Jest
-├── jest.config.js             # Configurações do ambiente de testes
-├── package.json
+│       └── ExamService.test.ts    # Testes unitários com Jest
+├── jest.config.js                 # Configuração do Jest
+├── package.json                   # Dependências e scripts do projeto
 └── README.md
+```
 
 
 ---
@@ -200,44 +199,43 @@ sgp-catolica-next/
 
 ### Passos de Instalação
 
-1. Clone o repositório ou acesse a pasta raiz:
+1. Clone o repositório ou acesse a pasta raiz do projeto.
+2. Instale as dependências:
+
    ```bash
-   cd sgp-catolica-next
-Instale as dependências:
+   npm install
+   ```
 
-Bash
-npm install
-Inicie o servidor de desenvolvimento:
+3. Inicie o servidor de desenvolvimento:
 
-Bash
-npm run dev
-Acesse no navegador:
+   ```bash
+   npm run dev
+   ```
 
-http://localhost:3000
-8. Testes e CI/CD
-O projeto conta com suíte de testes unitários cobrindo as regras centrais de negócio do serviço ExamService (limite de 20 questões por prova, payload de identificação do QR Code e integridade do embaralhamento):
+4. Acesse [http://localhost:3000](http://localhost:3000) no navegador.
 
-Bash
+---
+
+## 8. Testes e CI/CD
+
+O projeto conta com testes unitários para as regras centrais de negócio do `ExamService`, incluindo o limite de 20 questões por prova, o payload de identificação do QR Code e a integridade do embaralhamento.
+
+```bash
 # Executar todos os testes
 npm test
 
-# Executar com relatório de cobertura
+# Executar testes com relatório de cobertura
 npm run test:coverage
-A esteira de integração contínua (CI/CD) via GitHub Actions valida a cada push ou pull request na branch main:
+```
 
-Instalação de dependências (npm install).
+A esteira de integração contínua (CI/CD) via GitHub Actions é executada a cada *push* ou *pull request* na branch `main` e valida:
 
-Execução e aprovação da suíte de testes unitários com Jest.
+* Instalação das dependências (`npm install`);
+* Execução da suíte de testes unitários com Jest;
+* Compilação da build de produção do Next.js (`npm run build`).
 
-Compilação da build de produção do Next.js (npm run build).
+---
 
-9. Equipe e Contribuições
-Agenor Alvise: Front-end das telas de aplicação, diagramação para impressão frente/verso, gabaritos OMR, testes unitários com Jest e pipeline de CI/CD.
+## 9. Equipe e Contribuições
 
-Johnatan Vargas da Fonseca: Front-end do módulo de turmas, banco de questões e manipulação de mocks de dados.
-
-Eric Ricardo Lang: Modelagem das entidades de dados, regras de validação de formulários e mapeamento de componentes.
-
-Erick Andreas Pontecelli: Estruturação dos algoritmos de embaralhamento determinístico e matrizes de resposta OMR.
-
-Edinei Junio Machado: Levantamento de requisitos com o cliente Samuel, arquitetura em camadas, documentação e gestão do Git.
+As contribuições e principais frentes de cada integrante estão descritas na seção [Equipe](#equipe).
