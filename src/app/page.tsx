@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
+import { LoginScreen, UserRole } from '@/components/auth/LoginScreen';
 import { ExamVersionLayout, Question } from '@/types';
 import { 
   BookOpen, 
@@ -23,7 +24,32 @@ import {
 } from 'lucide-react';
 
 export default function Home() {
+  const [session, setSession] = useState<{ role: UserRole; name: string } | null>(null);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
   const [currentTab, setCurrentTab] = useState<'montador' | 'turmas' | 'impressao' | 'relatorios'>('montador');
+
+  useEffect(() => {
+    const savedSession = window.localStorage.getItem('sgp-mock-session');
+    if (savedSession) {
+      try {
+        setSession(JSON.parse(savedSession));
+      } catch {
+        window.localStorage.removeItem('sgp-mock-session');
+      }
+    }
+    setSessionLoaded(true);
+  }, []);
+
+  const handleLogin = (role: UserRole, name: string) => {
+    const newSession = { role, name };
+    window.localStorage.setItem('sgp-mock-session', JSON.stringify(newSession));
+    setSession(newSession);
+  };
+
+  const handleLogout = () => {
+    window.localStorage.removeItem('sgp-mock-session');
+    setSession(null);
+  };
   
   // Banco de Questões
   const [bancoQuestoes, setBancoQuestoes] = useState<Question[]>([
@@ -163,8 +189,10 @@ export default function Home() {
   };
 
   useEffect(() => {
-    gerarCadernosEImpressao();
-  }, [shuffleQ, shuffleAlt, withId]);
+    if (session?.role === 'professor') {
+      gerarCadernosEImpressao();
+    }
+  }, [shuffleQ, shuffleAlt, withId, session?.role]);
 
   const exportarCSV = () => {
     let csv = "Aluno;Matricula;N1;N2;N3;Media;Status\n";
@@ -188,6 +216,24 @@ export default function Home() {
 
   const currentVersion = versions[selectedVersionIdx] || null;
   const currentQuestions: Question[] = currentVersion?.questions || currentVersion?.shuffledQuestions || questoesSelecionadas || [];
+
+  if (!sessionLoaded) return <div className="min-h-screen bg-slate-100" />;
+
+  if (!session) return <LoginScreen onLogin={handleLogin} />;
+
+  if (session.role === 'aluno') {
+    return (
+      <main className="min-h-screen bg-slate-100 p-4 sm:p-8 flex items-center justify-center">
+        <section className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 text-center shadow-xl shadow-slate-900/10">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-catolica-light text-catolica-primary"><AlertCircle className="h-7 w-7" /></div>
+          <p className="mt-6 text-xs font-bold uppercase tracking-[0.16em] text-catolica-primary">Acesso de aluno</p>
+          <h1 className="mt-2 text-2xl font-bold text-slate-800">Olá, {session.name}!</h1>
+          <p className="mt-4 text-sm leading-6 text-slate-500">Seu login foi realizado com sucesso. As funcionalidades do portal do aluno ainda estão em construção e não há módulos liberados neste ambiente de teste.</p>
+          <button onClick={handleLogout} className="mt-8 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-catolica-primary">Sair da conta</button>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-100 font-sans text-slate-900">
@@ -241,7 +287,7 @@ export default function Home() {
       {/* CONTEÚDO PRINCIPAL */}
       <main className="flex-1 p-8 overflow-y-auto max-w-7xl mx-auto">
         <div className="print:hidden">
-          <Header currentTab={currentTab} />
+          <Header currentTab={currentTab} userName={session.name} onLogout={handleLogout} />
         </div>
 
         {/* ========================================================================= */}
