@@ -20,13 +20,17 @@ import {
   Award,
   Layers,
   FileCheck2,
-  AlertCircle
+  AlertCircle,
+  Menu,
+  X,
+  LogOut
 } from 'lucide-react';
 
 export default function Home() {
   const [session, setSession] = useState<{ role: UserRole; name: string } | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [currentTab, setCurrentTab] = useState<'montador' | 'turmas' | 'impressao' | 'relatorios'>('montador');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const savedSession = window.localStorage.getItem('sgp-mock-session');
@@ -236,22 +240,36 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-100 font-sans text-slate-900">
+    <div className="flex min-h-screen flex-col bg-slate-100 font-sans text-slate-900 md:block md:h-screen">
       
       {/* SIDEBAR */}
-      <aside className="w-64 bg-slate-900 text-white p-6 flex flex-col justify-between shrink-0 print:hidden shadow-2xl">
+      {sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Fechar menu"
+          className="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm print:hidden md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col justify-between bg-slate-900 p-6 text-white shadow-2xl transition-transform duration-300 print:hidden md:h-screen md:w-64 md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="space-y-6">
-          <div className="flex items-center gap-3 border-b border-slate-800 pb-5">
-            <div className="w-10 h-10 rounded-xl bg-catolica-primary flex items-center justify-center font-black text-white text-xl shadow-lg shadow-catolica-primary/40">
-              C
+          <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-catolica-primary flex items-center justify-center font-black text-white text-xl shadow-lg shadow-catolica-primary/40">
+                C
+              </div>
+              <div>
+                <h2 className="text-base font-bold tracking-tight text-white">SGP Católica</h2>
+                <p className="text-[11px] text-slate-400 font-medium">Gestão & OMR Studio</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base font-bold tracking-tight text-white">SGP Católica</h2>
-              <p className="text-[11px] text-slate-400 font-medium">Gestão & OMR Studio</p>
-            </div>
+            <button type="button" onClick={() => setSidebarOpen(false)} className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white md:hidden" aria-label="Fechar menu">
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
-          <nav className="space-y-1.5">
+          <nav className="space-y-1.5" aria-label="Navegação principal">
             {[
               { id: 'montador', label: 'Montador de Provas', icon: BookOpen },
               { id: 'turmas', label: 'Gestão de Turmas', icon: Users },
@@ -263,10 +281,10 @@ export default function Home() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setCurrentTab(item.id as any)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+                  onClick={() => { setCurrentTab(item.id as any); setSidebarOpen(false); }}
+                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all ${
                     active 
-                      ? 'bg-catolica-primary text-white shadow-md shadow-catolica-primary/30 translate-x-1' 
+                      ? 'translate-x-1 bg-catolica-primary text-white shadow-md shadow-catolica-primary/30'
                       : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                   }`}
                 >
@@ -278,16 +296,32 @@ export default function Home() {
           </nav>
         </div>
 
-        <div className="p-4 bg-slate-800/60 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
+        <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-800/60 p-4 text-[11px] text-slate-400">
+          <div className="border-b border-slate-700 pb-3">
+            <p className="truncate text-xs font-semibold text-slate-200">{session.name} autenticado(a)</p>
+            <p className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-500">Acesso de {session.role}</p>
+          </div>
           <p className="font-semibold text-slate-300">Católica SC - Campus Jaraguá</p>
           <p>Projeto de Arquitetura de Software</p>
+          <button type="button" onClick={handleLogout} className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 transition hover:border-catolica-primary hover:bg-catolica-primary hover:text-white" title="Sair da conta">
+            <LogOut className="h-4 w-4" /> Sair da conta
+          </button>
         </div>
       </aside>
 
       {/* CONTEÚDO PRINCIPAL */}
-      <main className="flex-1 p-8 overflow-y-auto max-w-7xl mx-auto">
+      <main className="w-full flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 md:ml-64 md:h-screen md:w-auto print:ml-0 print:h-auto">
         <div className="print:hidden">
-          <Header currentTab={currentTab} userName={session.name} onLogout={handleLogout} />
+          <div className="mb-4 flex items-center rounded-xl bg-slate-900 px-4 py-3 text-white shadow-sm md:hidden">
+            <button type="button" onClick={() => setSidebarOpen(true)} className="rounded-lg p-2 transition hover:bg-slate-800" aria-label="Abrir menu" aria-expanded={sidebarOpen}>
+              <Menu className="h-5 w-5" />
+            </button>
+            <div className="ml-2 flex items-center gap-2 text-sm font-bold">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-catolica-primary">C</span>
+              SGP Católica
+            </div>
+          </div>
+          <Header currentTab={currentTab} />
         </div>
 
         {/* ========================================================================= */}
@@ -297,8 +331,8 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* BANCO ESQUERDO */}
             <div className="lg:col-span-6 space-y-4">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                <div className="flex justify-between items-center">
+              <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <div className="flex items-center justify-between gap-3">
                   <div>
                     <h3 className="font-bold text-slate-800 text-sm">Banco de Questões</h3>
                     <p className="text-xs text-slate-500">Selecione para incluir no caderno</p>
@@ -330,8 +364,8 @@ export default function Home() {
                         jaAdicionada ? 'border-catolica-primary/40 bg-catolica-light/30' : 'border-slate-200 hover:border-slate-300 shadow-sm'
                       }`}
                     >
-                      <div className="flex justify-between items-start mb-2.5">
-                        <div className="flex items-center gap-2">
+                      <div className="mb-2.5 flex items-start justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-slate-900 text-white">
                             {q.id.toUpperCase()}
                           </span>
@@ -375,8 +409,8 @@ export default function Home() {
 
             {/* MONTADOR DIREITO */}
             <div className="lg:col-span-6 space-y-4">
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
-                <div className="flex justify-between items-start border-b border-slate-100 pb-4">
+              <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+                <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
                   <div>
                     <h3 className="font-bold text-slate-800 text-sm">Resumo da Avaliação</h3>
                     <p className="text-xs text-slate-500">Configuração de caderno e gabarito</p>
@@ -423,9 +457,9 @@ export default function Home() {
                     <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
                       {questoesSelecionadas.map((q, idx) => (
                         <div key={q.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl text-xs">
-                          <div className="flex items-center gap-2.5 overflow-hidden">
+                          <div className="flex min-w-0 items-center gap-2.5 overflow-hidden">
                             <span className="font-bold text-slate-400 w-5 text-center">{idx + 1}.</span>
-                            <span className="font-semibold text-slate-800 truncate max-w-[280px]">{q.enunciado}</span>
+                            <span className="max-w-[160px] truncate font-semibold text-slate-800 sm:max-w-[280px]">{q.enunciado}</span>
                           </div>
                           <div className="flex items-center gap-3 shrink-0">
                             <span className="font-bold text-catolica-primary">{q.pontuacao.toFixed(1)} pts</span>
@@ -456,7 +490,7 @@ export default function Home() {
         {/* ========================================================================= */}
         {currentTab === 'turmas' && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:p-6">
               <div>
                 <h3 className="font-bold text-slate-800">Turmas & Matrículas</h3>
                 <p className="text-xs text-slate-500">Gestão de turmas e códigos de auto-matrícula</p>
@@ -499,13 +533,13 @@ export default function Home() {
         {/* ========================================================================= */}
         {currentTab === 'impressao' && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center bg-white p-5 rounded-2xl border border-slate-200 shadow-sm print:hidden">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col items-stretch justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm print:hidden sm:flex-row sm:items-center sm:p-5">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
                 <label className="text-xs font-bold text-slate-700 uppercase">Selecione o Estudante / Versão:</label>
                 <select
                   value={selectedVersionIdx}
                   onChange={(e) => setSelectedVersionIdx(Number(e.target.value))}
-                  className="p-2.5 border border-slate-200 rounded-xl text-xs font-semibold bg-slate-50 outline-none"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-semibold outline-none sm:w-auto"
                 >
                   {versions.length > 0 ? (
                     versions.map((v, idx) => (
@@ -521,7 +555,7 @@ export default function Home() {
 
               <button
                 onClick={() => window.print()}
-                className="bg-catolica-primary text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-catolica-dark transition shadow-md shadow-catolica-primary/20"
+                className="flex items-center justify-center gap-2 rounded-xl bg-catolica-primary px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-catolica-primary/20 transition hover:bg-catolica-dark"
               >
                 <Printer className="w-4 h-4" /> Imprimir Prova Completa (Frente/Verso + Gabarito)
               </button>
@@ -530,20 +564,20 @@ export default function Home() {
             <div className="space-y-8">
               
               {/* 1. FOLHA DE RESPOSTA (GABARITO OMR) SEPARADO */}
-              <div className="bg-white p-8 border-2 border-slate-300 rounded-xl shadow-lg print:border-none print:shadow-none print:p-0">
-                <div className="border-b-2 border-dashed border-slate-400 pb-3 mb-6 flex justify-between items-center text-xs font-bold text-slate-500 uppercase">
+              <div className="rounded-xl border-2 border-slate-300 bg-white p-3 shadow-lg print:border-none print:p-0 sm:p-8">
+                <div className="mb-6 flex flex-col gap-1 border-b-2 border-dashed border-slate-400 pb-3 text-xs font-bold uppercase text-slate-500 sm:flex-row sm:items-center sm:justify-between">
                   <span>✂️ Destaque aqui — Entregar somente este gabarito ao professor</span>
                   <span>Folha de Respostas OMR</span>
                 </div>
 
-                <div className="relative border-4 border-slate-900 p-6 min-h-[500px]">
+                <div className="relative min-h-[500px] border-4 border-slate-900 p-4 sm:p-6">
                   {/* Marcadores de Calibração OMR */}
                   <div className="absolute top-2 left-2 w-4 h-4 bg-black" />
                   <div className="absolute top-2 right-2 w-4 h-4 bg-black" />
                   <div className="absolute bottom-2 left-2 w-4 h-4 bg-black" />
                   <div className="absolute bottom-2 right-2 w-4 h-4 bg-black" />
 
-                  <div className="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-6">
+                  <div className="mb-6 flex items-start justify-between gap-3 border-b-2 border-slate-900 pb-4">
                     <div>
                       <h3 className="text-base font-black uppercase text-slate-900">CATÓLICA SC - CENTRO UNIVERSITÁRIO</h3>
                       <p className="text-xs font-semibold text-slate-700">Folha de Respostas Óptica • Avaliação Individual</p>
@@ -592,8 +626,8 @@ export default function Home() {
               </div>
 
               {/* 3. CADERNO DE QUESTÕES COMPLETO FRENTE E VERSO PARA LEVAR PRA CASA */}
-              <div className="bg-white p-8 border border-slate-200 rounded-xl shadow-lg print:border-none print:shadow-none print:p-0 page-break-before">
-                <div className="border-b-2 border-slate-900 pb-3 mb-6 flex justify-between items-start">
+              <div className="page-break-before rounded-xl border border-slate-200 bg-white p-4 shadow-lg print:border-none print:shadow-none print:p-0 sm:p-8">
+                <div className="mb-6 flex flex-col gap-3 border-b-2 border-slate-900 pb-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h3 className="text-base font-black text-slate-900 uppercase">CATÓLICA SC - CADERNO DE QUESTÕES</h3>
                     <p className="text-xs text-slate-600">{tituloProva} • Versão {currentVersion?.versionLetter || 'A'}</p>
@@ -663,8 +697,8 @@ export default function Home() {
             </div>
 
             {/* TABELA 1: HISTÓRICO EVOLUTIVO POR ALUNO (N1, N2, N3) */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <div className="flex justify-between items-center">
+            <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+              <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
                 <div>
                   <h3 className="font-bold text-slate-800 text-sm">Histórico Contínuo de Notas (N1, N2 e N3)</h3>
                   <p className="text-xs text-slate-500">Acompanhamento longitudinal do desempenho dos estudantes</p>
@@ -677,8 +711,8 @@ export default function Home() {
                 </button>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+              <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+                <table className="min-w-[680px] w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase">
                       <th className="pb-3">Estudante</th>
@@ -714,7 +748,7 @@ export default function Home() {
             </div>
 
             {/* TABELA 2: ESTATÍSTICAS POR QUESTÃO & DIAGNÓSTICO DE DISTRATORES */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
               <div>
                 <h3 className="font-bold text-slate-800 text-sm">📊 Estatísticas Globais de Erros, Acertos e Distratores</h3>
                 <p className="text-xs text-slate-500">Mapeamento pedagógico processado pelo backend por questão avaliada</p>
@@ -723,7 +757,7 @@ export default function Home() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {estatisticasQuestoes.map((est) => (
                   <div key={est.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-xs font-black bg-slate-900 text-white px-2 py-0.5 rounded">{est.id}</span>
                       <div className="flex gap-2 text-xs font-bold">
                         <span className="text-emerald-600">✓ {est.taxaAcerto}% Acertos</span>
