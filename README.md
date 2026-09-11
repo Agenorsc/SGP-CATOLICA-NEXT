@@ -138,6 +138,10 @@ Automatizar integralmente o fluxo avaliativo institucional:
 ![Relatórios e Análise](docs/telas/tela-relatorios.png)
 *Consolidação de notas corrigidas, exportação em `.csv`, diagnóstico de distratores e evolução semestral.*
 
+### 4.6 Tela de Login
+![Tela de Login](docs/telas/Tela-Login.png)
+*Acesso demonstrativo com perfis de professor e aluno.*
+
 ---
 
 ## 5. Stack Tecnológica
