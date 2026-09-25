@@ -20,8 +20,109 @@ import {
   X,
   LogOut,
   FileText,
-  Pencil
+  Pencil,
+  UserPlus,
+  FolderPlus,
+  GraduationCap,
+  UserCheck
 } from 'lucide-react';
+
+// ============================================================================
+// MODELOS ORIENTADOS A OBJETOS (OO)
+// ============================================================================
+
+export interface Endereco {
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+}
+
+export interface Contato {
+  email: string;
+  celular: string;
+  residencial?: string;
+}
+
+export interface Filiacao {
+  mae: string;
+  pai: string;
+}
+
+// Classe Base Pessoa
+export class PessoaModel {
+  nome: string;
+  dataNascimento: string;
+  naturalidade: string;
+  estadoNatal: string;
+  filiacao: Filiacao;
+  contato: Contato;
+  endereco: Endereco;
+
+  constructor(data: Partial<PessoaModel>) {
+    this.nome = data.nome || '';
+    this.dataNascimento = data.dataNascimento || '';
+    this.naturalidade = data.naturalidade || '';
+    this.estadoNatal = data.estadoNatal || '';
+    this.filiacao = data.filiacao || { mae: '', pai: '' };
+    this.contato = data.contato || { email: '', celular: '' };
+    this.endereco = data.endereco || { cep: '', logradouro: '', numero: '', bairro: '', cidade: '', estado: '' };
+  }
+}
+
+// Classe Aluno Herdando de PessoaModel
+export class AlunoModel extends PessoaModel {
+  id: string;
+  ra: string; // Registro Acadêmico
+  curso: string;
+  turno: string;
+  turmaId: string;
+  n1: number;
+  n2: number;
+  n3: number;
+
+  constructor(data: Partial<AlunoModel>) {
+    super(data);
+    this.id = data.id || `alu_${Date.now()}`;
+    this.ra = data.ra || '';
+    this.curso = data.curso || 'Engenharia de Software';
+    this.turno = data.turno || 'Noturno';
+    this.turmaId = data.turmaId || '';
+    this.n1 = data.n1 ?? 0;
+    this.n2 = data.n2 ?? 0;
+    this.n3 = data.n3 ?? 0;
+  }
+
+  get media(): number {
+    return Number(((this.n1 + this.n2 + this.n3) / 3).toFixed(1));
+  }
+
+  get status(): 'Aprovado' | 'Exame' | 'Reprovado' {
+    if (this.media >= 7.0) return 'Aprovado';
+    if (this.media >= 4.0) return 'Exame';
+    return 'Reprovado';
+  }
+}
+
+// Classe Turma
+export class TurmaModel {
+  id: string;
+  nome: string;
+  curso: string;
+  semestre: string;
+  codigoConvite: string;
+
+  constructor(data: Partial<TurmaModel>) {
+    this.id = data.id || `turma_${Date.now()}`;
+    this.nome = data.nome || '';
+    this.curso = data.curso || 'Engenharia de Software';
+    this.semestre = data.semestre || '2026/2';
+    this.codigoConvite = data.codigoConvite || `CAT-${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+}
 
 interface AlternativaCadastro {
   letra: string;
@@ -32,7 +133,8 @@ interface AlternativaCadastro {
 export default function Home() {
   const [session, setSession] = useState<{ role: UserRole; name: string } | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
-  const [currentTab, setCurrentTab] = useState<'montador' | 'turmas' | 'impressao' | 'relatorios'>('montador');
+  const [currentTab, setCurrentTab] = useState<'montador' | 'cadastros' | 'turmas' | 'impressao' | 'relatorios'>('montador');
+  const [subTabCadastro, setSubTabCadastro] = useState<'alunos' | 'turmas'>('alunos');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -57,8 +159,28 @@ export default function Home() {
     window.localStorage.removeItem('sgp-mock-session');
     setSession(null);
   };
-  
-  // Banco de Questões Integrado
+
+  // State de Turmas
+  const [turmas, setTurmas] = useState<TurmaModel[]>([
+    new TurmaModel({ id: 't1', nome: 'Engenharia de Software IV', curso: 'Engenharia de Software', semestre: '2026/2', codigoConvite: 'CAT-8842' }),
+    new TurmaModel({ id: 't2', nome: 'Arquitetura de Software', curso: 'Engenharia de Software', semestre: '2026/2', codigoConvite: 'CAT-9910' })
+  ]);
+
+  // State de Alunos
+  const [alunos, setAlunos] = useState<AlunoModel[]>([
+    new AlunoModel({ id: 'alu-01', nome: 'AGENOR ALVISE', ra: '1328834', curso: 'ENGENHARIA DE SOFTWARE', turno: 'Noturno', turmaId: 't1', n1: 9.5, n2: 8.5, n3: 9.0, contato: { email: 'agenor.alvise@catolicasc.edu.br', celular: '(47) 99690-0033' }, endereco: { cep: '89251500', logradouro: 'MARINA FRUTUOSO', numero: '810', bairro: 'CENTRO', cidade: 'Jaraguá do Sul', estado: 'SC' } }),
+    new AlunoModel({ id: 'alu-02', nome: 'Beatriz Ramos', ra: '20241002', curso: 'ENGENHARIA DE SOFTWARE', turno: 'Noturno', turmaId: 't1', n1: 7.5, n2: 8.0, n3: 8.5 }),
+    new AlunoModel({ id: 'alu-03', nome: 'Lucas Martins', ra: '20241003', curso: 'ENGENHARIA DE SOFTWARE', turno: 'Noturno', turmaId: 't1', n1: 4.5, n2: 5.0, n3: 6.0 }),
+    new AlunoModel({ id: 'alu-04', nome: 'Fernanda Lima', ra: '20241004', curso: 'ENGENHARIA DE SOFTWARE', turno: 'Noturno', turmaId: 't1', n1: 10.0, n2: 9.5, n3: 10.0 })
+  ]);
+
+  // Turma Selecionada na Montagem da Prova
+  const [turmaSelecionadaId, setTurmaSelecionadaId] = useState<string>('t1');
+
+  // Modal de Vinculação de Alunos na Turma
+  const [modalVinculoTurmaId, setModalVinculoTurmaId] = useState<string | null>(null);
+
+  // Banco de Questões
   const [bancoQuestoes, setBancoQuestoes] = useState<Question[]>([
     {
       id: 'q1',
@@ -109,17 +231,17 @@ export default function Home() {
     }
   ]);
 
-  // Montador da Avaliação (Questões ativas no Caderno)
+  // Montador
   const [questoesSelecionadas, setQuestoesSelecionadas] = useState<Question[]>([bancoQuestoes[0], bancoQuestoes[1], bancoQuestoes[2], bancoQuestoes[3]]);
   const [tituloProva, setTituloProva] = useState('Avaliação Escrita N2 - Arquitetura de Software');
   const [buscaQuestao, setBuscaQuestao] = useState('');
   
-  // Regras de Impressão e Embaralhamento
+  // Regras
   const [shuffleQ, setShuffleQ] = useState(true);
   const [shuffleAlt, setShuffleAlt] = useState(true);
   const [withId, setWithId] = useState(true);
 
-  // Modal de Cadastro/Edição de Questão
+  // Modal de Questão
   const [modalAberto, setModalAberto] = useState(false);
   const [questaoEmEdicaoId, setQuestaoEmEdicaoId] = useState<string | null>(null);
   const [novoEnunciado, setNovoEnunciado] = useState('');
@@ -134,47 +256,60 @@ export default function Home() {
     { letra: 'E', texto: '', correta: false }
   ]);
 
-  // Versões e Alunos
+  // Modal de Aluno (Cadastro / Edição)
+  const [modalAlunoAberto, setModalAlunoAberto] = useState(false);
+  const [alunoEmEdicaoId, setAlunoEmEdicaoId] = useState<string | null>(null);
+  const [formAluno, setFormAluno] = useState({
+    nome: '',
+    ra: '',
+    curso: 'ENGENHARIA DE SOFTWARE',
+    turno: 'Noturno',
+    turmaId: 't1',
+    dataNascimento: '',
+    naturalidade: 'Jaraguá do Sul',
+    estadoNatal: 'SC',
+    mae: '',
+    pai: '',
+    email: '',
+    celular: '',
+    cep: '89251500',
+    logradouro: '',
+    numero: '',
+    bairro: '',
+    cidade: 'Jaraguá do Sul',
+    estado: 'SC'
+  });
+
+  // Modal de Turma (Cadastro / Edição)
+  const [modalTurmaAberto, setModalTurmaAberto] = useState(false);
+  const [turmaEmEdicaoId, setTurmaEmEdicaoId] = useState<string | null>(null);
+  const [formTurma, setFormTurma] = useState({
+    nome: '',
+    curso: 'Engenharia de Software',
+    semestre: '2026/2'
+  });
+
   const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
 
-  const historicoAlunos = [
-    { id: 'alu-01', nome: 'Gabriel Menezes', matricula: '20241001', n1: 9.5, n2: 8.5, n3: 9.0, media: 9.0, status: 'Aprovado' },
-    { id: 'alu-02', nome: 'Beatriz Ramos', matricula: '20241002', n1: 7.5, n2: 8.0, n3: 8.5, media: 8.0, status: 'Aprovado' },
-    { id: 'alu-03', nome: 'Lucas Martins', matricula: '20241003', n1: 4.5, n2: 5.0, n3: 6.0, media: 5.2, status: 'Exame' },
-    { id: 'alu-04', nome: 'Fernanda Lima', matricula: '20241004', n1: 10.0, n2: 9.5, n3: 10.0, media: 9.8, status: 'Aprovado' }
-  ];
+  // Alunos da Turma Selecionada
+  const alunosDaTurmaSelecionada = useMemo(() => {
+    return alunos.filter(a => a.turmaId === turmaSelecionadaId);
+  }, [alunos, turmaSelecionadaId]);
 
-  const estatisticasQuestoes = [
-    {
-      id: 'Q1',
-      enunciado: 'Isolamento de banco via Repositório (PostgreSQL)',
-      totalRespostas: 40,
-      taxaAcerto: 77.5,
-      taxaErro: 22.5,
-      distratorMaisMarcado: 'B (Controller) - 15%',
-      diagnostico: 'Alunos confundiram a camada de controle/orquestração com a de persistência.'
-    },
-    {
-      id: 'Q2',
-      enunciado: 'Materialização da matriz de layout OMR no banco',
-      totalRespostas: 40,
-      taxaAcerto: 85.0,
-      taxaErro: 15.0,
-      distratorMaisMarcado: 'C (Formatação) - 10%',
-      diagnostico: 'Excelente compreensão quanto à integridade das alternativas embaralhadas.'
-    },
-    {
-      id: 'Q3',
-      enunciado: 'Operação de correção offline e idempotência',
-      totalRespostas: 40,
-      taxaAcerto: 70.0,
-      taxaErro: 30.0,
-      distratorMaisMarcado: 'Apenas Cloud - 20%',
-      diagnostico: 'Conceito de tolerância a falhas precisa de reforço em sala.'
-    }
-  ];
+  const alunoAtual = alunosDaTurmaSelecionada[selectedVersionIdx] || alunosDaTurmaSelecionada[0] || alunos[0];
 
-  // Algoritmo de Embaralhamento Pseudo-Aleatório Deterministico por Aluno/Versão
+  // Alternar Vinculo do Aluno à Turma
+  const alternarVinculoAlunoTurma = (alunoId: string, turmaTargetId: string) => {
+    setAlunos(alunos.map(a => {
+      if (a.id === alunoId) {
+        const novaTurma = a.turmaId === turmaTargetId ? '' : turmaTargetId;
+        return new AlunoModel({ ...a, turmaId: novaTurma });
+      }
+      return a;
+    }));
+  };
+
+  // Algoritmo de Embaralhamento
   const questoesEmbaralhadas = useMemo(() => {
     let lista = [...questoesSelecionadas];
 
@@ -261,7 +396,6 @@ export default function Home() {
     }
   };
 
-  // Cadastrar / Editar Questão
   const handleSaveQuestaoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!novoEnunciado.trim()) return;
@@ -281,21 +415,187 @@ export default function Home() {
     };
 
     if (questaoEmEdicaoId) {
-      // Edição de questão existente
       setBancoQuestoes(bancoQuestoes.map(q => q.id === questaoEmEdicaoId ? questaoFormatada : q));
       setQuestoesSelecionadas(questoesSelecionadas.map(q => q.id === questaoEmEdicaoId ? questaoFormatada : q));
     } else {
-      // Nova questão: Fica SOMENTE no Banco de Questões (Aguardando inclusão pelo professor)
       setBancoQuestoes([questaoFormatada, ...bancoQuestoes]);
     }
 
     setModalAberto(false);
   };
 
+  // Funções de Abertura de Modais para Alunos
+  const abrirModalNovoAluno = () => {
+    setAlunoEmEdicaoId(null);
+    setFormAluno({
+      nome: '',
+      ra: '',
+      curso: 'ENGENHARIA DE SOFTWARE',
+      turno: 'Noturno',
+      turmaId: turmas[0]?.id || 't1',
+      dataNascimento: '',
+      naturalidade: 'Jaraguá do Sul',
+      estadoNatal: 'SC',
+      mae: '',
+      pai: '',
+      email: '',
+      celular: '',
+      cep: '89251500',
+      logradouro: '',
+      numero: '',
+      bairro: '',
+      cidade: 'Jaraguá do Sul',
+      estado: 'SC'
+    });
+    setModalAlunoAberto(true);
+  };
+
+  const abrirModalEditarAluno = (aluno: AlunoModel) => {
+    setAlunoEmEdicaoId(aluno.id);
+    setFormAluno({
+      nome: aluno.nome,
+      ra: aluno.ra,
+      curso: aluno.curso,
+      turno: aluno.turno,
+      turmaId: aluno.turmaId,
+      dataNascimento: aluno.dataNascimento,
+      naturalidade: aluno.naturalidade,
+      estadoNatal: aluno.estadoNatal,
+      mae: aluno.filiacao.mae,
+      pai: aluno.filiacao.pai,
+      email: aluno.contato.email,
+      celular: aluno.contato.celular,
+      cep: aluno.endereco.cep,
+      logradouro: aluno.endereco.logradouro,
+      numero: aluno.endereco.numero,
+      bairro: aluno.endereco.bairro,
+      cidade: aluno.endereco.cidade,
+      estado: aluno.endereco.estado
+    });
+    setModalAlunoAberto(true);
+  };
+
+  const excluirAluno = (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este aluno?')) {
+      setAlunos(alunos.filter(a => a.id !== id));
+    }
+  };
+
+  // Salvar (Criar ou Editar) Aluno
+  const handleSaveAlunoSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (alunoEmEdicaoId) {
+      setAlunos(alunos.map(a => {
+        if (a.id === alunoEmEdicaoId) {
+          return new AlunoModel({
+            ...a,
+            nome: formAluno.nome,
+            ra: formAluno.ra,
+            curso: formAluno.curso,
+            turno: formAluno.turno,
+            turmaId: formAluno.turmaId,
+            dataNascimento: formAluno.dataNascimento,
+            naturalidade: formAluno.naturalidade,
+            estadoNatal: formAluno.estadoNatal,
+            filiacao: { mae: formAluno.mae, pai: formAluno.pai },
+            contato: { email: formAluno.email, celular: formAluno.celular },
+            endereco: {
+              cep: formAluno.cep,
+              logradouro: formAluno.logradouro,
+              numero: formAluno.numero,
+              bairro: formAluno.bairro,
+              cidade: formAluno.cidade,
+              estado: formAluno.estado
+            }
+          });
+        }
+        return a;
+      }));
+    } else {
+      const novoAluno = new AlunoModel({
+        nome: formAluno.nome,
+        ra: formAluno.ra || String(Math.floor(1000000 + Math.random() * 9000000)),
+        curso: formAluno.curso,
+        turno: formAluno.turno,
+        turmaId: formAluno.turmaId,
+        dataNascimento: formAluno.dataNascimento,
+        naturalidade: formAluno.naturalidade,
+        estadoNatal: formAluno.estadoNatal,
+        filiacao: { mae: formAluno.mae, pai: formAluno.pai },
+        contato: { email: formAluno.email, celular: formAluno.celular },
+        endereco: {
+          cep: formAluno.cep,
+          logradouro: formAluno.logradouro,
+          numero: formAluno.numero,
+          bairro: formAluno.bairro,
+          cidade: formAluno.cidade,
+          estado: formAluno.estado
+        }
+      });
+      setAlunos([...alunos, novoAluno]);
+    }
+
+    setModalAlunoAberto(false);
+  };
+
+  // Funções de Abertura de Modais para Turmas
+  const abrirModalNovaTurma = () => {
+    setTurmaEmEdicaoId(null);
+    setFormTurma({
+      nome: '',
+      curso: 'Engenharia de Software',
+      semestre: '2026/2'
+    });
+    setModalTurmaAberto(true);
+  };
+
+  const abrirModalEditarTurma = (turma: TurmaModel) => {
+    setTurmaEmEdicaoId(turma.id);
+    setFormTurma({
+      nome: turma.nome,
+      curso: turma.curso,
+      semestre: turma.semestre
+    });
+    setModalTurmaAberto(true);
+  };
+
+  const excluirTurma = (id: string) => {
+    if (confirm('Tem certeza que deseja excluir esta turma?')) {
+      setTurmas(turmas.filter(t => t.id !== id));
+    }
+  };
+
+  // Salvar (Criar ou Editar) Turma
+  const handleSaveTurmaSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (turmaEmEdicaoId) {
+      setTurmas(turmas.map(t => {
+        if (t.id === turmaEmEdicaoId) {
+          return new TurmaModel({
+            ...t,
+            nome: formTurma.nome,
+            curso: formTurma.curso,
+            semestre: formTurma.semestre
+          });
+        }
+        return t;
+      }));
+    } else {
+      const novaTurma = new TurmaModel({
+        nome: formTurma.nome,
+        curso: formTurma.curso,
+        semestre: formTurma.semestre
+      });
+      setTurmas([...turmas, novaTurma]);
+    }
+    setModalTurmaAberto(false);
+  };
+
   const exportarCSV = () => {
-    let csv = "Aluno;Matricula;N1;N2;N3;Media;Status\n";
-    historicoAlunos.forEach(r => {
-      csv += `${r.nome};${r.matricula};${r.n1.toFixed(1)};${r.n2.toFixed(1)};${r.n3.toFixed(1)};${r.media.toFixed(1)};${r.status}\n`;
+    let csv = "Aluno;RA;N1;N2;N3;Media;Status\n";
+    alunos.forEach(r => {
+      csv += `${r.nome};${r.ra};${r.n1.toFixed(1)};${r.n2.toFixed(1)};${r.n3.toFixed(1)};${r.media.toFixed(1)};${r.status}\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -311,8 +611,6 @@ export default function Home() {
     q.enunciado.toLowerCase().includes(buscaQuestao.toLowerCase()) ||
     q.tags.some(t => t.toLowerCase().includes(buscaQuestao.toLowerCase()))
   );
-
-  const alunoAtual = historicoAlunos[selectedVersionIdx] || historicoAlunos[0];
 
   if (!sessionLoaded) return <div className="min-h-screen bg-slate-100" />;
 
@@ -365,6 +663,7 @@ export default function Home() {
           <nav className="space-y-1.5" aria-label="Navegação principal">
             {[
               { id: 'montador', label: 'Montador de Provas', icon: BookOpen },
+              { id: 'cadastros', label: 'Cadastros (Aluno/Turma)', icon: UserPlus },
               { id: 'turmas', label: 'Gestão de Turmas', icon: Users },
               { id: 'impressao', label: 'Caderno & Gabarito OMR', icon: Printer },
               { id: 'relatorios', label: 'Relatórios & Histórico', icon: BarChart3 },
@@ -418,7 +717,7 @@ export default function Home() {
         </div>
 
         {/* ========================================================================= */}
-        {/* ABA 1: MONTADOR SPLIT-SCREEN + CADASTRO BANCO POSTGRESQL */}
+        {/* ABA 1: MONTADOR SPLIT-SCREEN + SELEÇÃO DE TURMA */}
         {/* ========================================================================= */}
         {currentTab === 'montador' && (
           <div className="space-y-6">
@@ -427,7 +726,7 @@ export default function Home() {
                 <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                   <FileText className="text-catolica-primary" /> Montador de Avaliações
                 </h2>
-                <p className="text-xs text-slate-500">Cadastre, edite e selecione questões integradas ao banco PostgreSQL.</p>
+                <p className="text-xs text-slate-500">Selecione a turma e monte a avaliação com as questões do banco.</p>
               </div>
               <button 
                 onClick={abrirModalNovaQuestao}
@@ -532,6 +831,23 @@ export default function Home() {
               {/* MONTADOR DIREITO */}
               <div className="lg:col-span-6 space-y-4">
                 <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+                  
+                  {/* SELEÇÃO DE TURMA */}
+                  <div className="border-b border-slate-100 pb-4 space-y-2">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase">Turma Destino da Prova:</label>
+                    <select
+                      value={turmaSelecionadaId}
+                      onChange={(e) => setTurmaSelecionadaId(e.target.value)}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-catolica-primary outline-none"
+                    >
+                      {turmas.map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.nome} — {t.curso} ({t.semestre})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
                     <div>
                       <h3 className="font-bold text-slate-800 text-sm">Resumo da Avaliação</h3>
@@ -731,7 +1047,367 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* ABA 2: TURMAS */}
+        {/* ABA CADASTROS: MÓDULO UNIFICADO COM ALUNOS, TURMAS E VÍNCULO DE DISCIPLINAS */}
+        {/* ========================================================================= */}
+        {currentTab === 'cadastros' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <div>
+                <h3 className="font-bold text-slate-800 text-base">Painel de Cadastros Gerais</h3>
+                <p className="text-xs text-slate-500">Gestão e Edição de Alunos e Turmas Acadêmicas</p>
+              </div>
+
+              <div className="flex gap-2">
+                <button 
+                  onClick={abrirModalNovoAluno}
+                  className="bg-catolica-primary text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-catolica-dark transition shadow-md"
+                >
+                  <UserPlus className="w-4 h-4" /> Cadastrar Aluno
+                </button>
+                <button 
+                  onClick={abrirModalNovaTurma}
+                  className="bg-slate-900 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition shadow-md"
+                >
+                  <FolderPlus className="w-4 h-4" /> Cadastrar Turma
+                </button>
+              </div>
+            </div>
+
+            {/* SELETOR DE SUB-TAB (ALUNOS / TURMAS) */}
+            <div className="flex gap-3 border-b border-slate-200 pb-2">
+              <button
+                onClick={() => setSubTabCadastro('alunos')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+                  subTabCadastro === 'alunos' ? 'bg-catolica-primary text-white' : 'bg-white text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <GraduationCap className="w-4 h-4" /> Alunos Cadastrados ({alunos.length})
+              </button>
+              <button
+                onClick={() => setSubTabCadastro('turmas')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+                  subTabCadastro === 'turmas' ? 'bg-catolica-primary text-white' : 'bg-white text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Users className="w-4 h-4" /> Turmas / Disciplinas ({turmas.length})
+              </button>
+            </div>
+
+            {/* TELA DE ALUNOS CADASTRADOS */}
+            {subTabCadastro === 'alunos' && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+                <h4 className="font-bold text-slate-800 text-sm">Lista de Estudantes Cadastrados</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b text-slate-400 font-bold uppercase">
+                        <th className="pb-3">RA / Registro</th>
+                        <th className="pb-3">Nome Completo</th>
+                        <th className="pb-3">Curso</th>
+                        <th className="pb-3">Turno</th>
+                        <th className="pb-3">Contato</th>
+                        <th className="pb-3">Disciplina / Turma</th>
+                        <th className="pb-3 text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {alunos.map(a => {
+                        const turmaObj = turmas.find(t => t.id === a.turmaId);
+                        return (
+                          <tr key={a.id} className="hover:bg-slate-50">
+                            <td className="py-3 font-mono font-bold text-slate-800">{a.ra}</td>
+                            <td className="py-3 font-bold text-slate-900">{a.nome}</td>
+                            <td className="py-3 text-slate-600">{a.curso}</td>
+                            <td className="py-3 text-slate-600">{a.turno}</td>
+                            <td className="py-3 text-slate-500">{a.contato?.email || '-'}</td>
+                            <td className="py-3">
+                              <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] ${
+                                turmaObj ? 'bg-catolica-light text-catolica-primary' : 'bg-slate-100 text-slate-400'
+                              }`}>
+                                {turmaObj ? turmaObj.nome : 'Nenhuma Disciplina'}
+                              </span>
+                            </td>
+                            <td className="py-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => abrirModalEditarAluno(a)}
+                                  className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition"
+                                  title="Editar Aluno"
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                                <button
+                                  onClick={() => excluirAluno(a.id)}
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                                  title="Excluir Aluno"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* TELA DE TURMAS / DISCIPLINAS CADASTRADAS (COM BOTAO PARA VINCULAR ALUNOS) */}
+            {subTabCadastro === 'turmas' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {turmas.map(t => {
+                  const alunosDaTurma = alunos.filter(a => a.turmaId === t.id);
+                  return (
+                    <div key={t.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                      <div className="flex justify-between items-start">
+                        <span className="text-xs font-bold bg-catolica-light text-catolica-primary px-3 py-1 rounded-lg border border-catolica-primary/20">
+                          {t.semestre}
+                        </span>
+                        
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono bg-slate-100 px-3 py-1 rounded-lg border text-slate-700">
+                            Convite: <strong>{t.codigoConvite}</strong>
+                          </span>
+                          <button
+                            onClick={() => abrirModalEditarTurma(t)}
+                            className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition"
+                            title="Editar Turma"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => excluirTurma(t.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                            title="Excluir Turma"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                      <h4 className="font-bold text-base text-slate-800">{t.nome}</h4>
+                      <p className="text-xs text-slate-500">{t.curso}</p>
+                      
+                      <div className="border-t pt-3 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-bold text-slate-700">
+                            Estudantes Matriculados ({alunosDaTurma.length}):
+                          </span>
+                          <button
+                            onClick={() => setModalVinculoTurmaId(t.id)}
+                            className="text-xs font-bold text-catolica-primary hover:bg-catolica-light px-2.5 py-1 rounded-lg transition flex items-center gap-1"
+                          >
+                            <UserCheck size={14} /> + Vincular Alunos
+                          </button>
+                        </div>
+
+                        <div className="text-xs space-y-1 text-slate-600 max-h-40 overflow-y-auto">
+                          {alunosDaTurma.length === 0 ? (
+                            <p className="text-slate-400 italic text-[11px] py-2">Nenhum aluno matriculado nesta disciplina.</p>
+                          ) : (
+                            alunosDaTurma.map(a => (
+                              <div key={a.id} className="flex justify-between p-1.5 bg-slate-50 rounded-lg">
+                                <span>{a.nome}</span>
+                                <span className="font-mono text-slate-500">RA: {a.ra}</span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* MODAL VINCULAR ALUNOS À TURMA */}
+            {modalVinculoTurmaId && (
+              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-5 border border-slate-200 max-h-[85vh] overflow-y-auto">
+                  <div className="flex justify-between items-center border-b pb-3">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900">
+                        Matricular Alunos na Disciplina
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        {turmas.find(t => t.id === modalVinculoTurmaId)?.nome}
+                      </p>
+                    </div>
+                    <button onClick={() => setModalVinculoTurmaId(null)} className="text-slate-400 hover:text-slate-600">
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold uppercase text-slate-600 block mb-2">Selecione os Alunos:</span>
+                    {alunos.map(aluno => {
+                      const estaNaTurma = aluno.turmaId === modalVinculoTurmaId;
+                      return (
+                        <div key={aluno.id} className="flex items-center justify-between p-2.5 bg-slate-50 border rounded-xl text-xs">
+                          <div>
+                            <span className="font-bold text-slate-900 block">{aluno.nome}</span>
+                            <span className="text-[10px] text-slate-500 font-mono">RA: {aluno.ra}</span>
+                          </div>
+                          <button
+                            onClick={() => alternarVinculoAlunoTurma(aluno.id, modalVinculoTurmaId)}
+                            className={`px-3 py-1 rounded-lg font-bold text-xs transition flex items-center gap-1 ${
+                              estaNaTurma 
+                                ? 'bg-emerald-100 text-emerald-800 hover:bg-red-100 hover:text-red-700' 
+                                : 'bg-slate-900 text-white hover:bg-catolica-primary'
+                            }`}
+                          >
+                            {estaNaTurma ? <><Check size={12} /> Matriculado</> : <><Plus size={12} /> Adicionar</>}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex justify-end border-t pt-4">
+                    <button 
+                      onClick={() => setModalVinculoTurmaId(null)}
+                      className="px-5 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold shadow"
+                    >
+                      Concluído
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL CADASTRAR/EDITAR ALUNO COMPLETO */}
+            {modalAlunoAberto && (
+              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto border border-slate-200">
+                  <div className="flex justify-between items-center border-b pb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900">
+                        {alunoEmEdicaoId ? 'Editar Aluno' : 'Cadastro do Aluno'}
+                      </h3>
+                      <p className="text-xs text-slate-500">Estrutura baseada no Portal Acadêmico Católica SC</p>
+                    </div>
+                    <button onClick={() => setModalAlunoAberto(false)} className="text-slate-400 hover:text-slate-600 transition">
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSaveAlunoSubmit} className="space-y-4">
+                    <div className="border-b pb-3">
+                      <span className="text-xs font-bold text-catolica-primary uppercase block mb-2">Dados Acadêmicos & Identificação</span>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Nome Completo</label>
+                          <input required type="text" value={formAluno.nome} onChange={e => setFormAluno({ ...formAluno, nome: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Registro Acadêmico (RA)</label>
+                          <input type="text" placeholder="Ex: 1328834" value={formAluno.ra} onChange={e => setFormAluno({ ...formAluno, ra: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Disciplina / Turma</label>
+                          <select value={formAluno.turmaId} onChange={e => setFormAluno({ ...formAluno, turmaId: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs font-bold">
+                            <option value="">Nenhuma Disciplina</option>
+                            {turmas.map(t => (
+                              <option key={t.id} value={t.id}>{t.nome}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-b pb-3">
+                      <span className="text-xs font-bold text-catolica-primary uppercase block mb-2">Filiação & Contato</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Nome da Mãe</label>
+                          <input type="text" value={formAluno.mae} onChange={e => setFormAluno({ ...formAluno, mae: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Nome do Pai</label>
+                          <input type="text" value={formAluno.pai} onChange={e => setFormAluno({ ...formAluno, pai: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">E-mail Acadêmico</label>
+                          <input type="email" value={formAluno.email} onChange={e => setFormAluno({ ...formAluno, email: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Celular</label>
+                          <input type="text" value={formAluno.celular} onChange={e => setFormAluno({ ...formAluno, celular: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-xs font-bold text-catolica-primary uppercase block mb-2">Endereço Residencial</span>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">CEP</label>
+                          <input type="text" value={formAluno.cep} onChange={e => setFormAluno({ ...formAluno, cep: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Logradouro</label>
+                          <input type="text" value={formAluno.logradouro} onChange={e => setFormAluno({ ...formAluno, logradouro: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Número</label>
+                          <input type="text" value={formAluno.numero} onChange={e => setFormAluno({ ...formAluno, numero: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 border-t pt-4">
+                      <button type="button" onClick={() => setModalAlunoAberto(false)} className="px-4 py-2 border rounded-xl text-xs font-bold">Cancelar</button>
+                      <button type="submit" className="px-4 py-2 bg-catolica-primary text-white rounded-xl text-xs font-bold shadow-md">
+                        {alunoEmEdicaoId ? 'Atualizar Aluno' : 'Salvar Aluno'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL CADASTRAR/EDITAR TURMA */}
+            {modalTurmaAberto && (
+              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-6 border border-slate-200">
+                  <div className="flex justify-between items-center border-b pb-4">
+                    <h3 className="text-base font-bold text-slate-900">
+                      {turmaEmEdicaoId ? 'Editar Turma' : 'Nova Turma Acadêmica'}
+                    </h3>
+                    <button onClick={() => setModalTurmaAberto(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+                  </div>
+
+                  <form onSubmit={handleSaveTurmaSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nome da Disciplina / Turma</label>
+                      <input required type="text" placeholder="Ex: Engenharia de Software IV" value={formTurma.nome} onChange={e => setFormTurma({ ...formTurma, nome: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Curso</label>
+                      <input type="text" value={formTurma.curso} onChange={e => setFormTurma({ ...formTurma, curso: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Semestre Letivo</label>
+                      <input type="text" value={formTurma.semestre} onChange={e => setFormTurma({ ...formTurma, semestre: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" />
+                    </div>
+
+                    <div className="flex justify-end gap-3 border-t pt-4">
+                      <button type="button" onClick={() => setModalTurmaAberto(false)} className="px-4 py-2 border rounded-xl text-xs font-bold">Cancelar</button>
+                      <button type="submit" className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-md">
+                        {turmaEmEdicaoId ? 'Atualizar Turma' : 'Criar Turma'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* ABA 3: TURMAS */}
         {/* ========================================================================= */}
         {currentTab === 'turmas' && (
           <div className="space-y-6">
@@ -740,41 +1416,54 @@ export default function Home() {
                 <h3 className="font-bold text-slate-800">Turmas & Matrículas</h3>
                 <p className="text-xs text-slate-500">Gestão de turmas e códigos de auto-matrícula</p>
               </div>
-              <button onClick={() => alert('Cadastro de turmas conectado ao PostgreSQL')} className="bg-catolica-primary text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-catolica-dark transition">
+              <button onClick={abrirModalNovaTurma} className="bg-catolica-primary text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-catolica-dark transition">
                 <Plus className="w-4 h-4" /> Criar Turma
               </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold bg-catolica-light text-catolica-primary px-3 py-1 rounded-lg border border-catolica-primary/20">
-                    2026/2
-                  </span>
-                  <span className="text-xs font-mono bg-slate-100 px-3 py-1 rounded-lg border text-slate-700">
-                    Convite: <strong>CAT-8842</strong>
-                  </span>
-                </div>
-                <h4 className="font-bold text-base text-slate-800">Engenharia de Software IV</h4>
-                <p className="text-xs text-slate-500">Arquitetura e Projeto de Software</p>
-                <div className="border-t pt-3 space-y-2">
-                  <span className="text-xs font-bold text-slate-700 block">Estudantes Matriculados:</span>
-                  <div className="text-xs space-y-1 text-slate-600">
-                    {historicoAlunos.map(a => (
-                      <div key={a.id} className="flex justify-between p-1.5 bg-slate-50 rounded-lg">
-                        <span>{a.nome}</span>
-                        <span className="font-mono text-slate-500">{a.matricula}</span>
+              {turmas.map(t => {
+                const alunosDaTurma = alunos.filter(a => a.turmaId === t.id);
+                return (
+                  <div key={t.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div className="flex justify-between items-start">
+                      <span className="text-xs font-bold bg-catolica-light text-catolica-primary px-3 py-1 rounded-lg border border-catolica-primary/20">
+                        {t.semestre}
+                      </span>
+                      <span className="text-xs font-mono bg-slate-100 px-3 py-1 rounded-lg border text-slate-700">
+                        Convite: <strong>{t.codigoConvite}</strong>
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-base text-slate-800">{t.nome}</h4>
+                    <p className="text-xs text-slate-500">{t.curso}</p>
+                    <div className="border-t pt-3 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-slate-700">Estudantes Matriculados ({alunosDaTurma.length}):</span>
+                        <button
+                          onClick={() => setModalVinculoTurmaId(t.id)}
+                          className="text-xs font-bold text-catolica-primary hover:bg-catolica-light px-2.5 py-1 rounded-lg transition flex items-center gap-1"
+                        >
+                          <UserCheck size={14} /> + Vincular Alunos
+                        </button>
                       </div>
-                    ))}
+                      <div className="text-xs space-y-1 text-slate-600 max-h-40 overflow-y-auto">
+                        {alunosDaTurma.map(a => (
+                          <div key={a.id} className="flex justify-between p-1.5 bg-slate-50 rounded-lg">
+                            <span>{a.nome}</span>
+                            <span className="font-mono text-slate-500">{a.ra}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* ABA 3: CADERNO FRENTE/VERSO + GABARITO DESTACADO COM PÁGINA EM BRANCO */}
+        {/* ABA 4: CADERNO FRENTE/VERSO + GABARITO DESTACADO */}
         {/* ========================================================================= */}
         {currentTab === 'impressao' && (
           <div className="space-y-6">
@@ -786,9 +1475,9 @@ export default function Home() {
                   onChange={(e) => setSelectedVersionIdx(Number(e.target.value))}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-semibold outline-none sm:w-auto"
                 >
-                  {historicoAlunos.map((aluno, idx) => (
+                  {alunosDaTurmaSelecionada.map((aluno, idx) => (
                     <option key={aluno.id} value={idx}>
-                      {aluno.nome} — Matrícula: {aluno.matricula} (Versão {String.fromCharCode(65 + (idx % 4))})
+                      {aluno.nome} — RA: {aluno.ra} (Versão {String.fromCharCode(65 + (idx % 4))})
                     </option>
                   ))}
                 </select>
@@ -825,13 +1514,13 @@ export default function Home() {
                       
                       {withId ? (
                         <div className="mt-2 text-xs">
-                          <p><strong>Estudante:</strong> {alunoAtual.nome}</p>
-                          <p><strong>Matrícula:</strong> {alunoAtual.matricula}</p>
+                          <p><strong>Estudante:</strong> {alunoAtual?.nome}</p>
+                          <p><strong>Registro Acadêmico (RA):</strong> {alunoAtual?.ra}</p>
                         </div>
                       ) : (
                         <div className="mt-2 text-xs">
                           <p><strong>Estudante:</strong> __________________________________________</p>
-                          <p><strong>Matrícula:</strong> ____________________</p>
+                          <p><strong>RA:</strong> ____________________</p>
                         </div>
                       )}
                     </div>
@@ -845,7 +1534,7 @@ export default function Home() {
                     <div className="border border-slate-900 p-4 text-center font-mono text-xs">
                       <div className="bg-slate-100 p-4 mb-2 font-black text-slate-900 border">
                         [ QR CODE OMR ]<br />
-                        APP-CAT-EXAM-V1-{withId ? alunoAtual.matricula : 'ANONIMA'}
+                        APP-CAT-EXAM-V1-{withId ? alunoAtual?.ra : 'ANONIMA'}
                       </div>
                       <span className="text-[10px] text-slate-500">Leitura Exclusiva App Docente</span>
                     </div>
@@ -920,7 +1609,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* ABA 4: RELATÓRIOS E HISTÓRICO */}
+        {/* ABA 5: RELATÓRIOS E HISTÓRICO */}
         {/* ========================================================================= */}
         {currentTab === 'relatorios' && (
           <div className="space-y-6">
@@ -945,7 +1634,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* TABELA 1: HISTÓRICO EVOLUTIVO POR ALUNO (N1, N2, N3) */}
+            {/* TABELA: HISTÓRICO EVOLUTIVO POR ALUNO */}
             <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
               <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
                 <div>
@@ -965,7 +1654,7 @@ export default function Home() {
                   <thead>
                     <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase">
                       <th className="pb-3">Estudante</th>
-                      <th className="pb-3">Matrícula</th>
+                      <th className="pb-3">Registro Acadêmico (RA)</th>
                       <th className="pb-3 text-center">Nota N1</th>
                       <th className="pb-3 text-center">Nota N2</th>
                       <th className="pb-3 text-center">Nota N3</th>
@@ -974,10 +1663,10 @@ export default function Home() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {historicoAlunos.map((item) => (
+                    {alunos.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50">
                         <td className="py-3 font-bold text-slate-800">{item.nome}</td>
-                        <td className="py-3 font-mono text-slate-500">{item.matricula}</td>
+                        <td className="py-3 font-mono text-slate-500">{item.ra}</td>
                         <td className="py-3 text-center font-bold text-catolica-primary">{item.n1.toFixed(1)}</td>
                         <td className="py-3 text-center font-semibold text-slate-700">{item.n2.toFixed(1)}</td>
                         <td className="py-3 text-center font-semibold text-slate-700">{item.n3.toFixed(1)}</td>
@@ -993,33 +1682,6 @@ export default function Home() {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </div>
-
-            {/* TABELA 2: ESTATÍSTICAS POR QUESTÃO & DIAGNÓSTICO DE DISTRATORES */}
-            <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-              <div>
-                <h3 className="font-bold text-slate-800 text-sm">📊 Estatísticas Globais de Erros, Acertos e Distratores</h3>
-                <p className="text-xs text-slate-500">Mapeamento pedagógico processado pelo backend por questão avaliada</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {estatisticasQuestoes.map((est) => (
-                  <div key={est.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-xs font-black bg-slate-900 text-white px-2 py-0.5 rounded">{est.id}</span>
-                      <div className="flex gap-2 text-xs font-bold">
-                        <span className="text-emerald-600">✓ {est.taxaAcerto}% Acertos</span>
-                        <span className="text-red-500">✗ {est.taxaErro}% Erros</span>
-                      </div>
-                    </div>
-                    <p className="text-xs font-semibold text-slate-800 line-clamp-1">{est.enunciado}</p>
-                    <div className="text-[11px] bg-white p-2.5 rounded-lg border border-slate-200 space-y-1">
-                      <p className="text-slate-700">Distrator mais marcado: <strong className="text-catolica-primary">{est.distratorMaisMarcado}</strong></p>
-                      <p className="text-slate-500 italic">"{est.diagnostico}"</p>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
 
