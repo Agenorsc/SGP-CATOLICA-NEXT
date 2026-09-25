@@ -424,7 +424,6 @@ export default function Home() {
     setModalAberto(false);
   };
 
-  // Funções de Abertura de Modais para Alunos
   const abrirModalNovoAluno = () => {
     setAlunoEmEdicaoId(null);
     setFormAluno({
@@ -481,7 +480,6 @@ export default function Home() {
     }
   };
 
-  // Salvar (Criar ou Editar) Aluno
   const handleSaveAlunoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -539,7 +537,6 @@ export default function Home() {
     setModalAlunoAberto(false);
   };
 
-  // Funções de Abertura de Modais para Turmas
   const abrirModalNovaTurma = () => {
     setTurmaEmEdicaoId(null);
     setFormTurma({
@@ -566,7 +563,6 @@ export default function Home() {
     }
   };
 
-  // Salvar (Criar ou Editar) Turma
   const handleSaveTurmaSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (turmaEmEdicaoId) {
@@ -1154,7 +1150,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* TELA DE TURMAS / DISCIPLINAS CADASTRADAS (COM BOTAO PARA VINCULAR ALUNOS) */}
+            {/* TELA DE TURMAS / DISCIPLINAS CADASTRADAS */}
             {subTabCadastro === 'turmas' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {turmas.map(t => {
@@ -1463,7 +1459,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* ABA 4: CADERNO FRENTE/VERSO + GABARITO DESTACADO */}
+        {/* ABA 4: IMPRESSÃO (FRENTE E VERSO ISOLADO DO GABARITO) */}
         {/* ========================================================================= */}
         {currentTab === 'impressao' && (
           <div className="space-y-6">
@@ -1487,17 +1483,17 @@ export default function Home() {
                 onClick={() => window.print()}
                 className="flex items-center justify-center gap-2 rounded-xl bg-catolica-primary px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-catolica-primary/20 transition hover:bg-catolica-dark"
               >
-                <Printer className="w-4 h-4" /> Imprimir Prova Completa (Frente/Verso + Gabarito)
+                <Printer className="w-4 h-4" /> Imprimir Prova Completa (Frente/Verso)
               </button>
             </div>
 
             <div className="space-y-8">
               
-              {/* 1. FOLHA DE RESPOSTA (GABARITO OMR) SEPARADO */}
-              <div className="rounded-xl border-2 border-slate-300 bg-white p-3 shadow-lg print:border-none print:p-0 sm:p-8">
-                <div className="mb-6 flex flex-col gap-1 border-b-2 border-dashed border-slate-400 pb-3 text-xs font-bold uppercase text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+              {/* 1. FOLHA DE RESPOSTA (GABARITO OMR) SEPARADO - FRENTE (PÁGINA 1) */}
+              <div className="rounded-xl border-2 border-slate-300 bg-white p-3 shadow-lg print:border-none print:p-0 print:shadow-none sm:p-8 print:break-after-page">
+                <div className="mb-6 flex flex-col gap-1 border-b-2 border-dashed border-slate-400 pb-3 text-xs font-bold uppercase text-slate-500 sm:flex-row sm:items-center sm:justify-between print:hidden">
                   <span>✂️ Destaque aqui — Entregar somente este gabarito ao professor</span>
-                  <span>Folha de Respostas OMR</span>
+                  <span>Folha de Respostas OMR (Frente Única)</span>
                 </div>
 
                 <div className="relative min-h-[500px] border-4 border-slate-900 p-4 sm:p-6">
@@ -1556,15 +1552,19 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* 2. PÁGINA EM BRANCO AUTOMÁTICA */}
-              <div className="hidden print:block page-break-after">
-                <div className="h-[297mm] flex items-center justify-center text-slate-300 text-xs uppercase">
-                  [ Verso do Cartão-Resposta em Branco ]
+              {/* 2. PÁGINA EM BRANCO AUTOMÁTICA (PÁGINA 2 / VERSO DO GABARITO) */}
+              <div className="hidden print:block print:break-after-page">
+                <div className="h-[285mm] flex flex-col items-center justify-center border-2 border-dashed border-slate-300 text-slate-400 text-xs uppercase p-12 text-center space-y-4">
+                  <div className="w-12 h-12 rounded-full border-2 border-slate-300 flex items-center justify-center font-bold">✂️</div>
+                  <p className="font-bold">PÁGINA EM BRANCO INTENCIONAL (VERSO DO CARTÃO GABARITO)</p>
+                  <p className="max-w-md text-[10px] text-slate-400">
+                    Esta folha garante que ao imprimir em frente e verso, a folha de respostas OMR fique isolada na primeira página e possa ser destacada sem rasgar questões da prova.
+                  </p>
                 </div>
               </div>
 
-              {/* 3. CADERNO DE QUESTÕES */}
-              <div className="page-break-before rounded-xl border border-slate-200 bg-white p-4 shadow-lg print:border-none print:shadow-none print:p-0 sm:p-8">
+              {/* 3. CADERNO DE QUESTÕES (INICIA NA PÁGINA 3 - FRENTE E VERSO CONTÍNUO) */}
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-lg print:border-none print:shadow-none print:p-0 sm:p-8 print:break-before-page">
                 <div className="mb-6 flex flex-col gap-3 border-b-2 border-slate-900 pb-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h3 className="text-base font-black text-slate-900 uppercase">CATÓLICA SC - CADERNO DE QUESTÕES</h3>
@@ -1577,7 +1577,7 @@ export default function Home() {
 
                 <div className="space-y-6">
                   {questoesEmbaralhadas.map((q, idx) => (
-                    <div key={q.id || idx} className="text-xs space-y-2 border-b border-slate-100 pb-4">
+                    <div key={q.id || idx} className="text-xs space-y-2 border-b border-slate-100 pb-4 print:break-inside-avoid">
                       <div className="flex justify-between font-bold text-slate-900">
                         <span>Questão {idx + 1} ({q.pontuacao?.toFixed(1) || '2.5'} pts) - {q.tipo?.toUpperCase()}:</span>
                       </div>
@@ -1654,7 +1654,7 @@ export default function Home() {
                   <thead>
                     <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase">
                       <th className="pb-3">Estudante</th>
-                      <th className="pb-3">Registro Acadêmico (RA)</th>
+                      <th className="pb-3">Registro Académico (RA)</th>
                       <th className="pb-3 text-center">Nota N1</th>
                       <th className="pb-3 text-center">Nota N2</th>
                       <th className="pb-3 text-center">Nota N3</th>
