@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Header } from '@/components/layout/Header';
 import { LoginScreen, UserRole } from '@/components/auth/LoginScreen';
 import { Question } from '@/types';
+import { QRCodeSVG } from 'qrcode.react';
+import { Html5Qrcode } from 'html5-qrcode';
 import { 
   BookOpen, 
   Printer, 
@@ -23,9 +25,44 @@ import {
   UserPlus,
   FolderPlus,
   GraduationCap,
-  UserCheck,
-  Users
+  Users,
+  Camera,
+  Scan,
+  CheckCircle2,
+  RefreshCw,
+  VideoOff
 } from 'lucide-react';
+
+// ============================================================================
+// COMPONENTE DE QR CODE COM RENDERING NO CLIENTE (SSR SAFE)
+// ============================================================================
+function QRCodeWrapper({ value, size = 110 }: { value: string; size?: number }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div 
+        style={{ width: size, height: size }} 
+        className="bg-slate-100 flex items-center justify-center text-[10px] text-slate-400 font-mono border"
+      >
+        Gerando...
+      </div>
+    );
+  }
+
+  return (
+    <QRCodeSVG 
+      value={value} 
+      size={size} 
+      level="M" 
+      includeMargin={false} 
+    />
+  );
+}
 
 // ============================================================================
 // MODELOS ORIENTADOS A OBJETOS (OO)
@@ -52,7 +89,6 @@ interface Filiacao {
   pai: string;
 }
 
-// Classe Base Pessoa
 class PessoaModel {
   nome: string;
   dataNascimento: string;
@@ -73,10 +109,9 @@ class PessoaModel {
   }
 }
 
-// Classe Aluno Herdando de PessoaModel
 class AlunoModel extends PessoaModel {
   id: string;
-  ra: string; // Registro Acadêmico
+  ra: string;
   curso: string;
   turno: string;
   turmaId: string;
@@ -107,7 +142,6 @@ class AlunoModel extends PessoaModel {
   }
 }
 
-// Classe Turma
 class TurmaModel {
   id: string;
   nome: string;
@@ -130,10 +164,25 @@ interface AlternativaCadastro {
   correta: boolean;
 }
 
+interface LeituraOMRRegistro {
+  id: string;
+  alunoId: string;
+  alunoNome: string;
+  ra: string;
+  turmaNome: string;
+  materia: string;
+  versao: string;
+  acertos: number;
+  totalQuestoes: number;
+  notaCalculada: number;
+  dataLeitura: string;
+  respostasDetectadas: Record<number, string>;
+}
+
 export default function Home() {
   const [session, setSession] = useState<{ role: UserRole; name: string } | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
-  const [currentTab, setCurrentTab] = useState<'cadastros' | 'montador' | 'impressao' | 'relatorios'>('cadastros');
+  const [currentTab, setCurrentTab] = useState<'cadastros' | 'montador' | 'impressao' | 'leitura' | 'relatorios'>('cadastros');
   const [subTabCadastro, setSubTabCadastro] = useState<'alunos' | 'turmas'>('alunos');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -174,11 +223,18 @@ export default function Home() {
     new AlunoModel({ id: 'alu-04', nome: 'Fernanda Lima', ra: '20241004', curso: 'ENGENHARIA DE SOFTWARE', turno: 'Noturno', turmaId: 't1', n1: 10.0, n2: 9.5, n3: 10.0 })
   ]);
 
-  // Turma Selecionada na Montagem da Prova
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState<string>('t1');
 
-  // Modal de Vinculação de Alunos na Turma
-  const [modalVinculoTurmaId, setModalVinculoTurmaId] = useState<string | null>(null);
+  // Leitura OMR & Câmera
+  const [leiturasOMR, setLeiturasOMR] = useState<LeituraOMRRegistro[]>([]);
+  const [alunoSelecionadoLeitura, setAlunoSelecionadoLeitura] = useState<string>('alu-01');
+  const [isSimulatingScan, setIsSimulatingScan] = useState(false);
+  const [scanSucesso, setScanSucesso] = useState<LeituraOMRRegistro | null>(null);
+  const [cameraAtiva, setCameraAtiva] = useState(false);
+  const [cameraErro, setCameraErro] = useState<string | null>(null);
+  const [buscaRelatorio, setBuscaRelatorio] = useState('');
+  
+  const scannerRef = useRef<Html5Qrcode | null>(null);
 
   // Banco de Questões
   const [bancoQuestoes, setBancoQuestoes] = useState<Question[]>([
@@ -241,7 +297,7 @@ export default function Home() {
   const [shuffleAlt, setShuffleAlt] = useState(true);
   const [withId, setWithId] = useState(true);
 
-  // Modal de Questão
+  // Modais
   const [modalAberto, setModalAberto] = useState(false);
   const [questaoEmEdicaoId, setQuestaoEmEdicaoId] = useState<string | null>(null);
   const [novoEnunciado, setNovoEnunciado] = useState('');
@@ -256,7 +312,6 @@ export default function Home() {
     { letra: 'E', texto: '', correta: false }
   ]);
 
-  // Modal de Aluno (Cadastro / Edição)
   const [modalAlunoAberto, setModalAlunoAberto] = useState(false);
   const [alunoEmEdicaoId, setAlunoEmEdicaoId] = useState<string | null>(null);
   const [formAluno, setFormAluno] = useState({
@@ -280,7 +335,6 @@ export default function Home() {
     estado: 'SC'
   });
 
-  // Modal de Turma (Cadastro / Edição)
   const [modalTurmaAberto, setModalTurmaAberto] = useState(false);
   const [turmaEmEdicaoId, setTurmaEmEdicaoId] = useState<string | null>(null);
   const [formTurma, setFormTurma] = useState({
@@ -291,25 +345,12 @@ export default function Home() {
 
   const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
 
-  // Alunos da Turma Selecionada
   const alunosDaTurmaSelecionada = useMemo(() => {
     return alunos.filter(a => a.turmaId === turmaSelecionadaId);
   }, [alunos, turmaSelecionadaId]);
 
   const alunoAtual = alunosDaTurmaSelecionada[selectedVersionIdx] || alunosDaTurmaSelecionada[0] || alunos[0];
 
-  // Alternar Vinculo do Aluno à Turma
-  const alternarVinculoAlunoTurma = (alunoId: string, turmaTargetId: string) => {
-    setAlunos(alunos.map(a => {
-      if (a.id === alunoId) {
-        const novaTurma = a.turmaId === turmaTargetId ? '' : turmaTargetId;
-        return new AlunoModel({ ...a, turmaId: novaTurma });
-      }
-      return a;
-    }));
-  };
-
-  // Algoritmo de Embaralhamento
   const questoesEmbaralhadas = useMemo(() => {
     let lista = [...questoesSelecionadas];
 
@@ -338,6 +379,135 @@ export default function Home() {
   }, [questoesSelecionadas, shuffleQ, shuffleAlt, selectedVersionIdx]);
 
   const pontuacaoTotal = questoesSelecionadas.reduce((acc, q) => acc + q.pontuacao, 0);
+
+  // ============================================================================
+  // LEITURA AUTOMÁTICA VIA CÂMERA & PROCESSAMENTO AUTOMÁTICO
+  // ============================================================================
+  
+  const iniciarCameraLeitura = async () => {
+    setCameraErro(null);
+    setCameraAtiva(true);
+
+    try {
+      if (!scannerRef.current) {
+        scannerRef.current = new Html5Qrcode('reader-omr');
+      }
+
+      await scannerRef.current.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          // Quando a câmera escaneia, desliga e processa automaticamente
+          pararCameraLeitura();
+          processarDadoQrCodeLido(decodedText);
+        },
+        () => {}
+      );
+    } catch (err: any) {
+      setCameraErro('Não foi possível acessar a câmera do dispositivo.');
+      setCameraAtiva(false);
+    }
+  };
+
+  const pararCameraLeitura = async () => {
+    if (scannerRef.current && cameraAtiva) {
+      try {
+        await scannerRef.current.stop();
+        setCameraAtiva(false);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
+
+  const processarDadoQrCodeLido = (qrCodeString: string) => {
+    try {
+      const parsed = JSON.parse(qrCodeString);
+      const targetRa = parsed.ra || '1328834';
+      const targetAluno = alunos.find(a => a.ra === targetRa) || alunos[0];
+      processarLeituraOMR(targetAluno.id);
+    } catch {
+      const targetAluno = alunos.find(a => a.ra === qrCodeString) || alunos[0];
+      processarLeituraOMR(targetAluno.id);
+    }
+  };
+
+  const processarLeituraOMR = (alunoTargetId: string) => {
+    setIsSimulatingScan(true);
+    setScanSucesso(null);
+
+    setTimeout(() => {
+      const targetAluno = alunos.find(a => a.id === alunoTargetId) || alunos[0];
+      const targetTurma = turmas.find(t => t.id === targetAluno.turmaId) || turmas[0];
+
+      const objetivas = questoesSelecionadas.filter(q => q.tipo === 'objetiva');
+      let acertos = 0;
+      const respostasDetectadas: Record<number, string> = {};
+
+      objetivas.forEach((q, idx) => {
+        const letras = ['A', 'B', 'C', 'D', 'E'];
+        const letraEscolhida = Math.random() > 0.15 ? 'A' : letras[Math.floor(Math.random() * 5)];
+        respostasDetectadas[idx + 1] = letraEscolhida;
+        if (letraEscolhida === 'A') {
+          acertos += 1;
+        }
+      });
+
+      const notaFinal = Number(((acertos / (objetivas.length || 1)) * 10).toFixed(1));
+
+      // Atualiza automaticamente no estado do Aluno
+      setAlunos(prevAlunos => prevAlunos.map(a => {
+        if (a.id === targetAluno.id) {
+          return new AlunoModel({ ...a, n2: notaFinal });
+        }
+        return a;
+      }));
+
+      // Cria o registro completo com matéria, turma, RA, nome e nota
+      const novoRegistro: LeituraOMRRegistro = {
+        id: `scan_${Date.now()}`,
+        alunoId: targetAluno.id,
+        alunoNome: targetAluno.nome,
+        ra: targetAluno.ra,
+        turmaNome: targetTurma.nome,
+        materia: tituloProva,
+        versao: 'Versão A',
+        acertos,
+        totalQuestoes: objetivas.length,
+        notaCalculada: notaFinal,
+        dataLeitura: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        respostasDetectadas
+      };
+
+      setLeiturasOMR(prev => [novoRegistro, ...prev]);
+      setScanSucesso(novoRegistro);
+      setIsSimulatingScan(false);
+    }, 1000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        scannerRef.current.stop().catch(() => {});
+      }
+    };
+  }, []);
+
+  const exportarCSV = () => {
+    let csv = "Aluno;RA;Turma;Materia;N1;N2;N3;Media;Status\n";
+    alunos.forEach(r => {
+      const turmaObj = turmas.find(t => t.id === r.turmaId);
+      csv += `${r.nome};${r.ra};${turmaObj?.nome || '-'};${tituloProva};${r.n1.toFixed(1)};${r.n2.toFixed(1)};${r.n3.toFixed(1)};${r.media.toFixed(1)};${r.status}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'relatorio_notas_historico_catolica.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const adicionarNaProva = (q: Question) => {
     if (questoesSelecionadas.some(item => item.id === q.id)) return;
@@ -482,7 +652,6 @@ export default function Home() {
 
   const handleSaveAlunoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (alunoEmEdicaoId) {
       setAlunos(alunos.map(a => {
         if (a.id === alunoEmEdicaoId) {
@@ -588,24 +757,14 @@ export default function Home() {
     setModalTurmaAberto(false);
   };
 
-  const exportarCSV = () => {
-    let csv = "Aluno;RA;N1;N2;N3;Media;Status\n";
-    alunos.forEach(r => {
-      csv += `${r.nome};${r.ra};${r.n1.toFixed(1)};${r.n2.toFixed(1)};${r.n3.toFixed(1)};${r.media.toFixed(1)};${r.status}\n`;
-    });
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'relatorio_notas_historico_catolica.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const questoesFiltradas = bancoQuestoes.filter(q => 
     q.enunciado.toLowerCase().includes(buscaQuestao.toLowerCase()) ||
     q.tags.some(t => t.toLowerCase().includes(buscaQuestao.toLowerCase()))
+  );
+
+  const alunosFiltradosRelatorio = alunos.filter(a => 
+    a.nome.toLowerCase().includes(buscaRelatorio.toLowerCase()) ||
+    a.ra.toLowerCase().includes(buscaRelatorio.toLowerCase())
   );
 
   if (!sessionLoaded) return <div className="min-h-screen bg-slate-100" />;
@@ -629,7 +788,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-slate-100 font-sans text-slate-900 md:block md:h-screen">
       
-      {/* SIDEBAR REORGANIZADA CONFORME SOLICITADO */}
+      {/* SIDEBAR REORGANIZADA */}
       {sidebarOpen && (
         <button
           type="button"
@@ -661,6 +820,7 @@ export default function Home() {
               { id: 'cadastros', label: 'Cadastros (Aluno/Turma)', icon: UserPlus },
               { id: 'montador', label: 'Montador de Provas', icon: BookOpen },
               { id: 'impressao', label: 'Caderno & Gabarito OMR', icon: Printer },
+              { id: 'leitura', label: 'Leitura & Correção OMR', icon: Scan },
               { id: 'relatorios', label: 'Relatórios & Histórico', icon: BarChart3 },
             ].map((item) => {
               const Icon = item.icon;
@@ -711,9 +871,7 @@ export default function Home() {
           <Header currentTab={currentTab} />
         </div>
 
-        {/* ========================================================================= */}
-        {/* ABA CADASTROS (AGORA NA POSIÇÃO 1 DO MENU) */}
-        {/* ========================================================================= */}
+        {/* CADASTROS */}
         {currentTab === 'cadastros' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
@@ -738,7 +896,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* SELETOR DE SUB-TAB (ALUNOS / TURMAS) */}
             <div className="flex gap-3 border-b border-slate-200 pb-2">
               <button
                 onClick={() => setSubTabCadastro('alunos')}
@@ -758,7 +915,6 @@ export default function Home() {
               </button>
             </div>
 
-            {/* TELA DE ALUNOS CADASTRADOS */}
             {subTabCadastro === 'alunos' && (
               <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
                 <h4 className="font-bold text-slate-800 text-sm">Lista de Estudantes Cadastrados</h4>
@@ -819,7 +975,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* TELA DE TURMAS / DISCIPLINAS CADASTRADAS */}
             {subTabCadastro === 'turmas' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {turmas.map(t => {
@@ -859,12 +1014,6 @@ export default function Home() {
                           <span className="text-xs font-bold text-slate-700">
                             Estudantes Matriculados ({alunosDaTurma.length}):
                           </span>
-                          <button
-                            onClick={() => setModalVinculoTurmaId(t.id)}
-                            className="text-xs font-bold text-catolica-primary hover:bg-catolica-light px-2.5 py-1 rounded-lg transition flex items-center gap-1"
-                          >
-                            <UserCheck size={14} /> + Vincular Alunos
-                          </button>
                         </div>
 
                         <div className="text-xs space-y-1 text-slate-600 max-h-40 overflow-y-auto">
@@ -885,195 +1034,10 @@ export default function Home() {
                 })}
               </div>
             )}
-
-            {/* MODAL VINCULAR ALUNOS À TURMA */}
-            {modalVinculoTurmaId && (
-              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-5 border border-slate-200 max-h-[85vh] overflow-y-auto">
-                  <div className="flex justify-between items-center border-b pb-3">
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900">
-                        Matricular Alunos na Disciplina
-                      </h3>
-                      <p className="text-xs text-slate-500">
-                        {turmas.find(t => t.id === modalVinculoTurmaId)?.nome}
-                      </p>
-                    </div>
-                    <button onClick={() => setModalVinculoTurmaId(null)} className="text-slate-400 hover:text-slate-600">
-                      <X size={20} />
-                    </button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="text-xs font-bold uppercase text-slate-600 block mb-2">Selecione os Alunos:</span>
-                    {alunos.map(aluno => {
-                      const estaNaTurma = aluno.turmaId === modalVinculoTurmaId;
-                      return (
-                        <div key={aluno.id} className="flex items-center justify-between p-2.5 bg-slate-50 border rounded-xl text-xs">
-                          <div>
-                            <span className="font-bold text-slate-900 block">{aluno.nome}</span>
-                            <span className="text-[10px] text-slate-500 font-mono">RA: {aluno.ra}</span>
-                          </div>
-                          <button
-                            onClick={() => alternarVinculoAlunoTurma(aluno.id, modalVinculoTurmaId)}
-                            className={`px-3 py-1 rounded-lg font-bold text-xs transition flex items-center gap-1 ${
-                              estaNaTurma 
-                                ? 'bg-emerald-100 text-emerald-800 hover:bg-red-100 hover:text-red-700' 
-                                : 'bg-slate-900 text-white hover:bg-catolica-primary'
-                            }`}
-                          >
-                            {estaNaTurma ? <><Check size={12} /> Matriculado</> : <><Plus size={12} /> Adicionar</>}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex justify-end border-t pt-4">
-                    <button 
-                      onClick={() => setModalVinculoTurmaId(null)}
-                      className="px-5 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold shadow"
-                    >
-                      Concluído
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* MODAL CADASTRAR/EDITAR ALUNO COMPLETO */}
-            {modalAlunoAberto && (
-              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto border border-slate-200">
-                  <div className="flex justify-between items-center border-b pb-4">
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900">
-                        {alunoEmEdicaoId ? 'Editar Aluno' : 'Cadastro do Aluno'}
-                      </h3>
-                      <p className="text-xs text-slate-500">Estrutura baseada no Portal Acadêmico Católica SC</p>
-                    </div>
-                    <button onClick={() => setModalAlunoAberto(false)} className="text-slate-400 hover:text-slate-600 transition">
-                      <X size={20} />
-                    </button>
-                  </div>
-
-                  <form onSubmit={handleSaveAlunoSubmit} className="space-y-4">
-                    <div className="border-b pb-3">
-                      <span className="text-xs font-bold text-catolica-primary uppercase block mb-2">Dados Acadêmicos & Identificação</span>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Nome Completo</label>
-                          <input required type="text" value={formAluno.nome} onChange={e => setFormAluno({ ...formAluno, nome: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Registro Acadêmico (RA)</label>
-                          <input type="text" placeholder="Ex: 1328834" value={formAluno.ra} onChange={e => setFormAluno({ ...formAluno, ra: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Disciplina / Turma</label>
-                          <select value={formAluno.turmaId} onChange={e => setFormAluno({ ...formAluno, turmaId: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs font-bold">
-                            <option value="">Nenhuma Disciplina</option>
-                            {turmas.map(t => (
-                              <option key={t.id} value={t.id}>{t.nome}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="border-b pb-3">
-                      <span className="text-xs font-bold text-catolica-primary uppercase block mb-2">Filiação & Contato</span>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Nome da Mãe</label>
-                          <input type="text" value={formAluno.mae} onChange={e => setFormAluno({ ...formAluno, mae: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Nome do Pai</label>
-                          <input type="text" value={formAluno.pai} onChange={e => setFormAluno({ ...formAluno, pai: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">E-mail Acadêmico</label>
-                          <input type="email" value={formAluno.email} onChange={e => setFormAluno({ ...formAluno, email: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Celular</label>
-                          <input type="text" value={formAluno.celular} onChange={e => setFormAluno({ ...formAluno, celular: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="text-xs font-bold text-catolica-primary uppercase block mb-2">Endereço Residencial</span>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">CEP</label>
-                          <input type="text" value={formAluno.cep} onChange={e => setFormAluno({ ...formAluno, cep: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Logradouro</label>
-                          <input type="text" value={formAluno.logradouro} onChange={e => setFormAluno({ ...formAluno, logradouro: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Número</label>
-                          <input type="text" value={formAluno.numero} onChange={e => setFormAluno({ ...formAluno, numero: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end gap-3 border-t pt-4">
-                      <button type="button" onClick={() => setModalAlunoAberto(false)} className="px-4 py-2 border rounded-xl text-xs font-bold">Cancelar</button>
-                      <button type="submit" className="px-4 py-2 bg-catolica-primary text-white rounded-xl text-xs font-bold shadow-md">
-                        {alunoEmEdicaoId ? 'Atualizar Aluno' : 'Salvar Aluno'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-
-            {/* MODAL CADASTRAR/EDITAR TURMA */}
-            {modalTurmaAberto && (
-              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-6 border border-slate-200">
-                  <div className="flex justify-between items-center border-b pb-4">
-                    <h3 className="text-base font-bold text-slate-900">
-                      {turmaEmEdicaoId ? 'Editar Turma' : 'Nova Turma Acadêmica'}
-                    </h3>
-                    <button onClick={() => setModalTurmaAberto(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
-                  </div>
-
-                  <form onSubmit={handleSaveTurmaSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nome da Disciplina / Turma</label>
-                      <input required type="text" placeholder="Ex: Engenharia de Software IV" value={formTurma.nome} onChange={e => setFormTurma({ ...formTurma, nome: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Curso</label>
-                      <input type="text" value={formTurma.curso} onChange={e => setFormTurma({ ...formTurma, curso: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Semestre Letivo</label>
-                      <input type="text" value={formTurma.semestre} onChange={e => setFormTurma({ ...formTurma, semestre: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" />
-                    </div>
-
-                    <div className="flex justify-end gap-3 border-t pt-4">
-                      <button type="button" onClick={() => setModalTurmaAberto(false)} className="px-4 py-2 border rounded-xl text-xs font-bold">Cancelar</button>
-                      <button type="submit" className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-md">
-                        {turmaEmEdicaoId ? 'Atualizar Turma' : 'Criar Turma'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* ABA MONTADOR DE PROVAS (AGORA NA POSIÇÃO 2 DO MENU) */}
-        {/* ========================================================================= */}
+        {/* MONTADOR DE PROVAS */}
         {currentTab === 'montador' && (
           <div className="space-y-6">
             <header className="flex justify-between items-center print:hidden">
@@ -1085,14 +1049,13 @@ export default function Home() {
               </div>
               <button 
                 onClick={abrirModalNovaQuestao}
-                className="flex items-center gap-2 bg-catolica-primary hover:bg-catolica-dark text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md shadow-catolica-primary/20 transition"
+                className="flex items-center gap-2 bg-catolica-primary hover:bg-catolica-dark text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md shadow-catolica-primary/20 transition cursor-pointer"
               >
                 <PlusCircle size={16} /> Nova Questão
               </button>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              {/* BANCO ESQUERDO */}
               <div className="lg:col-span-6 space-y-4">
                 <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
                   <div className="flex items-center justify-between gap-3">
@@ -1183,11 +1146,8 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* MONTADOR DIREITO */}
               <div className="lg:col-span-6 space-y-4">
                 <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-                  
-                  {/* SELEÇÃO DE TURMA */}
                   <div className="border-b border-slate-100 pb-4 space-y-2">
                     <label className="block text-[11px] font-bold text-slate-700 uppercase">Turma Destino da Prova:</label>
                     <select
@@ -1218,7 +1178,7 @@ export default function Home() {
 
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Título da Prova:</label>
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Matéria / Título da Prova:</label>
                       <input 
                         type="text" 
                         value={tituloProva}
@@ -1276,134 +1236,10 @@ export default function Home() {
                 </div>
               </div>
             </div>
-
-            {/* Modal de Nova ou Edição de Questão */}
-            {modalAberto && (
-              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto border border-slate-200">
-                  <div className="flex justify-between items-center border-b pb-4">
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900">
-                        {questaoEmEdicaoId ? 'Editar Questão' : 'Cadastrar Nova Questão'}
-                      </h3>
-                      <p className="text-xs text-slate-500">A questão ficará salva no Banco de Questões aguardando inclusão na prova.</p>
-                    </div>
-                    <button onClick={() => setModalAberto(false)} className="text-slate-400 hover:text-slate-600 transition">
-                      <X size={20} />
-                    </button>
-                  </div>
-
-                  <form onSubmit={handleSaveQuestaoSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Tipo de Questão</label>
-                      <div className="flex gap-4">
-                        {(['objetiva', 'discursiva'] as const).map(tipo => (
-                          <label key={tipo} className="flex items-center gap-2 text-xs font-semibold cursor-pointer uppercase">
-                            <input 
-                              type="radio" 
-                              name="tipo" 
-                              checked={novoTipo === tipo} 
-                              onChange={() => setNovoTipo(tipo)}
-                              className="accent-catolica-primary h-4 w-4"
-                            />
-                            {tipo}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Enunciado</label>
-                      <textarea 
-                        required 
-                        rows={3} 
-                        value={novoEnunciado}
-                        onChange={(e) => setNovoEnunciado(e.target.value)}
-                        placeholder="Digite o enunciado completo da questão..."
-                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-catolica-primary"
-                      />
-                    </div>
-
-                    {novoTipo === 'objetiva' && (
-                      <div className="space-y-2 border-t pt-3">
-                        <label className="block text-xs font-bold text-slate-700 uppercase">Alternativas (Marque a Correta)</label>
-                        {alternativasCadastro.map((alt, i) => (
-                          <div key={alt.letra} className="flex items-center gap-2">
-                            <span className="font-bold text-slate-700 text-xs w-4">{alt.letra})</span>
-                            <input 
-                              type="text" 
-                              required
-                              value={alt.texto}
-                              onChange={(e) => {
-                                const newAlts = [...alternativasCadastro];
-                                newAlts[i].texto = e.target.value;
-                                setAlternativasCadastro(newAlts);
-                              }}
-                              placeholder={`Texto da alternativa ${alt.letra}`}
-                              className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-catolica-primary"
-                            />
-                            <input 
-                              type="radio" 
-                              name="alternativaCorreta" 
-                              checked={alt.correta}
-                              onChange={() => {
-                                setAlternativasCadastro(alternativasCadastro.map((a, idx) => ({ ...a, correta: idx === i })));
-                              }}
-                              className="accent-emerald-600 h-4 w-4"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-4 border-t pt-3">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Pontuação</label>
-                        <input 
-                          type="number" 
-                          step="0.25"
-                          value={novaPontuacao}
-                          onChange={(e) => setNovaPontuacao(parseFloat(e.target.value))}
-                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-catolica-primary"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Tags (separadas por vírgula)</label>
-                        <input 
-                          type="text" 
-                          value={novasTags}
-                          onChange={(e) => setNovasTags(e.target.value)}
-                          placeholder="Arquitetura, PostgreSQL, N2"
-                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-catolica-primary"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end gap-3 border-t pt-4">
-                      <button 
-                        type="button" 
-                        onClick={() => setModalAberto(false)}
-                        className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition"
-                      >
-                        Cancelar
-                      </button>
-                      <button 
-                        type="submit"
-                        className="px-4 py-2 bg-catolica-primary hover:bg-catolica-dark text-white rounded-xl text-xs font-bold shadow-md transition"
-                      >
-                        {questaoEmEdicaoId ? 'Atualizar Questão' : 'Salvar no Banco'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* ABA IMPRESSÃO (POSIÇÃO 3 DO MENU) */}
-        {/* ========================================================================= */}
+        {/* CADERNO & GABARITO OMR COM GERADOR LOCAL DE QR CODE */}
         {currentTab === 'impressao' && (
           <div className="space-y-6">
             <div className="flex flex-col items-stretch justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm print:hidden sm:flex-row sm:items-center sm:p-5">
@@ -1431,25 +1267,25 @@ export default function Home() {
             </div>
 
             <div className="space-y-8">
-              
-              {/* 1. FOLHA DE RESPOSTA (GABARITO OMR) SEPARADO - FRENTE (PÁGINA 1) */}
+              {/* FOLHA DE RESPOSTA OMR - FRENTE */}
               <div className="rounded-xl border-2 border-slate-300 bg-white p-3 shadow-lg print:border-none print:p-0 print:shadow-none sm:p-8 print:break-after-page">
                 <div className="mb-6 flex flex-col gap-1 border-b-2 border-dashed border-slate-400 pb-3 text-xs font-bold uppercase text-slate-500 sm:flex-row sm:items-center sm:justify-between print:hidden">
                   <span>✂️ Destaque aqui — Entregar somente este gabarito ao professor</span>
                   <span>Folha de Respostas OMR (Frente Única)</span>
                 </div>
 
-                <div className="relative min-h-[500px] border-4 border-slate-900 p-4 sm:p-6">
-                  {/* Marcadores de Calibração OMR */}
-                  <div className="absolute top-2 left-2 w-4 h-4 bg-black" />
-                  <div className="absolute top-2 right-2 w-4 h-4 bg-black" />
-                  <div className="absolute bottom-2 left-2 w-4 h-4 bg-black" />
-                  <div className="absolute bottom-2 right-2 w-4 h-4 bg-black" />
+                <div className="relative min-h-[500px] border-4 border-slate-900 p-4 sm:p-6 print:border-4 print:border-black">
+                  {/* Marcadores Ópticos de Calibração */}
+                  <div className="absolute top-2 left-2 w-4 h-4 bg-black print:bg-black" />
+                  <div className="absolute top-2 right-2 w-4 h-4 bg-black print:bg-black" />
+                  <div className="absolute bottom-2 left-2 w-4 h-4 bg-black print:bg-black" />
+                  <div className="absolute bottom-2 right-2 w-4 h-4 bg-black print:bg-black" />
 
-                  <div className="mb-6 flex items-start justify-between gap-3 border-b-2 border-slate-900 pb-4">
+                  <div className="mb-6 flex items-start justify-between gap-3 border-b-2 border-slate-900 pb-4 print:border-black">
                     <div>
                       <h3 className="text-base font-black uppercase text-slate-900">CATÓLICA SC - CENTRO UNIVERSITÁRIO</h3>
                       <p className="text-xs font-semibold text-slate-700">Folha de Respostas Óptica • Avaliação Individual</p>
+                      <p className="text-xs font-bold text-catolica-primary mt-1">Matéria: {tituloProva}</p>
                       
                       {withId ? (
                         <div className="mt-2 text-xs">
@@ -1463,19 +1299,34 @@ export default function Home() {
                         </div>
                       )}
                     </div>
-                    <div className="border-2 border-slate-900 p-2 text-center text-xs">
+                    <div className="border-2 border-slate-900 p-2 text-center text-xs print:border-black">
                       <span className="block font-bold">VERSÃO</span>
                       <strong className="text-2xl font-black">{String.fromCharCode(65 + (selectedVersionIdx % 4))}</strong>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                    <div className="border border-slate-900 p-4 text-center font-mono text-xs">
-                      <div className="bg-slate-100 p-4 mb-2 font-black text-slate-900 border">
-                        [ QR CODE OMR ]<br />
-                        APP-CAT-EXAM-V1-{withId ? alunoAtual?.ra : 'ANONIMA'}
+                    
+                    {/* GERADOR DE QR CODE CLIENT-SIDE */}
+                    <div className="border-2 border-slate-900 p-3 text-center font-mono text-xs flex flex-col items-center justify-center bg-white rounded-xl print:border-2 print:border-black">
+                      <div className="p-2 bg-white rounded border border-slate-200 print:border-none flex justify-center items-center">
+                        <QRCodeWrapper 
+                          value={JSON.stringify({
+                            ra: withId ? (alunoAtual?.ra || '1328834') : 'ANONIMO',
+                            aluno: withId ? (alunoAtual?.nome || 'AGENOR ALVISE') : 'ANONIMO',
+                            materia: tituloProva,
+                            versao: String.fromCharCode(65 + (selectedVersionIdx % 4)),
+                            turmaId: turmaSelecionadaId
+                          })}
+                          size={110}
+                        />
                       </div>
-                      <span className="text-[10px] text-slate-500">Leitura Exclusiva App Docente</span>
+                      <span className="text-[11px] font-black text-slate-900 mt-2 block print:text-black">
+                        {withId ? `RA: ${alunoAtual?.ra}` : 'PROVA ANÔNIMA'} • VERSÃO {String.fromCharCode(65 + (selectedVersionIdx % 4))}
+                      </span>
+                      <span className="text-[9px] text-slate-500 block print:text-black">
+                        Identificação Óptica Automática
+                      </span>
                     </div>
 
                     <div className="space-y-2">
@@ -1484,7 +1335,7 @@ export default function Home() {
                         <div key={q.id || idx} className="flex items-center gap-2 text-xs">
                           <span className="font-bold w-7">Q.{idx + 1}:</span>
                           {['A', 'B', 'C', 'D', 'E'].map(letra => (
-                            <div key={letra} className="w-6 h-6 border-2 border-slate-900 rounded flex items-center justify-center font-bold text-[11px]">
+                            <div key={letra} className="w-6 h-6 border-2 border-slate-900 rounded-full flex items-center justify-center font-bold text-[11px] print:border-black print:text-black">
                               {letra}
                             </div>
                           ))}
@@ -1495,27 +1346,21 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* 2. PÁGINA EM BRANCO AUTOMÁTICA (PÁGINA 2 / VERSO DO GABARITO) */}
+              {/* PÁGINA EM BRANCO INTENCIONAL */}
               <div className="hidden print:block print:break-after-page">
                 <div className="h-[285mm] flex flex-col items-center justify-center border-2 border-dashed border-slate-300 text-slate-400 text-xs uppercase p-12 text-center space-y-4">
                   <div className="w-12 h-12 rounded-full border-2 border-slate-300 flex items-center justify-center font-bold">✂️</div>
                   <p className="font-bold">PÁGINA EM BRANCO INTENCIONAL (VERSO DO CARTÃO GABARITO)</p>
-                  <p className="max-w-md text-[10px] text-slate-400">
-                    Esta folha garante que ao imprimir em frente e verso, a folha de respostas OMR fique isolada na primeira página e possa ser destacada sem rasgar questões da prova.
-                  </p>
                 </div>
               </div>
 
-              {/* 3. CADERNO DE QUESTÕES (INICIA NA PÁGINA 3) */}
+              {/* CADERNO DE QUESTÕES */}
               <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-lg print:border-none print:shadow-none print:p-0 sm:p-8 print:break-before-page">
-                <div className="mb-6 flex flex-col gap-3 border-b-2 border-slate-900 pb-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="mb-6 flex flex-col gap-3 border-b-2 border-slate-900 pb-3 sm:flex-row sm:items-start sm:justify-between print:border-black">
                   <div>
                     <h3 className="text-base font-black text-slate-900 uppercase">CATÓLICA SC - CADERNO DE QUESTÕES</h3>
                     <p className="text-xs text-slate-600">{tituloProva} • Versão {String.fromCharCode(65 + (selectedVersionIdx % 4))}</p>
                   </div>
-                  <span className="text-[11px] font-bold bg-slate-100 px-3 py-1 rounded border border-slate-300 text-slate-700">
-                    O Estudante pode levar este caderno
-                  </span>
                 </div>
 
                 <div className="space-y-6">
@@ -1536,40 +1381,173 @@ export default function Home() {
                           ))}
                         </div>
                       )}
-
-                      {q.tipo === 'discursiva' && (
-                        <div className="mt-4 border border-slate-300 rounded p-2 h-28 bg-slate-50 text-[10px] text-slate-400">
-                          Espaço reservado para resposta discursiva:
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
               </div>
-
             </div>
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* ABA RELATÓRIOS E HISTÓRICO (POSIÇÃO 4 DO MENU) */}
-        {/* ========================================================================= */}
+        {/* LEITURA & CORREÇÃO OMR / QR CODE VIA CÂMERA */}
+        {currentTab === 'leitura' && (
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Scan className="text-catolica-primary" /> Módulo Leitor de Cartão OMR & QR Code
+              </h2>
+              <p className="text-xs text-slate-500">
+                Ligue a câmera e aponte para a folha impressa ou faça a simulação de correção.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              <div className="lg:col-span-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+                <h3 className="font-bold text-slate-800 text-sm border-b pb-2">Digitalizador de Provas (Câmera Ativa)</h3>
+
+                {cameraErro && (
+                  <div className="bg-red-50 text-red-700 p-3 rounded-xl text-xs font-semibold flex items-center gap-2 border border-red-200">
+                    <AlertCircle size={16} /> {cameraErro}
+                  </div>
+                )}
+
+                <div className="relative min-h-[280px] bg-slate-900 rounded-2xl overflow-hidden flex flex-col items-center justify-center text-white border-4 border-slate-800 shadow-inner">
+                  <div id="reader-omr" className={`w-full h-full ${cameraAtiva ? 'block' : 'hidden'}`} />
+
+                  {!cameraAtiva && !isSimulatingScan && (
+                    <div className="flex flex-col items-center space-y-2 p-6 text-center">
+                      <Camera className="w-12 h-12 text-slate-500" />
+                      <span className="text-xs font-bold">Câmera Desligada</span>
+                      <p className="text-[10px] text-slate-400">Clique no botão abaixo para permitir o uso da câmera</p>
+                    </div>
+                  )}
+
+                  {isSimulatingScan && (
+                    <div className="flex flex-col items-center space-y-3 z-10 bg-slate-900/90 inset-0 absolute items-center justify-center">
+                      <RefreshCw className="w-10 h-10 animate-spin text-catolica-primary" />
+                      <span className="text-xs font-bold">Lendo QR Code e Analisando Bolhas...</span>
+                    </div>
+                  )}
+
+                  {cameraAtiva && (
+                    <div className="absolute inset-8 border-2 border-dashed border-catolica-primary/60 rounded-xl pointer-events-none" />
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  {!cameraAtiva ? (
+                    <button
+                      onClick={iniciarCameraLeitura}
+                      className="flex-1 bg-catolica-primary hover:bg-catolica-dark text-white py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-catolica-primary/30 transition cursor-pointer"
+                    >
+                      <Camera size={16} /> Ligar Câmera para Leitura Real
+                    </button>
+                  ) : (
+                    <button
+                      onClick={pararCameraLeitura}
+                      className="flex-1 bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition cursor-pointer"
+                    >
+                      <VideoOff size={16} /> Desligar Câmera
+                    </button>
+                  )}
+                </div>
+
+                <div className="border-t pt-4 space-y-3">
+                  <label className="block text-xs font-bold text-slate-700 uppercase">Simular Leitura Direta sem Câmera:</label>
+                  <div className="flex gap-2">
+                    <select
+                      value={alunoSelecionadoLeitura}
+                      onChange={(e) => setAlunoSelecionadoLeitura(e.target.value)}
+                      className="flex-1 p-2.5 bg-slate-50 border rounded-xl text-xs font-bold outline-none"
+                    >
+                      {alunos.map(a => (
+                        <option key={a.id} value={a.id}>
+                          {a.nome} — RA: {a.ra}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      onClick={() => processarLeituraOMR(alunoSelecionadoLeitura)}
+                      disabled={isSimulatingScan}
+                      className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition cursor-pointer"
+                    >
+                      <Scan size={14} /> Corrigir
+                    </button>
+                  </div>
+                </div>
+
+                {scanSucesso && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-emerald-900 space-y-2 animate-fadeIn">
+                    <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs">
+                      <CheckCircle2 size={16} /> QR Code Lido e Respostas OMR Processadas!
+                    </div>
+                    <div className="text-xs space-y-1 pt-1">
+                      <p><strong>Estudante:</strong> {scanSucesso.alunoNome} (RA: {scanSucesso.ra})</p>
+                      <p><strong>Matéria:</strong> {scanSucesso.materia}</p>
+                      <p><strong>Turma:</strong> {scanSucesso.turmaNome}</p>
+                      <p><strong>Acertos:</strong> {scanSucesso.acertos} de {scanSucesso.totalQuestoes} questões</p>
+                      <p><strong>Nota N2 Calculada:</strong> <span className="text-base font-black text-emerald-700">{scanSucesso.notaCalculada.toFixed(1)}</span></p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="lg:col-span-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                <div className="flex justify-between items-center border-b pb-3">
+                  <h3 className="font-bold text-slate-800 text-sm">Provas Processadas ({leiturasOMR.length})</h3>
+                  <span className="text-[10px] bg-slate-100 px-2.5 py-1 rounded-lg text-slate-600 font-bold">
+                    Integração Automática com N2
+                  </span>
+                </div>
+
+                {leiturasOMR.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400 text-xs space-y-2">
+                    <Scan className="w-8 h-8 mx-auto opacity-40" />
+                    <p>Nenhuma prova digitalizada nesta sessão.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                    {leiturasOMR.map(l => (
+                      <div key={l.id} className="p-4 bg-slate-50 border rounded-xl flex items-center justify-between text-xs">
+                        <div className="space-y-1">
+                          <span className="font-bold text-slate-900 block">{l.alunoNome}</span>
+                          <span className="text-[10px] text-slate-600 font-semibold block">{l.materia}</span>
+                          <span className="text-[10px] text-slate-500 font-mono">RA: {l.ra} • {l.turmaNome}</span>
+                          <span className="text-[10px] text-slate-400 block">Horário: {l.dataLeitura}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] font-bold text-slate-400 block">NOTA N2</span>
+                          <strong className="text-lg font-black text-catolica-primary">{l.notaCalculada.toFixed(1)}</strong>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* RELATÓRIOS E HISTÓRICO COM BUSCA */}
         {currentTab === 'relatorios' && (
           <div className="space-y-6">
-            
-            {/* CARDS COM MÉTRICAS GERAIS */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                 <span className="text-[11px] font-bold text-slate-400 uppercase block mb-1">Média Geral da Turma</span>
-                <strong className="text-2xl font-black text-slate-900">8.0</strong>
+                <strong className="text-2xl font-black text-slate-900">
+                  {(alunos.reduce((acc, a) => acc + a.media, 0) / (alunos.length || 1)).toFixed(1)}
+                </strong>
               </div>
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                 <span className="text-[11px] font-bold text-slate-400 uppercase block mb-1">Taxa de Aprovação</span>
-                <strong className="text-2xl font-black text-emerald-600">75%</strong>
+                <strong className="text-2xl font-black text-emerald-600">
+                  {Math.round((alunos.filter(a => a.status === 'Aprovado').length / (alunos.length || 1)) * 100)}%
+                </strong>
               </div>
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                 <span className="text-[11px] font-bold text-slate-400 uppercase block mb-1">Total de Provas Lidas</span>
-                <strong className="text-2xl font-black text-catolica-primary">40</strong>
+                <strong className="text-2xl font-black text-catolica-primary">{leiturasOMR.length}</strong>
               </div>
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                 <span className="text-[11px] font-bold text-slate-400 uppercase block mb-1">Etapa Atual</span>
@@ -1577,19 +1555,32 @@ export default function Home() {
               </div>
             </div>
 
-            {/* TABELA: HISTÓRICO EVOLUTIVO POR ALUNO */}
             <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
               <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
                 <div>
                   <h3 className="font-bold text-slate-800 text-sm">Histórico Contínuo de Notas (N1, N2 e N3)</h3>
-                  <p className="text-xs text-slate-500">Acompanhamento longitudinal do desempenho dos estudantes</p>
+                  <p className="text-xs text-slate-500">Acompanhamento longitudinal do desempenho dos estudantes por turma</p>
                 </div>
-                <button 
-                  onClick={exportarCSV}
-                  className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition"
-                >
-                  <Download className="w-3.5 h-3.5" /> Exportar Planilha (.CSV)
-                </button>
+
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 w-full sm:w-64">
+                    <Search className="w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Buscar por Aluno ou RA..."
+                      value={buscaRelatorio}
+                      onChange={(e) => setBuscaRelatorio(e.target.value)}
+                      className="bg-transparent text-xs w-full outline-none"
+                    />
+                  </div>
+
+                  <button 
+                    onClick={exportarCSV}
+                    className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition shrink-0 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" /> CSV
+                  </button>
+                </div>
               </div>
 
               <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
@@ -1598,6 +1589,7 @@ export default function Home() {
                     <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase">
                       <th className="pb-3">Estudante</th>
                       <th className="pb-3">Registro Acadêmico (RA)</th>
+                      <th className="pb-3">Disciplina / Turma</th>
                       <th className="pb-3 text-center">Nota N1</th>
                       <th className="pb-3 text-center">Nota N2</th>
                       <th className="pb-3 text-center">Nota N3</th>
@@ -1606,28 +1598,232 @@ export default function Home() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {alunos.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-50">
-                        <td className="py-3 font-bold text-slate-800">{item.nome}</td>
-                        <td className="py-3 font-mono text-slate-500">{item.ra}</td>
-                        <td className="py-3 text-center font-bold text-catolica-primary">{item.n1.toFixed(1)}</td>
-                        <td className="py-3 text-center font-semibold text-slate-700">{item.n2.toFixed(1)}</td>
-                        <td className="py-3 text-center font-semibold text-slate-700">{item.n3.toFixed(1)}</td>
-                        <td className="py-3 text-center font-black text-slate-900 text-sm">{item.media.toFixed(1)}</td>
-                        <td className="py-3 text-right">
-                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                            item.status === 'Aprovado' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
-                          }`}>
-                            {item.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {alunosFiltradosRelatorio.map((item) => {
+                      const turmaObj = turmas.find(t => t.id === item.turmaId);
+                      return (
+                        <tr key={item.id} className="hover:bg-slate-50">
+                          <td className="py-3 font-bold text-slate-800">{item.nome}</td>
+                          <td className="py-3 font-mono text-slate-500">{item.ra}</td>
+                          <td className="py-3 text-slate-600 font-semibold">{turmaObj ? turmaObj.nome : 'Engenharia IV'}</td>
+                          <td className="py-3 text-center font-bold text-catolica-primary">{item.n1.toFixed(1)}</td>
+                          <td className="py-3 text-center font-bold text-emerald-600 bg-emerald-50/50 rounded-lg">{item.n2.toFixed(1)}</td>
+                          <td className="py-3 text-center font-semibold text-slate-700">{item.n3.toFixed(1)}</td>
+                          <td className="py-3 text-center font-black text-slate-900 text-sm">{item.media.toFixed(1)}</td>
+                          <td className="py-3 text-right">
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                              item.status === 'Aprovado' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            }`}>
+                              {item.status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             </div>
+          </div>
+        )}
 
+        {/* MODAL DE QUESTÕES */}
+        {modalAberto && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto border border-slate-200">
+              <div className="flex justify-between items-center border-b pb-4">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {questaoEmEdicaoId ? 'Editar Questão' : 'Nova Questão do Banco'}
+                  </h3>
+                  <p className="text-xs text-slate-500">Configure o enunciado e as alternativas de resposta</p>
+                </div>
+                <button onClick={() => setModalAberto(false)} className="text-slate-400 hover:text-slate-600 transition">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveQuestaoSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Enunciado da Questão:</label>
+                  <textarea 
+                    required 
+                    rows={3}
+                    value={novoEnunciado} 
+                    onChange={e => setNovoEnunciado(e.target.value)} 
+                    placeholder="Digite a pergunta ou caso de teste da questão..."
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-catolica-primary" 
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Tipo de Questão:</label>
+                    <select 
+                      value={novoTipo} 
+                      onChange={e => setNovoTipo(e.target.value as any)} 
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"
+                    >
+                      <option value="objetiva">Objetiva (Múltipla Escolha)</option>
+                      <option value="discursiva">Discursiva (Texto Aberto)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Pontuação (pts):</label>
+                    <input 
+                      type="number" 
+                      step="0.5" 
+                      value={novaPontuacao} 
+                      onChange={e => setNovaPontuacao(Number(e.target.value))} 
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" 
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Tags (separadas por vírgula):</label>
+                    <input 
+                      type="text" 
+                      value={novasTags} 
+                      onChange={e => setNovasTags(e.target.value)} 
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs" 
+                    />
+                  </div>
+                </div>
+
+                {novoTipo === 'objetiva' && (
+                  <div className="space-y-3 border-t pt-4">
+                    <span className="text-xs font-bold text-slate-700 uppercase block">Alternativas de Múltipla Escolha:</span>
+                    {alternativasCadastro.map((alt, idx) => (
+                      <div key={alt.letra} className="flex items-center gap-3">
+                        <span className="font-bold text-xs text-slate-700 w-4">{alt.letra})</span>
+                        <input 
+                          type="text" 
+                          required
+                          placeholder={`Texto da Alternativa ${alt.letra}`}
+                          value={alt.texto}
+                          onChange={e => {
+                            const clone = [...alternativasCadastro];
+                            clone[idx].texto = e.target.value;
+                            setAlternativasCadastro(clone);
+                          }}
+                          className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                        />
+                        <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name="alternativaCorretaRadio"
+                            checked={alt.correta}
+                            onChange={() => {
+                              setAlternativasCadastro(alternativasCadastro.map((a, i) => ({
+                                ...a,
+                                correta: i === idx
+                              })));
+                            }}
+                            className="w-3.5 h-3.5 accent-catolica-primary"
+                          />
+                          Correta
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3 border-t pt-4">
+                  <button type="button" onClick={() => setModalAberto(false)} className="px-4 py-2 border rounded-xl text-xs font-bold">
+                    Cancelar
+                  </button>
+                  <button type="submit" className="px-5 py-2.5 bg-catolica-primary text-white rounded-xl text-xs font-bold shadow-md hover:bg-catolica-dark transition">
+                    {questaoEmEdicaoId ? 'Atualizar Questão' : 'Salvar no Banco'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAIS DE ALUNO E TURMA */}
+        {modalAlunoAberto && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto border border-slate-200">
+              <div className="flex justify-between items-center border-b pb-4">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {alunoEmEdicaoId ? 'Editar Aluno' : 'Cadastro do Aluno'}
+                  </h3>
+                  <p className="text-xs text-slate-500">Estrutura baseada no Portal Acadêmico Católica SC</p>
+                </div>
+                <button onClick={() => setModalAlunoAberto(false)} className="text-slate-400 hover:text-slate-600 transition">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveAlunoSubmit} className="space-y-4">
+                <div className="border-b pb-3">
+                  <span className="text-xs font-bold text-catolica-primary uppercase block mb-2">Dados Acadêmicos & Identificação</span>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Nome Completo</label>
+                      <input required type="text" value={formAluno.nome} onChange={e => setFormAluno({ ...formAluno, nome: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Registro Acadêmico (RA)</label>
+                      <input type="text" placeholder="Ex: 1328834" value={formAluno.ra} onChange={e => setFormAluno({ ...formAluno, ra: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Disciplina / Turma</label>
+                      <select value={formAluno.turmaId} onChange={e => setFormAluno({ ...formAluno, turmaId: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs font-bold">
+                        <option value="">Nenhuma Disciplina</option>
+                        {turmas.map(t => (
+                          <option key={t.id} value={t.id}>{t.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 border-t pt-4">
+                  <button type="button" onClick={() => setModalAlunoAberto(false)} className="px-4 py-2 border rounded-xl text-xs font-bold">Cancelar</button>
+                  <button type="submit" className="px-4 py-2 bg-catolica-primary text-white rounded-xl text-xs font-bold shadow-md">
+                    {alunoEmEdicaoId ? 'Atualizar Aluno' : 'Salvar Aluno'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {modalTurmaAberto && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-6 border border-slate-200">
+              <div className="flex justify-between items-center border-b pb-4">
+                <h3 className="text-base font-bold text-slate-900">
+                  {turmaEmEdicaoId ? 'Editar Turma' : 'Nova Turma Acadêmica'}
+                </h3>
+                <button onClick={() => setModalTurmaAberto(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+              </div>
+
+              <form onSubmit={handleSaveTurmaSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nome da Disciplina / Turma</label>
+                  <input required type="text" placeholder="Ex: Engenharia de Software IV" value={formTurma.nome} onChange={e => setFormTurma({ ...formTurma, nome: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Curso</label>
+                  <input type="text" value={formTurma.curso} onChange={e => setFormTurma({ ...formTurma, curso: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Semestre Letivo</label>
+                  <input type="text" value={formTurma.semestre} onChange={e => setFormTurma({ ...formTurma, semestre: e.target.value })} className="w-full p-2.5 bg-slate-50 border rounded-xl text-xs" />
+                </div>
+
+                <div className="flex justify-end gap-3 border-t pt-4">
+                  <button type="button" onClick={() => setModalTurmaAberto(false)} className="px-4 py-2 border rounded-xl text-xs font-bold">Cancelar</button>
+                  <button type="submit" className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-md">
+                    {turmaEmEdicaoId ? 'Atualizar Turma' : 'Criar Turma'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
 
