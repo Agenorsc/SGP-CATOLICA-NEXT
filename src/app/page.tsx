@@ -6,7 +6,6 @@ import { LoginScreen, UserRole } from '@/components/auth/LoginScreen';
 import { Question } from '@/types';
 import { 
   BookOpen, 
-  Users, 
   Printer, 
   BarChart3, 
   Plus, 
@@ -24,14 +23,15 @@ import {
   UserPlus,
   FolderPlus,
   GraduationCap,
-  UserCheck
+  UserCheck,
+  Users
 } from 'lucide-react';
 
 // ============================================================================
 // MODELOS ORIENTADOS A OBJETOS (OO)
 // ============================================================================
 
-export interface Endereco {
+interface Endereco {
   cep: string;
   logradouro: string;
   numero: string;
@@ -41,19 +41,19 @@ export interface Endereco {
   estado: string;
 }
 
-export interface Contato {
+interface Contato {
   email: string;
   celular: string;
   residencial?: string;
 }
 
-export interface Filiacao {
+interface Filiacao {
   mae: string;
   pai: string;
 }
 
 // Classe Base Pessoa
-export class PessoaModel {
+class PessoaModel {
   nome: string;
   dataNascimento: string;
   naturalidade: string;
@@ -74,7 +74,7 @@ export class PessoaModel {
 }
 
 // Classe Aluno Herdando de PessoaModel
-export class AlunoModel extends PessoaModel {
+class AlunoModel extends PessoaModel {
   id: string;
   ra: string; // Registro Acadêmico
   curso: string;
@@ -108,7 +108,7 @@ export class AlunoModel extends PessoaModel {
 }
 
 // Classe Turma
-export class TurmaModel {
+class TurmaModel {
   id: string;
   nome: string;
   curso: string;
@@ -133,7 +133,7 @@ interface AlternativaCadastro {
 export default function Home() {
   const [session, setSession] = useState<{ role: UserRole; name: string } | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
-  const [currentTab, setCurrentTab] = useState<'montador' | 'cadastros' | 'turmas' | 'impressao' | 'relatorios'>('montador');
+  const [currentTab, setCurrentTab] = useState<'cadastros' | 'montador' | 'impressao' | 'relatorios'>('cadastros');
   const [subTabCadastro, setSubTabCadastro] = useState<'alunos' | 'turmas'>('alunos');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -629,7 +629,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-slate-100 font-sans text-slate-900 md:block md:h-screen">
       
-      {/* SIDEBAR */}
+      {/* SIDEBAR REORGANIZADA CONFORME SOLICITADO */}
       {sidebarOpen && (
         <button
           type="button"
@@ -658,9 +658,8 @@ export default function Home() {
 
           <nav className="space-y-1.5" aria-label="Navegação principal">
             {[
-              { id: 'montador', label: 'Montador de Provas', icon: BookOpen },
               { id: 'cadastros', label: 'Cadastros (Aluno/Turma)', icon: UserPlus },
-              { id: 'turmas', label: 'Gestão de Turmas', icon: Users },
+              { id: 'montador', label: 'Montador de Provas', icon: BookOpen },
               { id: 'impressao', label: 'Caderno & Gabarito OMR', icon: Printer },
               { id: 'relatorios', label: 'Relatórios & Histórico', icon: BarChart3 },
             ].map((item) => {
@@ -713,337 +712,7 @@ export default function Home() {
         </div>
 
         {/* ========================================================================= */}
-        {/* ABA 1: MONTADOR SPLIT-SCREEN + SELEÇÃO DE TURMA */}
-        {/* ========================================================================= */}
-        {currentTab === 'montador' && (
-          <div className="space-y-6">
-            <header className="flex justify-between items-center print:hidden">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                  <FileText className="text-catolica-primary" /> Montador de Avaliações
-                </h2>
-                <p className="text-xs text-slate-500">Selecione a turma e monte a avaliação com as questões do banco.</p>
-              </div>
-              <button 
-                onClick={abrirModalNovaQuestao}
-                className="flex items-center gap-2 bg-catolica-primary hover:bg-catolica-dark text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md shadow-catolica-primary/20 transition"
-              >
-                <PlusCircle size={16} /> Nova Questão
-              </button>
-            </header>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              {/* BANCO ESQUERDO */}
-              <div className="lg:col-span-6 space-y-4">
-                <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <h3 className="font-bold text-slate-800 text-sm">Banco de Questões</h3>
-                      <p className="text-xs text-slate-500">Selecione para incluir no caderno</p>
-                    </div>
-                    <span className="text-xs bg-slate-100 font-bold px-3 py-1 rounded-lg text-slate-600">
-                      {bancoQuestoes.length} disponíveis
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
-                    <Search className="w-4 h-4 text-slate-400" />
-                    <input 
-                      type="text" 
-                      placeholder="Filtrar por enunciado ou tag..."
-                      value={buscaQuestao}
-                      onChange={(e) => setBuscaQuestao(e.target.value)}
-                      className="bg-transparent text-xs w-full outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
-                  {questoesFiltradas.map((q, idx) => {
-                    const jaAdicionada = questoesSelecionadas.some(item => item.id === q.id);
-                    return (
-                      <div 
-                        key={q.id}
-                        className={`bg-white p-5 rounded-2xl border transition-all ${
-                          jaAdicionada ? 'border-catolica-primary/40 bg-catolica-light/30' : 'border-slate-200 hover:border-slate-300 shadow-sm'
-                        }`}
-                      >
-                        <div className="mb-2.5 flex items-start justify-between gap-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-slate-900 text-white">
-                              Q{idx + 1} - {q.tipo.toUpperCase()}
-                            </span>
-                            <span className="text-[10px] font-semibold text-slate-500">
-                              {q.pontuacao.toFixed(1)} pts
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              onClick={() => abrirModalEditarQuestao(q)}
-                              className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition"
-                              title="Editar Questão"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              onClick={() => excluirQuestao(q.id)}
-                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                              title="Excluir Questão"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                            <button
-                              onClick={() => adicionarNaProva(q)}
-                              disabled={jaAdicionada}
-                              className={`text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1 transition ml-1 ${
-                                jaAdicionada 
-                                  ? 'bg-emerald-100 text-emerald-800 cursor-default' 
-                                  : 'bg-slate-900 text-white hover:bg-catolica-primary'
-                              }`}
-                            >
-                              {jaAdicionada ? <><Check className="w-3 h-3" /> No Caderno</> : <><Plus className="w-3 h-3" /> Adicionar</>}
-                            </button>
-                          </div>
-                        </div>
-
-                        <p className="text-xs text-slate-800 font-medium leading-relaxed mb-3">
-                          {q.enunciado}
-                        </p>
-
-                        <div className="flex gap-1.5 flex-wrap">
-                          {q.tags.map(t => (
-                            <span key={t} className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                              #{t}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* MONTADOR DIREITO */}
-              <div className="lg:col-span-6 space-y-4">
-                <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-                  
-                  {/* SELEÇÃO DE TURMA */}
-                  <div className="border-b border-slate-100 pb-4 space-y-2">
-                    <label className="block text-[11px] font-bold text-slate-700 uppercase">Turma Destino da Prova:</label>
-                    <select
-                      value={turmaSelecionadaId}
-                      onChange={(e) => setTurmaSelecionadaId(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-catolica-primary outline-none"
-                    >
-                      {turmas.map(t => (
-                        <option key={t.id} value={t.id}>
-                          {t.nome} — {t.curso} ({t.semestre})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
-                    <div>
-                      <h3 className="font-bold text-slate-800 text-sm">Resumo da Avaliação</h3>
-                      <p className="text-xs text-slate-500">Configuração de caderno e gabarito</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xs font-bold text-slate-400 block uppercase">Pontuação Total:</span>
-                      <strong className={`text-lg font-black ${pontuacaoTotal === 10 ? 'text-emerald-600' : 'text-catolica-primary'}`}>
-                        {pontuacaoTotal.toFixed(1)} / 10.0 pts
-                      </strong>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Título da Prova:</label>
-                      <input 
-                        type="text" 
-                        value={tituloProva}
-                        onChange={(e) => setTituloProva(e.target.value)}
-                        className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-catolica-primary"
-                      />
-                    </div>
-
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
-                      <span className="text-[11px] font-bold text-slate-700 uppercase block mb-1">Regras de Impressão e Embaralhamento:</span>
-                      <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer">
-                        <input type="checkbox" checked={shuffleQ} onChange={(e) => setShuffleQ(e.target.checked)} className="w-3.5 h-3.5 accent-catolica-primary" />
-                        Embaralhar ordem das questões
-                      </label>
-                      <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer">
-                        <input type="checkbox" checked={shuffleAlt} onChange={(e) => setShuffleAlt(e.target.checked)} className="w-3.5 h-3.5 accent-catolica-primary" />
-                        Embaralhar alternativas (A, B, C, D, E)
-                      </label>
-                      <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer">
-                        <input type="checkbox" checked={withId} onChange={(e) => setWithId(e.target.checked)} className="w-3.5 h-3.5 accent-catolica-primary" />
-                        QR Code Nominal (com Matrícula e Nome do Aluno)
-                      </label>
-                    </div>
-
-                    <div>
-                      <span className="text-xs font-bold text-slate-700 uppercase block mb-2">
-                        Questões no Caderno ({questoesSelecionadas.length} / 20):
-                      </span>
-                      <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                        {questoesSelecionadas.map((q, idx) => (
-                          <div key={q.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl text-xs">
-                            <div className="flex min-w-0 items-center gap-2.5 overflow-hidden">
-                              <span className="font-bold text-slate-400 w-5 text-center">{idx + 1}.</span>
-                              <span className="max-w-[160px] truncate font-semibold text-slate-800 sm:max-w-[280px]">{q.enunciado}</span>
-                            </div>
-                            <div className="flex items-center gap-3 shrink-0">
-                              <span className="font-bold text-catolica-primary">{q.pontuacao.toFixed(1)} pts</span>
-                              <button onClick={() => removerDaProva(q.id)} className="text-slate-400 hover:text-red-600 transition">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setCurrentTab('impressao')}
-                    disabled={questoesSelecionadas.length === 0}
-                    className="w-full bg-catolica-primary text-white py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-catolica-dark transition shadow-lg shadow-catolica-primary/30"
-                  >
-                    <Printer className="w-4 h-4" /> Gerar Caderno Frente/Verso & Gabarito OMR
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal de Nova ou Edição de Questão */}
-            {modalAberto && (
-              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto border border-slate-200">
-                  <div className="flex justify-between items-center border-b pb-4">
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900">
-                        {questaoEmEdicaoId ? 'Editar Questão' : 'Cadastrar Nova Questão'}
-                      </h3>
-                      <p className="text-xs text-slate-500">A questão ficará salva no Banco de Questões aguardando inclusão na prova.</p>
-                    </div>
-                    <button onClick={() => setModalAberto(false)} className="text-slate-400 hover:text-slate-600 transition">
-                      <X size={20} />
-                    </button>
-                  </div>
-
-                  <form onSubmit={handleSaveQuestaoSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Tipo de Questão</label>
-                      <div className="flex gap-4">
-                        {(['objetiva', 'discursiva'] as const).map(tipo => (
-                          <label key={tipo} className="flex items-center gap-2 text-xs font-semibold cursor-pointer uppercase">
-                            <input 
-                              type="radio" 
-                              name="tipo" 
-                              checked={novoTipo === tipo} 
-                              onChange={() => setNovoTipo(tipo)}
-                              className="accent-catolica-primary h-4 w-4"
-                            />
-                            {tipo}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Enunciado</label>
-                      <textarea 
-                        required 
-                        rows={3} 
-                        value={novoEnunciado}
-                        onChange={(e) => setNovoEnunciado(e.target.value)}
-                        placeholder="Digite o enunciado completo da questão..."
-                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-catolica-primary"
-                      />
-                    </div>
-
-                    {novoTipo === 'objetiva' && (
-                      <div className="space-y-2 border-t pt-3">
-                        <label className="block text-xs font-bold text-slate-700 uppercase">Alternativas (Marque a Correta)</label>
-                        {alternativasCadastro.map((alt, i) => (
-                          <div key={alt.letra} className="flex items-center gap-2">
-                            <span className="font-bold text-slate-700 text-xs w-4">{alt.letra})</span>
-                            <input 
-                              type="text" 
-                              required
-                              value={alt.texto}
-                              onChange={(e) => {
-                                const newAlts = [...alternativasCadastro];
-                                newAlts[i].texto = e.target.value;
-                                setAlternativasCadastro(newAlts);
-                              }}
-                              placeholder={`Texto da alternativa ${alt.letra}`}
-                              className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-catolica-primary"
-                            />
-                            <input 
-                              type="radio" 
-                              name="alternativaCorreta" 
-                              checked={alt.correta}
-                              onChange={() => {
-                                setAlternativasCadastro(alternativasCadastro.map((a, idx) => ({ ...a, correta: idx === i })));
-                              }}
-                              className="accent-emerald-600 h-4 w-4"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-4 border-t pt-3">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Pontuação</label>
-                        <input 
-                          type="number" 
-                          step="0.25"
-                          value={novaPontuacao}
-                          onChange={(e) => setNovaPontuacao(parseFloat(e.target.value))}
-                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-catolica-primary"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Tags (separadas por vírgula)</label>
-                        <input 
-                          type="text" 
-                          value={novasTags}
-                          onChange={(e) => setNovasTags(e.target.value)}
-                          placeholder="Arquitetura, PostgreSQL, N2"
-                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-catolica-primary"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end gap-3 border-t pt-4">
-                      <button 
-                        type="button" 
-                        onClick={() => setModalAberto(false)}
-                        className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition"
-                      >
-                        Cancelar
-                      </button>
-                      <button 
-                        type="submit"
-                        className="px-4 py-2 bg-catolica-primary hover:bg-catolica-dark text-white rounded-xl text-xs font-bold shadow-md transition"
-                      >
-                        {questaoEmEdicaoId ? 'Atualizar Questão' : 'Salvar no Banco'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* ABA CADASTROS: MÓDULO UNIFICADO COM ALUNOS, TURMAS E VÍNCULO DE DISCIPLINAS */}
+        {/* ABA CADASTROS (AGORA NA POSIÇÃO 1 DO MENU) */}
         {/* ========================================================================= */}
         {currentTab === 'cadastros' && (
           <div className="space-y-6">
@@ -1403,63 +1072,337 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* ABA 3: TURMAS */}
+        {/* ABA MONTADOR DE PROVAS (AGORA NA POSIÇÃO 2 DO MENU) */}
         {/* ========================================================================= */}
-        {currentTab === 'turmas' && (
+        {currentTab === 'montador' && (
           <div className="space-y-6">
-            <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:p-6">
+            <header className="flex justify-between items-center print:hidden">
               <div>
-                <h3 className="font-bold text-slate-800">Turmas & Matrículas</h3>
-                <p className="text-xs text-slate-500">Gestão de turmas e códigos de auto-matrícula</p>
+                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <FileText className="text-catolica-primary" /> Montador de Avaliações
+                </h2>
+                <p className="text-xs text-slate-500">Selecione a turma e monte a avaliação com as questões do banco.</p>
               </div>
-              <button onClick={abrirModalNovaTurma} className="bg-catolica-primary text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-catolica-dark transition">
-                <Plus className="w-4 h-4" /> Criar Turma
+              <button 
+                onClick={abrirModalNovaQuestao}
+                className="flex items-center gap-2 bg-catolica-primary hover:bg-catolica-dark text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md shadow-catolica-primary/20 transition"
+              >
+                <PlusCircle size={16} /> Nova Questão
               </button>
-            </div>
+            </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {turmas.map(t => {
-                const alunosDaTurma = alunos.filter(a => a.turmaId === t.id);
-                return (
-                  <div key={t.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                    <div className="flex justify-between items-start">
-                      <span className="text-xs font-bold bg-catolica-light text-catolica-primary px-3 py-1 rounded-lg border border-catolica-primary/20">
-                        {t.semestre}
-                      </span>
-                      <span className="text-xs font-mono bg-slate-100 px-3 py-1 rounded-lg border text-slate-700">
-                        Convite: <strong>{t.codigoConvite}</strong>
-                      </span>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {/* BANCO ESQUERDO */}
+              <div className="lg:col-span-6 space-y-4">
+                <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-bold text-slate-800 text-sm">Banco de Questões</h3>
+                      <p className="text-xs text-slate-500">Selecione para incluir no caderno</p>
                     </div>
-                    <h4 className="font-bold text-base text-slate-800">{t.nome}</h4>
-                    <p className="text-xs text-slate-500">{t.curso}</p>
-                    <div className="border-t pt-3 space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-slate-700">Estudantes Matriculados ({alunosDaTurma.length}):</span>
-                        <button
-                          onClick={() => setModalVinculoTurmaId(t.id)}
-                          className="text-xs font-bold text-catolica-primary hover:bg-catolica-light px-2.5 py-1 rounded-lg transition flex items-center gap-1"
-                        >
-                          <UserCheck size={14} /> + Vincular Alunos
-                        </button>
+                    <span className="text-xs bg-slate-100 font-bold px-3 py-1 rounded-lg text-slate-600">
+                      {bancoQuestoes.length} disponíveis
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
+                    <Search className="w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Filtrar por enunciado ou tag..."
+                      value={buscaQuestao}
+                      onChange={(e) => setBuscaQuestao(e.target.value)}
+                      className="bg-transparent text-xs w-full outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                  {questoesFiltradas.map((q, idx) => {
+                    const jaAdicionada = questoesSelecionadas.some(item => item.id === q.id);
+                    return (
+                      <div 
+                        key={q.id}
+                        className={`bg-white p-5 rounded-2xl border transition-all ${
+                          jaAdicionada ? 'border-catolica-primary/40 bg-catolica-light/30' : 'border-slate-200 hover:border-slate-300 shadow-sm'
+                        }`}
+                      >
+                        <div className="mb-2.5 flex items-start justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-slate-900 text-white">
+                              Q{idx + 1} - {q.tipo.toUpperCase()}
+                            </span>
+                            <span className="text-[10px] font-semibold text-slate-500">
+                              {q.pontuacao.toFixed(1)} pts
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => abrirModalEditarQuestao(q)}
+                              className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition"
+                              title="Editar Questão"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              onClick={() => excluirQuestao(q.id)}
+                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                              title="Excluir Questão"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                            <button
+                              onClick={() => adicionarNaProva(q)}
+                              disabled={jaAdicionada}
+                              className={`text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1 transition ml-1 ${
+                                jaAdicionada 
+                                  ? 'bg-emerald-100 text-emerald-800 cursor-default' 
+                                  : 'bg-slate-900 text-white hover:bg-catolica-primary'
+                              }`}
+                            >
+                              {jaAdicionada ? <><Check className="w-3 h-3" /> No Caderno</> : <><Plus className="w-3 h-3" /> Adicionar</>}
+                            </button>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-slate-800 font-medium leading-relaxed mb-3">
+                          {q.enunciado}
+                        </p>
+
+                        <div className="flex gap-1.5 flex-wrap">
+                          {q.tags.map(t => (
+                            <span key={t} className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                              #{t}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                      <div className="text-xs space-y-1 text-slate-600 max-h-40 overflow-y-auto">
-                        {alunosDaTurma.map(a => (
-                          <div key={a.id} className="flex justify-between p-1.5 bg-slate-50 rounded-lg">
-                            <span>{a.nome}</span>
-                            <span className="font-mono text-slate-500">{a.ra}</span>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* MONTADOR DIREITO */}
+              <div className="lg:col-span-6 space-y-4">
+                <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+                  
+                  {/* SELEÇÃO DE TURMA */}
+                  <div className="border-b border-slate-100 pb-4 space-y-2">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase">Turma Destino da Prova:</label>
+                    <select
+                      value={turmaSelecionadaId}
+                      onChange={(e) => setTurmaSelecionadaId(e.target.value)}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-catolica-primary outline-none"
+                    >
+                      {turmas.map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.nome} — {t.curso} ({t.semestre})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div>
+                      <h3 className="font-bold text-slate-800 text-sm">Resumo da Avaliação</h3>
+                      <p className="text-xs text-slate-500">Configuração de caderno e gabarito</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-slate-400 block uppercase">Pontuação Total:</span>
+                      <strong className={`text-lg font-black ${pontuacaoTotal === 10 ? 'text-emerald-600' : 'text-catolica-primary'}`}>
+                        {pontuacaoTotal.toFixed(1)} / 10.0 pts
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Título da Prova:</label>
+                      <input 
+                        type="text" 
+                        value={tituloProva}
+                        onChange={(e) => setTituloProva(e.target.value)}
+                        className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-catolica-primary"
+                      />
+                    </div>
+
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                      <span className="text-[11px] font-bold text-slate-700 uppercase block mb-1">Regras de Impressão e Embaralhamento:</span>
+                      <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer">
+                        <input type="checkbox" checked={shuffleQ} onChange={(e) => setShuffleQ(e.target.checked)} className="w-3.5 h-3.5 accent-catolica-primary" />
+                        Embaralhar ordem das questões
+                      </label>
+                      <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer">
+                        <input type="checkbox" checked={shuffleAlt} onChange={(e) => setShuffleAlt(e.target.checked)} className="w-3.5 h-3.5 accent-catolica-primary" />
+                        Embaralhar alternativas (A, B, C, D, E)
+                      </label>
+                      <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer">
+                        <input type="checkbox" checked={withId} onChange={(e) => setWithId(e.target.checked)} className="w-3.5 h-3.5 accent-catolica-primary" />
+                        QR Code Nominal (com Matrícula e Nome do Aluno)
+                      </label>
+                    </div>
+
+                    <div>
+                      <span className="text-xs font-bold text-slate-700 uppercase block mb-2">
+                        Questões no Caderno ({questoesSelecionadas.length} / 20):
+                      </span>
+                      <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                        {questoesSelecionadas.map((q, idx) => (
+                          <div key={q.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl text-xs">
+                            <div className="flex min-w-0 items-center gap-2.5 overflow-hidden">
+                              <span className="font-bold text-slate-400 w-5 text-center">{idx + 1}.</span>
+                              <span className="max-w-[160px] truncate font-semibold text-slate-800 sm:max-w-[280px]">{q.enunciado}</span>
+                            </div>
+                            <div className="flex items-center gap-3 shrink-0">
+                              <span className="font-bold text-catolica-primary">{q.pontuacao.toFixed(1)} pts</span>
+                              <button onClick={() => removerDaProva(q.id)} className="text-slate-400 hover:text-red-600 transition">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
                     </div>
                   </div>
-                );
-              })}
+
+                  <button
+                    onClick={() => setCurrentTab('impressao')}
+                    disabled={questoesSelecionadas.length === 0}
+                    className="w-full bg-catolica-primary text-white py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-catolica-dark transition shadow-lg shadow-catolica-primary/30"
+                  >
+                    <Printer className="w-4 h-4" /> Gerar Caderno Frente/Verso & Gabarito OMR
+                  </button>
+                </div>
+              </div>
             </div>
+
+            {/* Modal de Nova ou Edição de Questão */}
+            {modalAberto && (
+              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto border border-slate-200">
+                  <div className="flex justify-between items-center border-b pb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900">
+                        {questaoEmEdicaoId ? 'Editar Questão' : 'Cadastrar Nova Questão'}
+                      </h3>
+                      <p className="text-xs text-slate-500">A questão ficará salva no Banco de Questões aguardando inclusão na prova.</p>
+                    </div>
+                    <button onClick={() => setModalAberto(false)} className="text-slate-400 hover:text-slate-600 transition">
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSaveQuestaoSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Tipo de Questão</label>
+                      <div className="flex gap-4">
+                        {(['objetiva', 'discursiva'] as const).map(tipo => (
+                          <label key={tipo} className="flex items-center gap-2 text-xs font-semibold cursor-pointer uppercase">
+                            <input 
+                              type="radio" 
+                              name="tipo" 
+                              checked={novoTipo === tipo} 
+                              onChange={() => setNovoTipo(tipo)}
+                              className="accent-catolica-primary h-4 w-4"
+                            />
+                            {tipo}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Enunciado</label>
+                      <textarea 
+                        required 
+                        rows={3} 
+                        value={novoEnunciado}
+                        onChange={(e) => setNovoEnunciado(e.target.value)}
+                        placeholder="Digite o enunciado completo da questão..."
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-catolica-primary"
+                      />
+                    </div>
+
+                    {novoTipo === 'objetiva' && (
+                      <div className="space-y-2 border-t pt-3">
+                        <label className="block text-xs font-bold text-slate-700 uppercase">Alternativas (Marque a Correta)</label>
+                        {alternativasCadastro.map((alt, i) => (
+                          <div key={alt.letra} className="flex items-center gap-2">
+                            <span className="font-bold text-slate-700 text-xs w-4">{alt.letra})</span>
+                            <input 
+                              type="text" 
+                              required
+                              value={alt.texto}
+                              onChange={(e) => {
+                                const newAlts = [...alternativasCadastro];
+                                newAlts[i].texto = e.target.value;
+                                setAlternativasCadastro(newAlts);
+                              }}
+                              placeholder={`Texto da alternativa ${alt.letra}`}
+                              className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-catolica-primary"
+                            />
+                            <input 
+                              type="radio" 
+                              name="alternativaCorreta" 
+                              checked={alt.correta}
+                              onChange={() => {
+                                setAlternativasCadastro(alternativasCadastro.map((a, idx) => ({ ...a, correta: idx === i })));
+                              }}
+                              className="accent-emerald-600 h-4 w-4"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4 border-t pt-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Pontuação</label>
+                        <input 
+                          type="number" 
+                          step="0.25"
+                          value={novaPontuacao}
+                          onChange={(e) => setNovaPontuacao(parseFloat(e.target.value))}
+                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-catolica-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Tags (separadas por vírgula)</label>
+                        <input 
+                          type="text" 
+                          value={novasTags}
+                          onChange={(e) => setNovasTags(e.target.value)}
+                          placeholder="Arquitetura, PostgreSQL, N2"
+                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-catolica-primary"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 border-t pt-4">
+                      <button 
+                        type="button" 
+                        onClick={() => setModalAberto(false)}
+                        className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition"
+                      >
+                        Cancelar
+                      </button>
+                      <button 
+                        type="submit"
+                        className="px-4 py-2 bg-catolica-primary hover:bg-catolica-dark text-white rounded-xl text-xs font-bold shadow-md transition"
+                      >
+                        {questaoEmEdicaoId ? 'Atualizar Questão' : 'Salvar no Banco'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* ABA 4: IMPRESSÃO (FRENTE E VERSO ISOLADO DO GABARITO) */}
+        {/* ABA IMPRESSÃO (POSIÇÃO 3 DO MENU) */}
         {/* ========================================================================= */}
         {currentTab === 'impressao' && (
           <div className="space-y-6">
@@ -1563,7 +1506,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* 3. CADERNO DE QUESTÕES (INICIA NA PÁGINA 3 - FRENTE E VERSO CONTÍNUO) */}
+              {/* 3. CADERNO DE QUESTÕES (INICIA NA PÁGINA 3) */}
               <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-lg print:border-none print:shadow-none print:p-0 sm:p-8 print:break-before-page">
                 <div className="mb-6 flex flex-col gap-3 border-b-2 border-slate-900 pb-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
@@ -1609,7 +1552,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* ABA 5: RELATÓRIOS E HISTÓRICO */}
+        {/* ABA RELATÓRIOS E HISTÓRICO (POSIÇÃO 4 DO MENU) */}
         {/* ========================================================================= */}
         {currentTab === 'relatorios' && (
           <div className="space-y-6">
@@ -1654,7 +1597,7 @@ export default function Home() {
                   <thead>
                     <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase">
                       <th className="pb-3">Estudante</th>
-                      <th className="pb-3">Registro Académico (RA)</th>
+                      <th className="pb-3">Registro Acadêmico (RA)</th>
                       <th className="pb-3 text-center">Nota N1</th>
                       <th className="pb-3 text-center">Nota N2</th>
                       <th className="pb-3 text-center">Nota N3</th>
