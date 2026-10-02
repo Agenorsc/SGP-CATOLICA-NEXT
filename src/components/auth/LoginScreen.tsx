@@ -6,7 +6,7 @@ import { ArrowRight, GraduationCap, LockKeyhole, Mail, ShieldCheck, UserRound } 
 export type UserRole = 'professor' | 'aluno';
 
 interface LoginScreenProps {
-  onLogin: (role: UserRole, name: string) => void;
+  onLogin: (role: UserRole, name: string, email: string) => void;
 }
 
 export function LoginScreen({ onLogin }: LoginScreenProps) {
@@ -22,8 +22,8 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
       return;
     }
 
-    const suggestedName = role === 'professor' ? 'Professor(a)' : 'Aluno(a)';
-    onLogin(role, suggestedName);
+    const suggestedName = role === 'professor' ? 'Professor(a)' : email.trim().split('@')[0].replace(/[._-]+/g, ' ');
+    onLogin(role, suggestedName, email.trim().toLowerCase());
   };
 
   return (

@@ -30,7 +30,10 @@ import {
   Scan,
   CheckCircle2,
   RefreshCw,
-  VideoOff
+  VideoOff,
+  ClipboardList,
+  Award,
+  CalendarDays
 } from 'lucide-react';
 
 // ============================================================================
@@ -179,8 +182,34 @@ interface LeituraOMRRegistro {
   respostasDetectadas: Record<number, string>;
 }
 
+function PortalAluno({ aluno, nomeSessao, provas, onLogout }: {
+  aluno?: AlunoModel;
+  nomeSessao: string;
+  provas: LeituraOMRRegistro[];
+  onLogout: () => void;
+}) {
+  const media = provas.length ? provas.reduce((total, prova) => total + prova.notaCalculada, 0) / provas.length : null;
+  return (
+    <main className="min-h-screen bg-slate-100 font-sans text-slate-900">
+      <header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
+        <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-catolica-primary text-xl font-black text-white">C</div><div><p className="font-bold">SGP Católica</p><p className="text-xs text-slate-500">Portal do aluno</p></div></div>
+        <button onClick={onLogout} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 hover:text-catolica-primary"><LogOut className="mr-2 inline h-4 w-4" />Sair</button>
+      </div></header>
+      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-10">
+        <section className="rounded-3xl bg-slate-900 p-6 text-white shadow-xl sm:p-9"><p className="text-xs font-bold uppercase tracking-[0.18em] text-red-300">Área acadêmica</p><h1 className="mt-3 text-2xl font-black sm:text-3xl">Olá, {aluno?.nome || nomeSessao}!</h1><p className="mt-2 text-sm text-slate-300">Consulte as notas e respostas das avaliações corrigidas.</p>{aluno && <p className="mt-4 text-xs font-semibold text-slate-400">{aluno.curso} • RA {aluno.ra}</p>}</section>
+        {!aluno ? <section className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900"><p className="font-bold">Cadastro não localizado</p><p className="mt-1">Este e-mail não está vinculado a um cadastro de aluno. Confira seu e-mail institucional.</p></section> : <>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2"><article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex justify-between text-xs font-bold uppercase tracking-wide text-slate-500">Provas corrigidas<ClipboardList className="h-5 w-5 text-catolica-primary" /></div><p className="mt-3 text-3xl font-black">{provas.length}</p><p className="mt-1 text-xs text-slate-500">Avaliações disponíveis</p></article><article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex justify-between text-xs font-bold uppercase tracking-wide text-slate-500">Média das provas<Award className="h-5 w-5 text-catolica-primary" /></div><p className="mt-3 text-3xl font-black">{media === null ? '—' : media.toFixed(1)}</p><p className="mt-1 text-xs text-slate-500">Escala de 0 a 10</p></article></div>
+          <section className="mt-8"><div className="mb-4"><h2 className="text-lg font-black">Minhas avaliações</h2><p className="mt-1 text-sm text-slate-500">Notas e respostas registradas nas provas que você realizou.</p></div>
+            {provas.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center"><div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-catolica-light text-catolica-primary"><FileText className="h-6 w-6" /></div><p className="mt-4 font-bold text-slate-700">Nenhuma avaliação corrigida ainda</p><p className="mt-1 text-sm text-slate-500">Quando uma prova sua for corrigida, ela aparecerá aqui.</p></div> : <div className="space-y-4">{provas.map(prova => <article key={prova.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-bold">{prova.materia}</h3><p className="mt-1 text-xs text-slate-500">{prova.turmaNome} • {prova.versao}</p></div><div className="flex items-center gap-4"><span className="flex items-center gap-1.5 text-xs text-slate-500"><CalendarDays className="h-4 w-4" />{prova.dataLeitura}</span><span className="rounded-xl bg-emerald-50 px-4 py-2 text-lg font-black text-emerald-700">{prova.notaCalculada.toFixed(1)}<span className="ml-1 text-xs font-semibold">/ 10</span></span></div></div><div className="p-5"><p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500">Suas respostas <span className="font-medium normal-case">({prova.acertos} de {prova.totalQuestoes} acertos)</span></p><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{Object.entries(prova.respostasDetectadas).map(([questao, resposta]) => <div key={questao} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5 text-sm"><span className="text-slate-500">Questão {questao}</span><span className="font-black">{resposta}</span></div>)}</div></div></article>)}</div>}
+          </section>
+        </>}
+      </div>
+    </main>
+  );
+}
+
 export default function Home() {
-  const [session, setSession] = useState<{ role: UserRole; name: string } | null>(null);
+  const [session, setSession] = useState<{ role: UserRole; name: string; email?: string } | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [currentTab, setCurrentTab] = useState<'cadastros' | 'montador' | 'impressao' | 'leitura' | 'relatorios'>('cadastros');
   const [subTabCadastro, setSubTabCadastro] = useState<'alunos' | 'turmas'>('alunos');
@@ -198,8 +227,8 @@ export default function Home() {
     setSessionLoaded(true);
   }, []);
 
-  const handleLogin = (role: UserRole, name: string) => {
-    const newSession = { role, name };
+  const handleLogin = (role: UserRole, name: string, email: string) => {
+    const newSession = { role, name, email };
     window.localStorage.setItem('sgp-mock-session', JSON.stringify(newSession));
     setSession(newSession);
   };
@@ -652,6 +681,14 @@ export default function Home() {
 
   const handleSaveAlunoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const emailAluno = formAluno.email.trim().toLowerCase();
+    const emailJaCadastrado = alunos.some(aluno =>
+      aluno.id !== alunoEmEdicaoId && aluno.contato.email.trim().toLowerCase() === emailAluno
+    );
+    if (emailJaCadastrado) {
+      alert('Este e-mail já está vinculado a outro aluno.');
+      return;
+    }
     if (alunoEmEdicaoId) {
       setAlunos(alunos.map(a => {
         if (a.id === alunoEmEdicaoId) {
@@ -666,7 +703,7 @@ export default function Home() {
             naturalidade: formAluno.naturalidade,
             estadoNatal: formAluno.estadoNatal,
             filiacao: { mae: formAluno.mae, pai: formAluno.pai },
-            contato: { email: formAluno.email, celular: formAluno.celular },
+            contato: { email: emailAluno, celular: formAluno.celular },
             endereco: {
               cep: formAluno.cep,
               logradouro: formAluno.logradouro,
@@ -690,7 +727,7 @@ export default function Home() {
         naturalidade: formAluno.naturalidade,
         estadoNatal: formAluno.estadoNatal,
         filiacao: { mae: formAluno.mae, pai: formAluno.pai },
-        contato: { email: formAluno.email, celular: formAluno.celular },
+        contato: { email: emailAluno, celular: formAluno.celular },
         endereco: {
           cep: formAluno.cep,
           logradouro: formAluno.logradouro,
@@ -772,6 +809,9 @@ export default function Home() {
   if (!session) return <LoginScreen onLogin={handleLogin} />;
 
   if (session.role === 'aluno') {
+    const alunoLogado = alunos.find(aluno => aluno.contato.email.toLowerCase() === (session.email || '').toLowerCase());
+    const provasDoAluno = alunoLogado ? leiturasOMR.filter(leitura => leitura.alunoId === alunoLogado.id) : [];
+    return <PortalAluno aluno={alunoLogado} nomeSessao={session.name} provas={provasDoAluno} onLogout={handleLogout} />;
     return (
       <main className="min-h-screen bg-slate-100 p-4 sm:p-8 flex items-center justify-center">
         <section className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 text-center shadow-xl shadow-slate-900/10">
@@ -1760,7 +1800,7 @@ export default function Home() {
               <form onSubmit={handleSaveAlunoSubmit} className="space-y-4">
                 <div className="border-b pb-3">
                   <span className="text-xs font-bold text-catolica-primary uppercase block mb-2">Dados Acadêmicos & Identificação</span>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Nome Completo</label>
                       <input required type="text" value={formAluno.nome} onChange={e => setFormAluno({ ...formAluno, nome: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
@@ -1768,6 +1808,11 @@ export default function Home() {
                     <div>
                       <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Registro Acadêmico (RA)</label>
                       <input type="text" placeholder="Ex: 1328834" value={formAluno.ra} onChange={e => setFormAluno({ ...formAluno, ra: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">E-mail de acesso</label>
+                      <input required type="email" autoComplete="email" placeholder="aluno@catolicasc.edu.br" value={formAluno.email} onChange={e => setFormAluno({ ...formAluno, email: e.target.value })} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
+                      <p className="mt-1 text-[10px] text-slate-500">O aluno usará este e-mail para entrar na área dele.</p>
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Disciplina / Turma</label>
