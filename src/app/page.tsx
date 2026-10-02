@@ -812,17 +812,7 @@ export default function Home() {
     const alunoLogado = alunos.find(aluno => aluno.contato.email.toLowerCase() === (session.email || '').toLowerCase());
     const provasDoAluno = alunoLogado ? leiturasOMR.filter(leitura => leitura.alunoId === alunoLogado.id) : [];
     return <PortalAluno aluno={alunoLogado} nomeSessao={session.name} provas={provasDoAluno} onLogout={handleLogout} />;
-    return (
-      <main className="min-h-screen bg-slate-100 p-4 sm:p-8 flex items-center justify-center">
-        <section className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 text-center shadow-xl shadow-slate-900/10">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-catolica-light text-catolica-primary"><AlertCircle className="h-7 w-7" /></div>
-          <p className="mt-6 text-xs font-bold uppercase tracking-[0.16em] text-catolica-primary">Acesso de aluno</p>
-          <h1 className="mt-2 text-2xl font-bold text-slate-800">Olá, {session.name}!</h1>
-          <p className="mt-4 text-sm leading-6 text-slate-500">Seu login foi realizado com sucesso. As funcionalidades do portal do aluno ainda estão em construção e não há módulos liberados neste ambiente de teste.</p>
-          <button onClick={handleLogout} className="mt-8 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-catolica-primary">Sair da conta</button>
-        </section>
-      </main>
-    );
+
   }
 
   return (
