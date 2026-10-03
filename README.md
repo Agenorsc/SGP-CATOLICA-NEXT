@@ -144,6 +144,17 @@ Automatizar integralmente o fluxo avaliativo institucional:
 
 ---
 
+### 4.7 Portal do Aluno — consulta de notas
+![Portal do Aluno](docs/telas/Tela-Aluno-Nota.png)
+*Área do aluno para consultar avaliações corrigidas, notas, quantidade de acertos e respostas identificadas. O acesso usa o e-mail institucional associado ao cadastro do estudante.*
+
+### Funcionalidades recentes
+- **Portal do aluno:** entrada com perfil de estudante e consulta às avaliações corrigidas vinculadas ao seu cadastro.
+- **Leitura e correção OMR:** leitura do QR Code e das respostas do cartão, cálculo da nota e registro do resultado no histórico e nos relatórios.
+- **Atualização da nota N2:** o resultado da correção atualiza a nota do aluno e fica disponível para consulta no portal.
+
+---
+
 ## 5. Stack Tecnológica
 
 ![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white)
