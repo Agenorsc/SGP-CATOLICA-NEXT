@@ -1,16 +1,13 @@
 'use client';
 
 import React, { FormEvent, useState } from 'react';
-import { ArrowRight, GraduationCap, LockKeyhole, Mail, ShieldCheck, UserRound } from 'lucide-react';
-
-export type UserRole = 'professor' | 'aluno';
+import { ArrowRight, GraduationCap, LockKeyhole, Mail, ShieldCheck } from 'lucide-react';
 
 interface LoginScreenProps {
-  onLogin: (role: UserRole, name: string, email: string) => void;
+  onLogin: (name: string, email: string) => void;
 }
 
 export function LoginScreen({ onLogin }: LoginScreenProps) {
-  const [role, setRole] = useState<UserRole>('professor');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -22,8 +19,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
       return;
     }
 
-    const suggestedName = role === 'professor' ? 'Professor(a)' : email.trim().split('@')[0].replace(/[._-]+/g, ' ');
-    onLogin(role, suggestedName, email.trim().toLowerCase());
+    onLogin('Professor(a)', email.trim().toLowerCase());
   };
 
   return (
@@ -45,30 +41,14 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         <section className="p-8 sm:p-12">
           <div className="max-w-md mx-auto">
             <h2 className="text-2xl font-bold text-slate-800">Entrar na plataforma</h2>
-            <p className="mt-2 text-sm text-slate-500">Selecione o seu perfil para continuar.</p>
-
-            <div className="mt-7 grid grid-cols-2 gap-3 rounded-2xl bg-slate-100 p-1.5">
-              {[
-                { id: 'professor' as const, label: 'Professor', icon: GraduationCap },
-                { id: 'aluno' as const, label: 'Aluno', icon: UserRound },
-              ].map(({ id, label, icon: Icon }) => (
-                <button
-                  type="button"
-                  key={id}
-                  onClick={() => { setRole(id); setError(''); }}
-                  className={`flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm font-bold transition ${role === id ? 'bg-white text-catolica-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  <Icon className="w-4 h-4" /> {label}
-                </button>
-              ))}
-            </div>
+            <p className="mt-2 text-sm text-slate-500">Acesso exclusivo para professores.</p>
 
             <form className="mt-7 space-y-4" onSubmit={handleSubmit}>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-bold text-slate-700">E-mail institucional</span>
                 <div className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 focus-within:border-catolica-primary focus-within:ring-2 focus-within:ring-catolica-primary/10">
                   <Mail className="w-4 h-4 text-slate-400" />
-                  <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder={role === 'aluno' ? 'nome@catolicasc.edu.br' : 'nome@catolicasc.org.br'} className="w-full py-3 text-sm outline-none" />
+                  <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="nome@catolicasc.org.br" className="w-full py-3 text-sm outline-none" />
                 </div>
               </label>
               <label className="block">
@@ -80,7 +60,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               </label>
               {error && <p className="text-xs font-medium text-red-600">{error}</p>}
               <button className="w-full rounded-xl bg-catolica-primary py-3.5 text-sm font-bold text-white shadow-md shadow-catolica-primary/25 transition hover:bg-catolica-dark flex items-center justify-center gap-2">
-                Entrar como {role === 'professor' ? 'professor' : 'aluno'} <ArrowRight className="w-4 h-4" />
+                Entrar como professor <ArrowRight className="w-4 h-4" />
               </button>
             </form>
             <p className="mt-5 text-center text-xs text-slate-400">Para testar, preencha quaisquer e-mail e senha.</p>
