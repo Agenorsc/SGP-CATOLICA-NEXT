@@ -332,7 +332,7 @@ O cenário modela a dinâmica temporal entre o **Professor**, o componente **Cam
 
 ---
 
-## 5. Projeto de Persistência em Banco de Dados Relacional (SQL)
+## 5. Projeto de Persistência em Banco de Dados Relacional (SQL) AGENOR ALVISER
 
 ### 5.1 Justificativa da Migração e Modelo de Dados Normalizado (3FN)
 Para suportar a escala real de centenas de estudantes e assegurar auditabilidade das avaliações, o SGP foi modelado para migrar de mocks em memória para um SGBD relacional (**PostgreSQL**). O modelo normalizado em Terceira Forma Normal (**3FN**) resolve:
@@ -340,7 +340,7 @@ Para suportar a escala real de centenas de estudantes e assegurar auditabilidade
 - A **garantia de idempotência na correção offline** via chave `client_correction_id`, impedindo que uma mesma prova seja computada duas vezes caso o dispositivo reconecte à rede;
 - A **integridade referencial estrita** com chaves primárias (`UUID` / `SERIAL`) e chaves estrangeiras (`FOREIGN KEY`) com deleção em cascata controlada.
 
-### 5.2 Estrutura do Esquema Relacional (`schema-n2.sql`)
+### 5.2 Estrutura do Esquema Relacional (`schema-n2.sql`) AGENOR ALVISE
 O esquema foi materializado em **11 tabelas interligadas** no script [`docs/schema-n2.sql`](docs/schema-n2.sql):
 
 1. **`usuarios`**: Autenticação institucional do corpo docente (`@catolicasc.org.br`);
@@ -371,6 +371,7 @@ Para cumprir a exigência docente de evidenciação clara de atividades individu
 | **PR #04** | `feature/omr-scanner-camera` | **Erick Andreas Pontecelli** | Algoritmo determinístico de shuffle com seed e leitura óptica via câmera (`html5-qrcode`). | Reconhecimento óptico ao vivo e atualização da nota N2 do aluno. |
 | **PR #05** | `feature/abnt-docs-and-sql-schema` | **Edinei Junio Machado** | Relatório acadêmico ABNT, modelagem UML formal e DDL SQL relacional (`schema-n2.sql`). | Documento acadêmico completo e integridade do script SQL PostgreSQL. |
 | **PR #06** | `feature/inspecao-espelho-omr` | **Johnatan Vargas da Fonseca** | Módulo de inspeção do espelho OMR e ajuste manual de notas pelo professor. | Acesso do docente ao espelho detalhado com opções de auditoria. |
+
 
 ### 6.2 Fluxo Git e Rastreabilidade
 O repositório adota o modelo de ramificação **Git Flow simplificado**, com proteção de branch na `main`. Todo código integrado passa obrigatoriamente pela esteira automatizada de CI/CD, que valida compilação, suíte de testes unitários Jest e linters antes da aprovação do merge.
@@ -441,6 +442,10 @@ C:\SGP-CATOLICA-NEXT\src/
     ├── diagramas/              # Imagens oficiais dos 4 diagramas UML
     ├── telas/                  # Capturas de tela comprobatórias da aplicação
     └── schema-n2.sql           # DDL SQL PostgreSQL completo
+
+```
+
+---
 
 # 1. Clonar o repositório
 git clone [https://github.com/Agenorsc/SGP-CATOLICA-NEXT.git](https://github.com/Agenorsc/SGP-CATOLICA-NEXT.git)

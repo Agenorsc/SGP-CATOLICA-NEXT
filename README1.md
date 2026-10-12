@@ -250,7 +250,7 @@ A modelagem do sistema foi desenvolvida em conformidade com o padrão internacio
 
 <div align="center">
   <img src="docs/diagramas/figura1-casos-de-uso.png" alt="Figura 1 - Diagrama de Casos de Uso do SGP Católica" width="750" />
-  <p><strong>Figura 1 – Diagrama de Casos de Uso Oficial do Sistema SGP Católica SC</strong> (Fonte: Autores)</p>
+  <p><strong>Figura 1 – Diagrama de Casos de Uso Oficial do Sistema SGP Católica SC</strong> (AUTOR: AGENOR ALVISE)</p>
 </div>
 
 #### Análise Dedutiva do Diagrama
@@ -265,7 +265,7 @@ A modelagem do sistema foi desenvolvida em conformidade com o padrão internacio
 
 <div align="center">
   <img src="docs/diagramas/figura2-atividades.png" alt="Figura 2 - Diagrama de Atividades com Raias do Ciclo Avaliativo" width="750" />
-  <p><strong>Figura 2 – Diagrama de Atividades com Raias Concorrentes (Swimlanes)</strong> (Fonte: Autores)</p>
+  <p><strong>Figura 2 – Diagrama de Atividades com Raias Concorrentes (Swimlanes)</strong> (AUTOR: EDINEI JUNIO MACHAD)</p>
 </div>
 
 #### Análise das 4 Raias Concorrentes (*Swimlanes*)
@@ -282,7 +282,7 @@ A modelagem do sistema foi desenvolvida em conformidade com o padrão internacio
 
 <div align="center">
   <img src="docs/diagramas/figura3-classes.png" alt="Figura 3 - Diagrama de Classes UML do Domínio do SGP" width="750" />
-  <p><strong>Figura 3 – Diagrama de Classes de Domínio e Associações do SGP</strong> (Fonte: Autores)</p>
+  <p><strong>Figura 3 – Diagrama de Classes de Domínio e Associações do SGP</strong> (AUTOR: ERIC RICARDO LANGE )</p>
 </div>
 
 #### Análise Estrutural das Entidades e Relacionamentos
@@ -301,7 +301,7 @@ A modelagem do sistema foi desenvolvida em conformidade com o padrão internacio
 
 <div align="center">
   <img src="docs/diagramas/figura4-sequencia.png" alt="Figura 4 - Diagrama de Sequência UML da Correção Automatizada" width="750" />
-  <p><strong>Figura 4 – Diagrama de Sequência UML: Leitura Óptica, Correção e Atualização da Nota N2</strong> (Fonte: Autores)</p>
+  <p><strong>Figura 4 – Diagrama de Sequência UML: Leitura Óptica, Correção e Atualização da Nota N2</strong> (AUTOR: ERICK ANDREAS PONTECELLI )</p>
 </div>
 
 #### Cronologia e Intercâmbio de Mensagens (1 a 18)
