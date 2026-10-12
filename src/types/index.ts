@@ -34,3 +34,44 @@ export interface GenerateExamConfig {
   shuffleAlternatives: boolean;
   withStudentIdentification: boolean;
 }
+
+export interface Endereco {
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+}
+
+export interface Contato {
+  celular: string;
+  residencial?: string;
+}
+
+export interface Filiacao {
+  mae: string;
+  pai: string;
+}
+
+export interface AlternativaCadastro {
+  letra: string;
+  texto: string;
+  correta: boolean;
+}
+
+export interface LeituraOMRRegistro {
+  id: string;
+  alunoId: string;
+  alunoNome: string;
+  ra: string;
+  turmaNome: string;
+  materia: string;
+  versao: string;
+  acertos: number;
+  totalQuestoes: number;
+  notaCalculada: number;
+  dataLeitura: string;
+  respostasDetectadas: Record<number, string>;
+}
