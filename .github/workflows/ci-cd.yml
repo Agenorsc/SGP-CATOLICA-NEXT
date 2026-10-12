@@ -14,14 +14,14 @@ jobs:
     - name: Checkout do Repositório
       uses: actions/checkout@v4
 
-    - name: Configurar Node.js v20.x
+    - name: Configurar Node.js v22.x LTS
       uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version: 22
         cache: 'npm'
 
     - name: Instalar Dependências
-      run: npm install
+      run: npm install --legacy-peer-deps
 
     - name: Executar Testes Unitários Jest
       run: npm test
