@@ -1,31 +1,32 @@
 <div align="center">
 
-#  SGP - Sistema de Geração e Correção de Provas
+# 📝 SGP - Sistema de Geração e Correção de Provas
 
 **Plataforma web componentizada para criação flexível de avaliações, embaralhamento dinâmico de versões, impressão de caderno frente e verso com folha de respostas OMR destacável e correção automatizada via leitura de QR Code.**
 
- **Link do sistema hospedado:** https://sgp-catolica-next.vercel.app/
+🌐 **Link do sistema hospedado:** https://sgp-catolica-next.vercel.app/
 
-![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js_16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 ![Jest](https://img.shields.io/badge/Jest-C21325?style=for-the-badge&logo=jest&logoColor=white)
-![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
-![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js_22_LTS-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 
 ![Status](https://img.shields.io/badge/status-em%20desenvolvimento-F5A623?style=flat-square)
-![Entrega](https://img.shields.io/badge/entrega%20atual-N1-3D348B?style=flat-square)
+![Entrega](https://img.shields.io/badge/entrega%20atual-N2-3D348B?style=flat-square)
+![Arquitetura](https://img.shields.io/badge/arquitetura-5%20camadas-007ACC?style=flat-square)
 ![Licença](https://img.shields.io/badge/licença-uso%20acadêmico-7B4FA6?style=flat-square)
 
 </div>
 
 ---
 
-##  Equipe
+## 👥 Equipe
 
 | Nome completo | Papel / Principais frentes no projeto |
 |---|---|
-| **Agenor Alvise** | Front-end das telas de aplicação, diagramação para impressão frente/verso, gabaritos OMR, testes unitários com Jest e pipeline de CI/CD |
+| **Agenor Alvise** | Front-end das telas de aplicação, diagramação para impressão frente/verso, gabaritos OMR, testes unitários com Jest, pipeline de CI/CD e arquitetura em camadas |
 | **Johnatan Vargas da Fonseca** | Front-end do módulo de turmas, banco de questões e manipulação de mocks de dados |
 | **Eric Ricardo Lange** | Modelagem das entidades de dados, regras de validação de formulários e mapeamento de componentes |
 | **Erick Andreas Pontecelli** | Estruturação dos algoritmos de embaralhamento determinístico e matrizes de resposta OMR |
@@ -33,16 +34,16 @@
 
 ---
 
-##  Sumário
+## 📑 Sumário
 
 - [1. Visão Geral e Objetivo](#1-visão-geral-e-objetivo)
 - [2. Escopo do Projeto](#2-escopo-do-projeto)
 - [3. Requisitos do Sistema](#3-requisitos-do-sistema)
-- [3.1 Requisitos Funcionais (RF)](#31-requisitos-funcionais-rf)
-- [3.2 Requisitos Não Funcionais (RNF)](#32-requisitos-não-funcionais-rnf)
+  - [3.1 Requisitos Funcionais (RF)](#31-requisitos-funcionais-rf)
+  - [3.2 Requisitos Não Funcionais (RNF)](#32-requisitos-não-funcionais-rnf)
 - [4. Telas do Sistema](#4-telas-do-sistema)
 - [5. Stack Tecnológica](#5-stack-tecnológica)
-- [6. Estrutura de Pastas](#6-estrutura-de-pastas)
+- [6. Arquitetura em Camadas e Estrutura de Pastas](#6-arquitetura-em-camadas-e-estrutura-de-pastas)
 - [7. Como Executar o Projeto](#7-como-executar-o-projeto)
 - [8. Testes e CI/CD](#8-testes-e-cicd)
 - [9. Equipe e Contribuições](#9-equipe-e-contribuições)
@@ -58,7 +59,7 @@ O **SGP (Sistema de Geração e Correção de Provas)** foi concebido para atend
 Automatizar integralmente o fluxo avaliativo institucional:
 1. **Montagem Flexível:** Composição de provas com banco de até 20 questões e pontuações personalizadas.
 2. **Diagramação e Impressão Inteligente:** Geração de cadernos de questões em formato **frente e verso** acompanhados de folha de respostas/gabarito OMR destacável com inserção de página em branco no verso (em caso de página ímpar), permitindo que o aluno entregue apenas o gabarito e leve o caderno para casa.
-3. **Embaralhamento Determinístico:** Alternância independente da ordem de questões e alternativas por versão.
+3. **Embaralhamento Determinístico:** Alternância independente da ordem de questões e alternativas por versão gerada.
 4. **Correção e Diagnóstico Pedagógico:** Leitura automatizada via QR Code e processamento no backend de estatísticas de erros/acertos, diagnóstico de distratores e acompanhamento contínuo de notas (N1, N2 e N3).
 
 ---
@@ -107,12 +108,12 @@ Automatizar integralmente o fluxo avaliativo institucional:
 
 | Código | Requisito |
 |---|---|
-| **RNF01** | **Arquitetura em 5 Camadas:** O backend segue o fluxo estrutural `Rota → Controle → Serviço → Repositório → Model`. |
-| **RNF02** | **Desempenho:** Tempo de resposta da API p95 < 300ms. |
-| **RNF03** | **Disponibilidade:** Mínimo de 99,5% de disponibilidade mensal. |
+| **RNF01** | **Arquitetura em 5 Camadas:** O sistema segue estritamente o fluxo arquitetural padronizado pela Católica SC: `Rota / UI → Controle → Serviço → Repositório → Model`. |
+| **RNF02** | **Desempenho:** Tempo de resposta da API p95 < 300ms e build otimizado com Next.js Turbopack. |
+| **RNF03** | **Disponibilidade:** Mínimo de 99,5% de disponibilidade mensal hospedado na Vercel. |
 | **RNF04** | **Operação Offline:** Suporte a cache de gabarito e sincronização idempotente via `clientCorrectionId`. |
-| **RNF05** | **Confiabilidade OMR:** Taxa de erro na leitura óptica inferior a 1% sob condições regulares. |
-| **RNF06** | **Segurança:** Isolamento estrito de acesso e visualização de notas entre estudantes. |
+| **RNF05** | **Confiabilidade OMR:** Leitura óptica de QR Code via biblioteca `Html5Qrcode` integrada à câmera do dispositivo. |
+| **RNF06** | **Segurança:** Isolamento estrito de acesso e visualização de notas entre estudantes e professores. |
 
 ---
 
@@ -144,108 +145,161 @@ Automatizar integralmente o fluxo avaliativo institucional:
 
 ---
 
-### Funcionalidades recentes
-- **Leitura e correção OMR:** leitura do QR Code e das respostas do cartão, cálculo da nota e registro do resultado no histórico e nos relatórios.
-- **Atualização da nota N2:** o resultado da correção atualiza a nota do aluno e fica disponível nos relatórios do professor.
-
----
-
 ## 5. Stack Tecnológica
 
-![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)
-![Jest](https://img.shields.io/badge/Jest-C21325?style=flat-square&logo=jest&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white)
-
-* **Next.js 14 (App Router):** Framework React full-stack para interfaces e rotas server-side.
-* **TypeScript:** Tipagem estática em modelos de domínio, layouts e serviços.
-* **Tailwind CSS:** Design system responsivo com regras utilitárias para impressão física (`@media print`).
-* **Jest & Testing Library:** Execução de testes unitários automatizados.
-* **Lucide React:** Biblioteca de ícones utilitários minimalistas.
+* **Next.js 16 (App Router com Turbopack):** Framework full-stack moderno com suporte a rotas server-side e compilação em alta performance.
+* **React 19 & React DOM 19:** Biblioteca base de interfaces reativas com componentes client-side e SSR seguros.
+* **TypeScript 5.x:** Tipagem estática rigorosa cobrindo contratos, DTOs, modelos e serviços.
+* **Tailwind CSS 3.4:** Design system utilitário com suporte nativo a regras de impressão física (`@media print`).
+* **Jest 29 & Testing Library:** Suíte automatizada de testes unitários para serviços e algoritmos centrais.
+* **Node.js v22.x LTS:** Ambiente de execução em conformidade com as diretrizes mais recentes de suporte e CI/CD.
+* **Lucide React 0.475+:** Ícones utilitários minimalistas com compatibilidade oficial ao React 19.
+* **Html5-QRCode & QRCode.react:** Leitura óptica de gabaritos via câmera e renderização vetorial de QR Codes.
 
 ---
 
-## 6. Estrutura de Pastas
+## 6. Arquitetura em Camadas e Estrutura de Pastas
+
+O projeto adota a **Arquitetura em Camadas (Layered Architecture)**, seguindo as diretrizes e boas práticas ensinadas no Centro Universitário Católica SC (referência nos padrões da disciplina de Arquitetura de Software):
 
 ```text
 sgp-catolica-next/
 ├── .github/
-│   └── workflows/                 # Fluxos de CI/CD do GitHub Actions
+│   └── workflows/
+│       └── ci-cd.yml              # Pipeline de CI/CD (Node 22 LTS, Jest, Next Build)
 ├── docs/
-│   └── telas/                     # Capturas de tela da aplicação
+│   ├── migrations/                # Scripts de migração de banco de dados
+│   ├── schema-n2.sql              # Modelagem relacional PostgreSQL
+│   └── telas/                     # Capturas de tela comprobatórias da aplicação
 ├── src/
 │   ├── app/
 │   │   ├── api/exams/generate/
-│   │   │   └── route.ts           # Rota de API para geração de versões
-│   │   ├── globals.css            # Estilos globais e regras de impressão
+│   │   │   └── route.ts           # [Camada Rota] Endpoint HTTP para geração de versões
+│   │   ├── globals.css            # Folha de estilos globais e regras de impressão (@media print)
 │   │   ├── layout.tsx             # Layout raiz da aplicação
-│   │   └── page.tsx               # Página principal da aplicação
-│   ├── components/
-│   │   ├── auth/                  # Componentes de autenticação
-│   │   ├── layout/                # Cabeçalho e navegação
-│   │   └── omr/                   # Renderização da folha OMR
-│   ├── controllers/               # Controle e validação de requisições
-│   ├── models/                    # Entidades e modelos de domínio
-│   ├── repositories/              # Acesso e abstração de dados
-│   ├── services/                  # Regras de negócio e embaralhamento
-│   └── types/                     # Interfaces e contratos TypeScript
+│   │   └── page.tsx               # [Camada UI] Orquestrador enxuto e declarativo das abas
+│   │
+│   ├── models/                    # [Camada 1: Modelos / Domínio]
+│   │   ├── PessoaModel.ts         # Entidade base (filiação, contato, endereço)
+│   │   ├── AlunoModel.ts          # Entidade Aluno com cálculo de média e status acadêmico
+│   │   ├── TurmaModel.ts          # Entidade Turma com código de convite institucional
+│   │   ├── ExamModel.ts           # Entidade de diagramação determinística de avaliações
+│   │   └── index.ts               # Barrel export dos modelos
+│   │
+│   ├── repositories/              # [Camada 2: Repositórios / Acesso a Dados]
+│   │   ├── AlunoRepository.ts     # Abstração de persistência e consultas de estudantes
+│   │   ├── TurmaRepository.ts     # Abstração de persistência de turmas acadêmicas
+│   │   ├── QuestionRepository.ts  # Abstração de persistência do banco de questões
+│   │   ├── OmrRepository.ts       # Abstração de persistência de leituras ópticas
+│   │   ├── ExamRepository.ts      # Repositório de integração de exames
+│   │   └── index.ts               # Barrel export dos repositórios
+│   │
+│   ├── services/                  # [Camada 3: Serviços / Regras de Negócio]
+│   │   ├── AlunoService.ts        # Regras de estudantes, médias e taxas de aprovação
+│   │   ├── TurmaService.ts        # Regras de turmas e geração de convites
+│   │   ├── QuestionService.ts     # Validação de limites (máx. 20 questões) e pontuações
+│   │   ├── OmrService.ts          # Processamento óptico, correção OMR e nota N2
+│   │   ├── ExportService.ts       # Regra de geração e download de arquivos CSV
+│   │   ├── ExamService.ts         # Algoritmo determinístico de embaralhamento com seed
+│   │   └── index.ts               # Barrel export dos serviços
+│   │
+│   ├── controllers/               # [Camada 4: Controladores / Orquestração]
+│   │   ├── AlunoController.ts     # Orquestrador de requisições de estudantes
+│   │   ├── TurmaController.ts     # Orquestrador de requisições de turmas
+│   │   ├── QuestionController.ts  # Orquestrador de requisições de questões
+│   │   ├── OmrController.ts       # Orquestrador de requisições de leituras OMR
+│   │   ├── ExamController.ts      # Orquestrador de geração de avaliações
+│   │   └── index.ts               # Barrel export dos controladores
+│   │
+│   ├── components/                # [Camada 5: Apresentação Componentizada]
+│   │   ├── cadastros/             # Componentes de gestão de Alunos e Turmas
+│   │   │   ├── CadastrosTab.tsx   # Painel com alternância Alunos / Turmas
+│   │   │   ├── AlunosTable.tsx    # Tabela com listagem, edição e exclusão
+│   │   │   ├── TurmasGrid.tsx     # Cards de turmas e alunos matriculados
+│   │   │   ├── ModalAluno.tsx     # Modal de cadastro/edição de estudante
+│   │   │   └── ModalTurma.tsx     # Modal de cadastro/edição de turma
+│   │   ├── montador/              # Módulo do Montador Split-Screen
+│   │   │   ├── MontadorTab.tsx    # Banco de questões à esquerda, resumo à direita
+│   │   │   └── ModalQuestao.tsx   # Modal de criação/edição de questão
+│   │   ├── impressao/             # Módulo de Diagramação Física
+│   │   │   └── ImpressaoTab.tsx   # Gabarito OMR frente, folha em branco e caderno verso
+│   │   ├── leitura/               # Módulo de Leitura e Correção
+│   │   │   └── LeituraTab.tsx     # Leitor de câmera ativa e simulação direta
+│   │   ├── relatorios/            # Módulo de Análise e Diagnóstico
+│   │   │   └── RelatoriosTab.tsx  # Estatísticas gerais, busca e exportação CSV
+│   │   ├── layout/                # Moldura e Navegação
+│   │   │   ├── Sidebar.tsx        # Menu lateral responsivo com dados docentes
+│   │   │   └── Header.tsx         # Cabeçalho da aplicação
+│   │   ├── common/                # Componentes Compartilhados
+│   │   │   └── QRCodeWrapper.tsx  # Renderizador de QR Code SSR-safe
+│   │   ├── auth/LoginScreen.tsx   # Tela de autenticação institucional
+│   │   └── omr/OmrSheet.tsx       # Folha de gabarito avulsa
+│   │
+│   └── types/index.ts             # Interfaces e contratos TypeScript do sistema
+│
 ├── __tests__/
 │   └── services/
 │       └── ExamService.test.ts    # Testes unitários com Jest
-├── jest.config.js                 # Configuração do Jest
+├── .npmrc                         # Configuração de compatibilidade de dependências (legacy-peer-deps)
+├── vercel.json                    # Configuração de build e deploy contínuo na Vercel
+├── jest.config.js                 # Configurações do framework de testes Jest
 ├── package.json                   # Dependências e scripts do projeto
-└── README.md
+└── README.md                      # Documentação completa do projeto
 ```
-
 
 ---
 
 ## 7. Como Executar o Projeto
 
 ### Pré-requisitos
-* Node.js v20.x ou superior instalado.
-* NPM (gerenciador de pacotes).
+* **Node.js v22.x LTS** ou superior instalado.
+* **NPM** (gerenciador de pacotes padrão do Node).
 
-### Passos de Instalação
+### Passos de Instalação e Execução
 
-1. Clone o repositório ou acesse a pasta raiz do projeto.
+1. Clone o repositório ou acesse a pasta raiz do projeto:
+   ```bash
+   git clone https://github.com/Agenorsc/SGP-CATOLICA-NEXT.git
+   cd SGP-CATOLICA-NEXT
+   ```
+
 2. Instale as dependências:
-
    ```bash
    npm install
    ```
 
 3. Inicie o servidor de desenvolvimento:
-
    ```bash
    npm run dev
    ```
 
-4. Acesse [http://localhost:3000](http://localhost:3000) no navegador.
+4. Acesse a aplicação no seu navegador:
+   👉 **http://localhost:3000**
 
 ---
 
 ## 8. Testes e CI/CD
 
-O projeto conta com testes unitários para as regras centrais de negócio do `ExamService`, incluindo o limite de 20 questões por prova, o payload de identificação do QR Code e a integridade do embaralhamento.
+O projeto conta com uma suíte abrangente de testes unitários automatizados cobrindo as regras centrais de negócio do `ExamService`: limite de 20 questões por prova, integridade do payload de identificação do QR Code (nominal e anônimo) e integridade determinística do embaralhamento de questões e alternativas.
 
 ```bash
-# Executar todos os testes
+# Executar todos os testes unitários
 npm test
 
-# Executar testes com relatório de cobertura
+# Executar testes com relatório detalhado de cobertura de código
 npm run test:coverage
 ```
 
-A esteira de integração contínua (CI/CD) via GitHub Actions é executada a cada *push* ou *pull request* na branch `main` e valida:
-
-* Instalação das dependências (`npm install`);
-* Execução da suíte de testes unitários com Jest;
-* Compilação da build de produção do Next.js (`npm run build`).
+### Esteira de Integração Contínua (GitHub Actions & Vercel)
+A esteira configurada em `.github/workflows/ci-cd.yml` é disparada automaticamente a cada *push* ou *pull request* na branch `main`:
+1. Checkout do repositório em container Ubuntu;
+2. Configuração do ambiente com **Node.js v22.x LTS**;
+3. Resolução segura de dependências com `npm install --legacy-peer-deps`;
+4. Execução automatizada da suíte de testes com Jest;
+5. Validação rigorosa da compilação de produção com **Next.js Turbopack** (`npm run build`).
 
 ---
 
 ## 9. Equipe e Contribuições
 
-As contribuições e principais frentes de cada integrante estão descritas na seção [Equipe](#equipe).
+As contribuições e atribuições de cada integrante na modelagem, arquitetura, testes e desenvolvimento do sistema estão registradas na seção [Equipe](#equipe).
