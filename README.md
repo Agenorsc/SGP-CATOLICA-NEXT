@@ -101,11 +101,11 @@ Este documento apresenta os **quatro diagramas UML basilares (Casos de Uso, Ativ
 No contexto universitário contemporâneo, a elaboração, a aplicação e a correção de avaliações somativas e formativas demandam um tempo substancial do corpo docente. No **Centro Universitário Católica de Santa Catarina (Católica SC)**, especificamente nos cursos das áreas de Tecnologia da Informação e Engenharias, o docente Samuel gerencia múltiplos módulos acadêmicos com contingentes que totalizam de **200 a 400 alunos por ciclo de provas**.
 
 A operacionalização manual dessas avaliações acarreta gargalos críticos:
-* **Elevado risco de fraudes ou "colas"** pela aplicação de provas com ordenação idêntica a turmas volumosas;
-* **Desperdício de papel** decorrente da ausência de diagramação gráfica otimizada em formato frente e verso;
-* **Inviabilidade pedagógica** de o estudante levar o caderno de questões para casa no dia da aplicação da avaliação;
-* **Fadiga cognitiva e falhas humanas** na correção manual de centenas de cartões-resposta;
-* **Morosidade na compilação estatística** das médias semestrais e na identificação pedagógica de distratores mais assinalados.
+- **Elevado risco de fraudes ou "colas"** pela aplicação de provas com ordenação idêntica a turmas volumosas;
+- **Desperdício de papel** decorrente da ausência de diagramação gráfica otimizada em formato frente e verso;
+- **Inviabilidade pedagógica** de o estudante levar o caderno de questões para casa no dia da aplicação da avaliação;
+- **Fadiga cognitiva e falhas humanas** na correção manual de centenas de cartões-resposta;
+- **Morosidade na compilação estatística** das médias semestrais e na identificação pedagógica de distratores mais assinalados.
 
 Para sanar tais deficiências, concebeu-se o **Sistema de Geração e Correção de Provas (SGP)**, uma plataforma web full-stack desenvolvida em Next.js 16, React 19, TypeScript e Tailwind CSS, orientada a componentes modulares e estruturada sob os pilares da Engenharia de Software como ferramenta de alta produtividade para o corpo docente.
 
@@ -118,11 +118,11 @@ O desafio central consiste em estruturar um fluxo integrado que une a elaboraç�
 Desenvolver e modelar arquiteturalmente um sistema full-stack componentizado para automação integral do ciclo de avaliação acadêmica da Católica SC, abrangendo desde a composição e impressão de cadernos e gabaritos OMR até a correção óptica por QR Code e consolidação de relatórios docentes de desempenho escolar.
 
 #### 1.3.2 Objetivos Específicos
-* Modelar formalmente o sistema utilizando **quatro diagramas UML padronizados (Casos de Uso, Atividades com raias, Classes e Sequência)**, expondo o raciocínio dedutivo de elaboração passo a passo;
-* Catalogar e documentar os requisitos funcionais e não funcionais que sustentam a aplicação;
-* Especificar funcionalmente cada tela do sistema, detalhando a interface administrativa e pedagógica do docente;
-* Conceber o modelo relacional de banco de dados SQL (PostgreSQL), preparando a aplicação para substituir os mocks e estados locais por uma camada transacional robusta;
-* Estabelecer uma divisão transparente de tarefas para os cinco integrantes do grupo, ancorada em Pull Requests (PRs) e evidências para o diário de bordo acadêmico.
+- Modelar formalmente o sistema utilizando **quatro diagramas UML padronizados (Casos de Uso, Atividades com raias, Classes e Sequência)**, expondo o raciocínio dedutivo de elaboração passo a passo;
+- Catalogar e documentar os requisitos funcionais e não funcionais que sustentam a aplicação;
+- Especificar funcionalmente cada tela do sistema, detalhando a interface administrativa e pedagógica do docente;
+- Conceber o modelo relacional de banco de dados SQL (PostgreSQL), preparando a aplicação para substituir os mocks e estados locais por uma camada transacional robusta;
+- Estabelecer uma divisão transparente de tarefas para os cinco integrantes do grupo, ancorada em Pull Requests (PRs) e evidências para o diário de bordo acadêmico.
 
 ---
 
@@ -266,43 +266,8 @@ A análise textual dos requisitos e do sistema permitiu isolar os atores que int
 
 <div align="center">
   <img src="docs/diagramas/figura1-casos-de-uso.png" alt="Figura 1 - Diagrama de Casos de Uso SGP Católica SC" width="800" />
-  <p><strong>Figura 1 – Diagrama de Casos de Uso do Sistema SGP Católica SC</strong> (Fonte: Autores)</p>
+  <p><strong>Figura 1 – Diagrama de Casos de Uso do Sistema SGP Católica SC</strong> (Auto: AGENOR ALVISE)</p>
 </div>
-
-```mermaid
-flowchart LR
-    subgraph SGP["Sistema de Geração e Correção de Provas (SGP Católica SC)"]
-        UC1(["Autenticar no Sistema"])
-        UC2(["Gerenciar Turmas"])
-        UC3(["Gerenciar Alunos e Notas (N1, N2, N3)"])
-        UC4(["Manter Banco de Questões"])
-        UC5(["Montar Avaliação (Split-Screen)"])
-        UC6(["Configurar Embaralhamento"])
-        UC7(["Gerar Caderno e Gabarito OMR"])
-        UC8(["Imprimir Provas Frente/Verso"])
-        UC9(["Escanear Cartão-Resposta OMR"])
-        UC10(["Corrigir Prova e Atualizar N2"])
-        UC11(["Consultar Relatórios e Distratores"])
-        UC12(["Inspecionar Espelho OMR do Aluno"])
-        UC13(["Exportar Notas e Relatório em CSV/Excel"])
-    end
-
-    Professor["Professor (Docente)"] --> UC1
-    Professor --> UC2
-    Professor --> UC3
-    Professor --> UC4
-    Professor --> UC5
-    Professor --> UC6
-    Professor --> UC7
-    Professor --> UC8
-    Professor --> UC9
-    Professor --> UC10
-    Professor --> UC11
-    Professor --> UC12
-    Professor --> UC13
-
-    UC9 <-- "Captura de Frames" --> Camera["Câmera / Scanner (Hardware)"]
-```
 
 ---
 
@@ -324,69 +289,8 @@ O fluxo do processo avaliativo envolve quatro raias com transferência contínua
 
 <div align="center">
   <img src="docs/diagramas/figura2-atividades.png" alt="Figura 2 - Diagrama de Atividades com Raias do Ciclo Avaliativo" width="850" />
-  <p><strong>Figura 2 – Diagrama de Atividades com Raias (Swimlanes) do Ciclo Avaliativo</strong> (Fonte: Autores)</p>
+  <p><strong>Figura 2 – Diagrama de Atividades com Raias (Swimlanes) do Ciclo Avaliativo</strong> (Autor: EDINEI JUNIO MACHADO )</p>
 </div>
-
-```mermaid
-flowchart TD
-    subgraph PROF["Professor"]
-        P1([Início]) --> P2["Montar Prova (Split-Screen)"]
-        P2 --> P3["Parametrizar Regras e Versões"]
-        P4["Disparar Impressão Física"]
-        P5["Aplicar Avaliação Presencial"]
-        P6["Coletar Folhas OMR Preenchidas"]
-        P7["Acionar Câmera / Scanner OMR"]
-        P8{"Alerta de Leitura?"}
-        P9["Reajustar Enquadramento do Cartão"]
-        P10["Conferir Nota N2 Calculada"]
-        P11["Consultar Relatórios e Distratores"] --> P12([Fim])
-    end
-
-    subgraph SIST["Sistema SGP (Full-Stack)"]
-        S1["Embaralhar Itens Deterministicamente"]
-        S2["Diagramar Frente/Verso com Folha Branca"]
-        S3["Capturar Quadro de Vídeo e Decodificar QR Code"]
-        S4{"Leitura Óptica Conclusiva?"}
-        S5["Comparar Bolhas com Gabarito da Versão"]
-        S6["Calcular Nota N2 Proporcional"]
-    end
-
-    subgraph ALUN["Aluno (Agente Físico)"]
-        A1["Receber Prova Impressa"]
-        A2["Resolver Questões no Caderno"]
-        A3["Preencher Folha OMR a Caneta"]
-        A4["Destacar e Entregar Gabarito OMR"]
-    end
-
-    subgraph BANC["Banco de Dados SQL"]
-        B1["Persistir Layout Materializado (ExamVersion)"]
-        B2["Registrar Log OMR Idempotente"]
-        B3["Atualizar Nota N2 no Cadastro do Aluno"]
-    end
-
-    P3 --> S1
-    S1 --> B1
-    B1 --> S2
-    S2 --> P4
-    P4 --> P5
-    P5 --> A1
-    A1 --> A2
-    A2 --> A3
-    A3 --> A4
-    A4 --> P6
-    P6 --> P7
-    P7 --> S3
-    S3 --> S4
-    S4 -- "Não (Falha)" --> P8
-    P8 --> P9
-    P9 --> S3
-    S4 -- "Sim (Sucesso)" --> S5
-    S5 --> S6
-    S6 --> B2
-    B2 --> B3
-    B3 --> P10
-    P10 --> P11
-```
 
 ---
 
@@ -409,104 +313,8 @@ Através da extração de substantivos do código-fonte e regras de negócio, ca
 
 <div align="center">
   <img src="docs/diagramas/figura3-classes.png" alt="Figura 3 - Diagrama de Classes UML do Domínio do SGP" width="850" />
-  <p><strong>Figura 3 – Diagrama de Classes UML do Domínio do SGP</strong> (Fonte: Autores)</p>
+  <p><strong>Figura 3 – Diagrama de Classes UML do Domínio do SGP</strong> (Autor: ERIC RICARDO LANGE )</p>
 </div>
-
-```mermaid
-classDiagram
-    class PessoaModel {
-        +String nome
-        +String dataNascimento
-        +String naturalidade
-        +String estadoNatal
-        +Filiacao filiacao
-        +Contato contato
-        +Endereco endereco
-    }
-
-    class AlunoModel {
-        +String id
-        +String ra
-        +String curso
-        +String turno
-        +String turmaId
-        +Float n1
-        +Float n2
-        +Float n3
-        +calcularMedia() Float
-        +verificarStatus() String
-    }
-
-    class TurmaModel {
-        +String id
-        +String nome
-        +String curso
-        +String semestre
-        +String codigoConvite
-        +gerarCodigoConvite() String
-    }
-
-    class Question {
-        +String id
-        +String tipo
-        +String enunciado
-        +Float pontuacao
-        +List~String~ tags
-        +validarPontuacao() Boolean
-    }
-
-    class Alternative {
-        +String id
-        +String letraOriginal
-        +String texto
-        +Boolean correta
-    }
-
-    class ExamVersionLayout {
-        +Int versionNumber
-        +String versionLetter
-        +String qrPayload
-    }
-
-    class ExamService {
-        +shuffleArray(array, seed) List
-        +generateVersions(config) List
-        +validarLimite20Questoes() Boolean
-    }
-
-    class LeituraOMRRegistro {
-        +String id
-        +String alunoId
-        +String alunoNome
-        +String ra
-        +String turmaNome
-        +String materia
-        +String versao
-        +Int acertos
-        +Int totalQuestoes
-        +Float notaCalculada
-        +String dataLeitura
-        +calcularNotaFinal() Float
-    }
-
-    class RelatorioDesempenho {
-        +Float mediaTurma
-        +Int totalAvaliacoes
-        +Float taxaAprovacao
-        +exportarCSV() Blob
-        +exportarExcel() Blob
-    }
-
-    PessoaModel <|-- AlunoModel : Herança
-    TurmaModel "1" --> "0..*" AlunoModel : matricula
-    Question "1" *-- "2..5" Alternative : contem
-    ExamVersionLayout "1" o-- "1..20" Question : compoe
-    AlunoModel "1" --> "0..1" ExamVersionLayout : recebe
-    ExamService ..> ExamVersionLayout : gera
-    AlunoModel "1" --> "0..*" LeituraOMRRegistro : possui
-    ExamVersionLayout "1" --> "0..1" LeituraOMRRegistro : orienta
-    RelatorioDesempenho "1" o-- "0..*" LeituraOMRRegistro : agrega
-```
 
 ---
 
@@ -519,56 +327,8 @@ O cenário modela a dinâmica temporal entre o **Professor**, o componente **Cam
 
 <div align="center">
   <img src="docs/diagramas/figura4-sequencia.png" alt="Figura 4 - Diagrama de Sequência UML Leitura OMR e Atualização N2" width="850" />
-  <p><strong>Figura 4 – Diagrama de Sequência UML: Leitura OMR, Correção Automatizada e Atualização da Nota N2</strong> (Fonte: Autores)</p>
+  <p><strong>Figura 4 – Diagrama de Sequência UML: Leitura OMR, Correção Automatizada e Atualização da Nota N2</strong> (Autor: ERICK ANDREAS PONTECELLI  )</p>
 </div>
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Prof as Professor
-    participant Cam as CameraScanner (Html5Qrcode)
-    participant Ctrl as ExamController
-    participant Srv as ExamService
-    participant BD as BancoDeDados (SQL)
-
-    Prof->>Cam: iniciarCameraLeitura()
-    activate Cam
-    Cam-->>Prof: feed de vídeo ativo (webcam)
-    
-    Cam->>Cam: capturarFrame() e decodificar QR Code
-    Cam->>Ctrl: processarDadoQrCodeLido(qrCodeString)
-    activate Ctrl
-
-    Ctrl->>Srv: processarCorrecao(targetAluno, targetTurma, questoes, tituloProva)
-    activate Srv
-
-    Srv->>Srv: extrairVersaoEAluno(qrCodeString)
-    Srv->>Srv: compararBolhasComGabaritoOficial()
-    Srv->>Srv: computarAcertosENotaN2()
-
-    alt Leitura e Validação Bem-Sucedida
-        Srv->>BD: salvarRegistroLeituraOMR(novoRegistro)
-        activate BD
-        BD-->>Srv: 200 OK (registro persistido)
-        deactivate BD
-
-        Srv->>BD: atualizarNotaN2Aluno(alunoId, notaFinal)
-        activate BD
-        BD-->>Srv: 200 OK (nota N2 atualizada)
-        deactivate BD
-
-        Srv-->>Ctrl: retorno com LeituraOMRRegistro
-        Ctrl-->>Cam: 200 OK (sucesso)
-        deactivate Ctrl
-        Cam-->>Prof: exibir feedback verde de sucesso com nota N2 calculada
-    else Falha de Leitura ou Enquadramento
-        Srv-->>Ctrl: erro de decodificação óptica
-        Ctrl-->>Cam: 400 Bad Request
-        Cam-->>Prof: emitir alerta sonoro/visual para reenquadrar cartão
-    end
-    deactivate Srv
-    deactivate Cam
-```
 
 ---
 
@@ -576,12 +336,12 @@ sequenceDiagram
 
 ### 5.1 Justificativa da Migração e Modelo de Dados Normalizado (3FN)
 Para suportar a escala real de centenas de estudantes e assegurar auditabilidade das avaliações, o SGP foi modelado para migrar de mocks em memória para um SGBD relacional (**PostgreSQL**). O modelo normalizado em Terceira Forma Normal (**3FN**) resolve:
-* A **persistência determinística das versões de avaliação** (tabelas `questoes_versao` e `alternativas_versao`), materializando a ordem exata das questões e alternativas sorteadas;
-* A **garantia de idempotência na correção offline** via chave `client_correction_id`, impedindo que uma mesma prova seja computada duas vezes caso o dispositivo reconecte à rede;
-* A **integridade referencial estrita** com chaves primárias (`UUID` / `SERIAL`) e chaves estrangeiras (`FOREIGN KEY`) com deleção em cascata controlada.
+- A **persistência determinística das versões de avaliação** (tabelas `questoes_versao` e `alternativas_versao`), materializando a ordem exata das questões e alternativas sorteadas;
+- A **garantia de idempotência na correção offline** via chave `client_correction_id`, impedindo que uma mesma prova seja computada duas vezes caso o dispositivo reconecte à rede;
+- A **integridade referencial estrita** com chaves primárias (`UUID` / `SERIAL`) e chaves estrangeiras (`FOREIGN KEY`) com deleção em cascata controlada.
 
 ### 5.2 Estrutura do Esquema Relacional (`schema-n2.sql`)
-O esquema foi materializado em **11 tabelas interligadas** no script [`docs/schema-n2.sql`](file:///C:/SGP-CATOLICA-NEXT/docs/schema-n2.sql):
+O esquema foi materializado em **11 tabelas interligadas** no script [`docs/schema-n2.sql`](docs/schema-n2.sql):
 
 1. **`usuarios`**: Autenticação institucional do corpo docente (`@catolicasc.org.br`);
 2. **`turmas`**: Gestão de turmas acadêmicas com código de convite autogerado (`invite_code`);
@@ -599,7 +359,7 @@ O esquema foi materializado em **11 tabelas interligadas** no script [`docs/sche
 
 ## 6. Gestão da Equipe, Diário de Bordo e Registro de PRs
 
-### 6.1 Divisão de Tarefas da Equipe
+### 6.1 Divisão de Tarefas da Equipe (Tabela de PRs)
 
 Para cumprir a exigência docente de evidenciação clara de atividades individuais para o diário de bordo acadêmico, estruturou-se uma matriz de trabalho especializada por integrante, rastreada por Pull Requests (PRs):
 
@@ -681,20 +441,9 @@ C:\SGP-CATOLICA-NEXT\src/
     ├── diagramas/              # Imagens oficiais dos 4 diagramas UML
     ├── telas/                  # Capturas de tela comprobatórias da aplicação
     └── schema-n2.sql           # DDL SQL PostgreSQL completo
-```
 
----
-
-### 7.2 Como Executar o Projeto Localmente
-
-#### Pré-requisitos
-* **Node.js v22.x LTS** instalado;
-* **NPM** (gerenciador de pacotes oficial).
-
-#### Passo a Passo
-```bash
 # 1. Clonar o repositório
-git clone https://github.com/Agenorsc/SGP-CATOLICA-NEXT.git
+git clone [https://github.com/Agenorsc/SGP-CATOLICA-NEXT.git](https://github.com/Agenorsc/SGP-CATOLICA-NEXT.git)
 cd SGP-CATOLICA-NEXT
 
 # 2. Instalar dependências (utiliza .npmrc configurado)
@@ -702,25 +451,13 @@ npm install
 
 # 3. Executar o servidor de desenvolvimento
 npm run dev
-```
 
-Abra no navegador: 👉 **http://localhost:3000**
-
----
-
-### 7.3 Testes Automatizados e CI/CD
-
-O projeto conta com suíte automatizada de testes unitários Jest cobrindo 100% dos cenários críticos de negócio:
-
-```bash
 # Executar todos os testes
 npm test
 
 # Executar testes com relatório de cobertura
 npm run test:coverage
-```
 
-```text
 PASS __tests__/services/ExamService.test.ts
   ExamService - Regras de Negócio e Embaralhamento
     √ deve instanciar o serviço com sucesso
@@ -734,20 +471,6 @@ PASS __tests__/services/ExamService.test.ts
 Test Suites: 1 passed, 1 total
 Tests:       7 passed, 7 total
 Snapshots:   0 total
-```
 
----
 
-## 8. Considerações Finais
 
-A entrega da **Avaliação N2 (Parte 1)** consolida uma solução robusta que atende de ponta a ponta aos requisitos do cliente Samuel e do Centro Universitário Católica SC. A transição da estrutura monolítica para a **Arquitetura em 5 Camadas Desacopladas** confere ao projeto legibilidade, testabilidade e alta manutenibilidade, preparando a base tecnológica para as próximas etapas de integração transacional com banco de dados PostgreSQL e visão computacional avançada.
-
----
-
-## 9. Referências
-
-1. PRESSMAN, Roger S.; MAXIM, Bruce R. **Engenharia de Software: Uma Abordagem Profissional**. 9. ed. Porto Alegre: AMGH, 2021.
-2. SOMMERVILLE, Ian. **Engenharia de Software**. 10. ed. São Paulo: Pearson Education do Brasil, 2019.
-3. FOWLER, Martin. **UML Essencial: Um Breve Guia para a Linguagem Padrão de Modelagem de Objetos**. 3. ed. Porto Alegre: Bookman, 2005.
-4. LARMAN, Craig. **Utilizando UML e Padrões: Uma Introdução à Análise e ao Projeto Orientados a Objetos e ao Desenvolvimento Iterativo**. 3. ed. Porto Alegre: Bookman, 2007.
-5. CENTRO UNIVERSITÁRIO CATÓLICA DE SANTA CATARINA. **Diretrizes Pedagógicas e Critérios Avaliativos do Curso de Bacharelado em Engenharia de Software**. Jaraguá do Sul: Católica SC, 2026.
