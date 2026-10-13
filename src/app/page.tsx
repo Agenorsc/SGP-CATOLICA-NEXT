@@ -264,15 +264,15 @@ export default function Home() {
     setModalAberto(true);
   };
 
-  const excluirQuestao = (id: string) => {
+  const excluirQuestao = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir esta questão do banco?')) {
-      questionService.excluirQuestao(id);
+      await questionService.excluirQuestao(id);
       setBancoQuestoes(bancoQuestoes.filter(q => q.id !== id));
       setQuestoesSelecionadas(questoesSelecionadas.filter(q => q.id !== id));
     }
   };
 
-  const handleSaveQuestaoSubmit = (e: React.FormEvent) => {
+  const handleSaveQuestaoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!novoEnunciado.trim()) return;
 
@@ -290,13 +290,13 @@ export default function Home() {
       })) : undefined
     };
 
-    questionService.salvarQuestao(questaoFormatada);
+    const saved = await questionService.salvarQuestao(questaoFormatada);
 
     if (questaoEmEdicaoId) {
-      setBancoQuestoes(bancoQuestoes.map(q => q.id === questaoEmEdicaoId ? questaoFormatada : q));
-      setQuestoesSelecionadas(questoesSelecionadas.map(q => q.id === questaoEmEdicaoId ? questaoFormatada : q));
+      setBancoQuestoes(bancoQuestoes.map(q => q.id === questaoEmEdicaoId ? saved : q));
+      setQuestoesSelecionadas(questoesSelecionadas.map(q => q.id === questaoEmEdicaoId ? saved : q));
     } else {
-      setBancoQuestoes([questaoFormatada, ...bancoQuestoes]);
+      setBancoQuestoes([saved, ...bancoQuestoes]);
     }
 
     setModalAberto(false);
@@ -351,14 +351,14 @@ export default function Home() {
     setModalAlunoAberto(true);
   };
 
-  const excluirAluno = (id: string) => {
+  const excluirAluno = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este aluno?')) {
-      alunoService.excluirAluno(id);
+      await alunoService.excluirAluno(id);
       setAlunos(alunos.filter(a => a.id !== id));
     }
   };
 
-  const handleSaveAlunoSubmit = (e: React.FormEvent) => {
+  const handleSaveAlunoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (alunoEmEdicaoId) {
       const alunoAtualizado = new AlunoModel({
@@ -382,8 +382,8 @@ export default function Home() {
           estado: formAluno.estado
         }
       });
-      alunoService.salvarAluno(alunoAtualizado);
-      setAlunos(alunos.map(a => a.id === alunoEmEdicaoId ? alunoAtualizado : a));
+      const saved = await alunoService.salvarAluno(alunoAtualizado);
+      setAlunos(alunos.map(a => a.id === alunoEmEdicaoId ? saved : a));
     } else {
       const novoAluno = new AlunoModel({
         nome: formAluno.nome,
@@ -405,8 +405,8 @@ export default function Home() {
           estado: formAluno.estado
         }
       });
-      alunoService.salvarAluno(novoAluno);
-      setAlunos([...alunos, novoAluno]);
+      const saved = await alunoService.salvarAluno(novoAluno);
+      setAlunos([...alunos, saved]);
     }
 
     setModalAlunoAberto(false);
@@ -433,14 +433,14 @@ export default function Home() {
     setModalTurmaAberto(true);
   };
 
-  const excluirTurma = (id: string) => {
+  const excluirTurma = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir esta turma?')) {
-      turmaService.excluirTurma(id);
+      await turmaService.excluirTurma(id);
       setTurmas(turmas.filter(t => t.id !== id));
     }
   };
 
-  const handleSaveTurmaSubmit = (e: React.FormEvent) => {
+  const handleSaveTurmaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (turmaEmEdicaoId) {
       const turmaAtualizada = new TurmaModel({
@@ -449,16 +449,16 @@ export default function Home() {
         curso: formTurma.curso,
         semestre: formTurma.semestre
       });
-      turmaService.salvarTurma(turmaAtualizada);
-      setTurmas(turmas.map(t => t.id === turmaEmEdicaoId ? turmaAtualizada : t));
+      const saved = await turmaService.salvarTurma(turmaAtualizada);
+      setTurmas(turmas.map(t => t.id === turmaEmEdicaoId ? saved : t));
     } else {
       const novaTurma = new TurmaModel({
         nome: formTurma.nome,
         curso: formTurma.curso,
         semestre: formTurma.semestre
       });
-      turmaService.salvarTurma(novaTurma);
-      setTurmas([...turmas, novaTurma]);
+      const saved = await turmaService.salvarTurma(novaTurma);
+      setTurmas([...turmas, saved]);
     }
     setModalTurmaAberto(false);
   };

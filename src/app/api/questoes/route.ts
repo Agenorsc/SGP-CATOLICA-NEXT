@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { PrismaQuestionRepository } from '@/repositories/prisma/PrismaQuestionRepository';
 import { Question } from '@/types';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const questionRepo = new PrismaQuestionRepository();
 
 export async function GET() {

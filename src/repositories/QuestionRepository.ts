@@ -55,7 +55,7 @@ export class QuestionRepository implements IBaseRepository<Question> {
   async findAll(): Promise<Question[]> {
     if (typeof window !== 'undefined') {
       try {
-        const res = await fetch('/api/questoes');
+        const res = await fetch('/api/questoes', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           this.fallbackQuestions = data;

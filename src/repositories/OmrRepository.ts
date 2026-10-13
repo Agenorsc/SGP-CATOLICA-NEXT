@@ -7,7 +7,7 @@ export class OmrRepository implements IBaseRepository<LeituraOMRRegistro> {
   async findAll(): Promise<LeituraOMRRegistro[]> {
     if (typeof window !== 'undefined') {
       try {
-        const res = await fetch('/api/omr');
+        const res = await fetch('/api/omr', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           this.fallbackLeituras = data;
@@ -28,7 +28,7 @@ export class OmrRepository implements IBaseRepository<LeituraOMRRegistro> {
   async findByAlunoId(alunoId: string): Promise<LeituraOMRRegistro[]> {
     if (typeof window !== 'undefined') {
       try {
-        const res = await fetch(`/api/omr?alunoId=${encodeURIComponent(alunoId)}`);
+        const res = await fetch(`/api/omr?alunoId=${encodeURIComponent(alunoId)}`, { cache: 'no-store' });
         if (res.ok) {
           return await res.json();
         }

@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { PrismaAlunoRepository } from '@/repositories/prisma/PrismaAlunoRepository';
 import { AlunoModel } from '@/models/AlunoModel';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const alunoRepo = new PrismaAlunoRepository();
 
 export async function GET(request: Request) {

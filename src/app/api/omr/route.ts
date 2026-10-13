@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { PrismaOmrRepository } from '@/repositories/prisma/PrismaOmrRepository';
 import { LeituraOMRRegistro } from '@/types';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const omrRepo = new PrismaOmrRepository();
 
 export async function GET(request: Request) {

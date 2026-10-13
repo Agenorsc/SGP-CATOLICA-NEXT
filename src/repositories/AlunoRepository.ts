@@ -72,7 +72,7 @@ export class AlunoRepository implements IBaseRepository<AlunoModel> {
   async findAll(): Promise<AlunoModel[]> {
     if (typeof window !== 'undefined') {
       try {
-        const res = await fetch('/api/alunos');
+        const res = await fetch('/api/alunos', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           this.fallbackAlunos = data.map((d: any) => new AlunoModel(d));
@@ -98,7 +98,7 @@ export class AlunoRepository implements IBaseRepository<AlunoModel> {
   async findByTurmaId(turmaId: string): Promise<AlunoModel[]> {
     if (typeof window !== 'undefined') {
       try {
-        const res = await fetch(`/api/alunos?turmaId=${encodeURIComponent(turmaId)}`);
+        const res = await fetch(`/api/alunos?turmaId=${encodeURIComponent(turmaId)}`, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           return data.map((d: any) => new AlunoModel(d));

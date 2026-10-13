@@ -22,7 +22,7 @@ export class TurmaRepository implements IBaseRepository<TurmaModel> {
   async findAll(): Promise<TurmaModel[]> {
     if (typeof window !== 'undefined') {
       try {
-        const res = await fetch('/api/turmas');
+        const res = await fetch('/api/turmas', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           this.fallbackTurmas = data.map((d: any) => new TurmaModel(d));
