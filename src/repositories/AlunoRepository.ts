@@ -54,6 +54,17 @@ export class AlunoRepository {
       n1: 10.0,
       n2: 9.5,
       n3: 10.0
+    }),
+    new AlunoModel({
+      id: 'alu-05',
+      nome: 'Leticia Alvise',
+      ra: 'RQ123456',
+      curso: 'ENGENHARIA DE SOFTWARE',
+      turno: 'Noturno',
+      turmaId: 't1',
+      n1: 8.5,
+      n2: 0.0,
+      n3: 8.5
     })
   ];
 

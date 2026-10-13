@@ -30,7 +30,7 @@ export function QRCodeWrapper({ value, size = 110 }: QRCodeWrapperProps) {
     <QRCodeSVG
       value={value}
       size={size}
-      level="M"
+      level="L"
       includeMargin={false}
     />
   );

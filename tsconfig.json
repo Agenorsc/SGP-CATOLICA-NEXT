@@ -26,6 +26,10 @@
         "./src/*"
       ]
     },
+    "types": [
+      "jest",
+      "node"
+    ],
     "target": "ES2017"
   },
   "include": [

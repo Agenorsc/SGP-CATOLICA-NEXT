@@ -98,13 +98,15 @@ export function ImpressaoTab({
                 <div className="p-2 bg-white rounded border border-slate-200 print:border-none flex justify-center items-center">
                   <QRCodeWrapper
                     value={JSON.stringify({
+                      system: 'SGP-CATOLICA',
+                      examId: `EXAM-${turmaSelecionadaId || 'T1'}`,
+                      studentId: alunoAtual?.id || 'alu-01',
                       ra: withId ? (alunoAtual?.ra || '1328834') : 'ANONIMO',
-                      aluno: withId ? (alunoAtual?.nome || 'AGENOR ALVISE') : 'ANONIMO',
-                      materia: tituloProva,
-                      versao: String.fromCharCode(65 + (selectedVersionIdx % 4)),
-                      turmaId: turmaSelecionadaId
+                      name: withId ? (alunoAtual?.nome || 'AGENOR ALVISE') : 'ANONIMO',
+                      turmaId: turmaSelecionadaId || 't1',
+                      examVersion: String.fromCharCode(65 + (selectedVersionIdx % 4))
                     })}
-                    size={110}
+                    size={135}
                   />
                 </div>
                 <span className="text-[11px] font-black text-slate-900 mt-2 block print:text-black">
@@ -115,21 +117,41 @@ export function ImpressaoTab({
                 </span>
               </div>
 
-              <div className="space-y-2">
-                <span className="text-xs font-bold uppercase block text-slate-800">Quadro de Respostas (Preencha a caneta):</span>
-                {questoesEmbaralhadas.filter(q => q.tipo === 'objetiva').map((q, idx) => (
-                  <div key={q.id || idx} className="flex items-center gap-2 text-xs">
-                    <span className="font-bold w-7">Q.{idx + 1}:</span>
-                    {['A', 'B', 'C', 'D', 'E'].map(letra => (
-                      <div
-                        key={letra}
-                        className="w-6 h-6 border-2 border-slate-900 rounded-full flex items-center justify-center font-bold text-[11px] print:border-black print:text-black"
-                      >
-                        {letra}
-                      </div>
-                    ))}
+              {/* QUADRO DE RESPOSTAS OMR EM FORMATO QUADRADO */}
+              <div className="border-2 border-slate-900 p-4 bg-white rounded-xl print:border-2 print:border-black space-y-2.5">
+                <div className="flex items-center justify-between border-b-2 border-slate-900 pb-1.5 print:border-black">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 bg-black inline-block print:bg-black" />
+                    <span className="text-xs font-black uppercase text-slate-900 print:text-black tracking-wide">
+                      Quadro de Respostas (Preencha o Quadrado a Caneta)
+                    </span>
                   </div>
-                ))}
+                  <span className="w-3 h-3 bg-black inline-block print:bg-black" />
+                </div>
+
+                <div className="space-y-2">
+                  {questoesEmbaralhadas.filter(q => q.tipo === 'objetiva').map((q, idx) => (
+                    <div key={q.id || idx} className="flex items-center gap-2 text-xs">
+                      <span className="font-mono font-black w-7 text-slate-900 print:text-black">Q.{idx + 1}:</span>
+                      <div className="flex items-center gap-1.5">
+                        {['A', 'B', 'C', 'D', 'E'].map(letra => (
+                          <div
+                            key={letra}
+                            className="w-7 h-7 border-2 border-slate-900 rounded-none flex items-center justify-center font-black text-xs print:border-2 print:border-black print:text-black bg-white"
+                          >
+                            {letra}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between pt-1.5 border-t border-slate-300 print:border-black text-[9px] text-slate-600 print:text-black font-mono">
+                  <span className="w-3 h-3 bg-black inline-block print:bg-black" />
+                  <span>Preencha totalmente o quadrado: [ ■ ]</span>
+                  <span className="w-3 h-3 bg-black inline-block print:bg-black" />
+                </div>
               </div>
             </div>
           </div>

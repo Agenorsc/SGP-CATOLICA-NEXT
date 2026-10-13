@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Menu } from 'lucide-react';
-import { Html5Qrcode } from 'html5-qrcode';
 
 // Camadas de Domínio (Models)
 import { AlunoModel, TurmaModel } from '@/models';
@@ -95,15 +94,9 @@ export default function Home() {
     questionService.listarQuestoes().then(setBancoQuestoes);
   }, [turmaService, alunoService, questionService]);
 
-  // Leitura OMR & Câmera
+  // Leitura OMR & Histórico
   const [leiturasOMR, setLeiturasOMR] = useState<LeituraOMRRegistro[]>([]);
-  const [alunoSelecionadoLeitura, setAlunoSelecionadoLeitura] = useState<string>('alu-01');
-  const [isSimulatingScan, setIsSimulatingScan] = useState(false);
-  const [scanSucesso, setScanSucesso] = useState<LeituraOMRRegistro | null>(null);
-  const [cameraAtiva, setCameraAtiva] = useState(false);
-  const [cameraErro, setCameraErro] = useState<string | null>(null);
   const [buscaRelatorio, setBuscaRelatorio] = useState('');
-  const scannerRef = useRef<Html5Qrcode | null>(null);
 
   // Montador de Provas
   const [questoesSelecionadas, setQuestoesSelecionadas] = useState<Question[]>([]);
@@ -213,88 +206,6 @@ export default function Home() {
   const alunosFiltradosRelatorio = useMemo(() => {
     return alunoService.filtrarAlunos(alunos, buscaRelatorio);
   }, [alunoService, alunos, buscaRelatorio]);
-
-  // Handlers de Câmera & Leitura OMR
-  const iniciarCameraLeitura = async () => {
-    setCameraErro(null);
-    setCameraAtiva(true);
-
-    try {
-      if (!scannerRef.current) {
-        scannerRef.current = new Html5Qrcode('reader-omr');
-      }
-
-      await scannerRef.current.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-          pararCameraLeitura();
-          processarDadoQrCodeLido(decodedText);
-        },
-        () => {}
-      );
-    } catch {
-      setCameraErro('Não foi possível acessar a câmera do dispositivo.');
-      setCameraAtiva(false);
-    }
-  };
-
-  const pararCameraLeitura = async () => {
-    if (scannerRef.current && cameraAtiva) {
-      try {
-        await scannerRef.current.stop();
-        setCameraAtiva(false);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-  };
-
-  const processarDadoQrCodeLido = (qrCodeString: string) => {
-    const targetRa = omrService.extrairRaDoQrCode(qrCodeString);
-    const targetAluno = alunos.find(a => a.ra === targetRa) || alunos[0];
-    processarLeituraOMR(targetAluno.id);
-  };
-
-  const processarLeituraOMR = (alunoTargetId: string) => {
-    setIsSimulatingScan(true);
-    setScanSucesso(null);
-
-    setTimeout(() => {
-      const targetAluno = alunos.find(a => a.id === alunoTargetId) || alunos[0];
-      const targetTurma = turmas.find(t => t.id === targetAluno.turmaId) || turmas[0];
-
-      const novoRegistro = omrService.processarCorrecao(
-        targetAluno,
-        targetTurma,
-        questoesSelecionadas,
-        tituloProva,
-        'Versão A'
-      );
-
-      // Atualiza nota N2 no AlunoModel
-      setAlunos(prevAlunos => prevAlunos.map(a => {
-        if (a.id === targetAluno.id) {
-          return new AlunoModel({ ...a, n2: novoRegistro.notaCalculada });
-        }
-        return a;
-      }));
-
-      // Registra a leitura OMR
-      omrService.registrarLeitura(novoRegistro);
-      setLeiturasOMR(prev => [novoRegistro, ...prev]);
-      setScanSucesso(novoRegistro);
-      setIsSimulatingScan(false);
-    }, 1000);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        scannerRef.current.stop().catch(() => {});
-      }
-    };
-  }, []);
 
   // Exportação CSV via ExportService
   const exportarCSV = () => {
@@ -649,17 +560,19 @@ export default function Home() {
         {/* 4. ABA LEITURA & CORREÇÃO OMR / QR CODE */}
         {currentTab === 'leitura' && (
           <LeituraTab
-            cameraAtiva={cameraAtiva}
-            cameraErro={cameraErro}
-            isSimulatingScan={isSimulatingScan}
-            iniciarCameraLeitura={iniciarCameraLeitura}
-            pararCameraLeitura={pararCameraLeitura}
-            alunoSelecionadoLeitura={alunoSelecionadoLeitura}
-            setAlunoSelecionadoLeitura={setAlunoSelecionadoLeitura}
             alunos={alunos}
-            processarLeituraOMR={processarLeituraOMR}
-            scanSucesso={scanSucesso}
+            turmas={turmas}
+            turmaSelecionadaId={turmaSelecionadaId}
+            questoesSelecionadas={questoesSelecionadas}
+            tituloProva={tituloProva}
+            shuffleQ={shuffleQ}
+            shuffleAlt={shuffleAlt}
             leiturasOMR={leiturasOMR}
+            onSalvarLeitura={(registro, alunoAtualizado) => {
+              setAlunos(prevAlunos => prevAlunos.map(a => a.id === alunoAtualizado.id ? alunoAtualizado : a));
+              setLeiturasOMR(prev => [registro, ...prev]);
+              omrService.registrarLeitura(registro);
+            }}
           />
         )}
 

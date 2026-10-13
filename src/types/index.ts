@@ -61,11 +61,31 @@ export interface AlternativaCadastro {
   correta: boolean;
 }
 
+export interface SecureQrPayload {
+  system: 'SGP-CATOLICA';
+  examId: string;
+  studentId: string;
+  ra: string;
+  name: string;
+  turmaId: string;
+  examVersion: string;
+}
+
+export interface OMRQuestionResult {
+  numero: number;
+  respostaMarcada: string | null;
+  respostaCorreta: string;
+  correta: boolean;
+  status: 'CORRETA' | 'INCORRETA' | 'ANULADA' | 'EM_BRANCO';
+  fillRate?: number;
+}
+
 export interface LeituraOMRRegistro {
   id: string;
   alunoId: string;
   alunoNome: string;
   ra: string;
+  turmaId?: string;
   turmaNome: string;
   materia: string;
   versao: string;
@@ -73,5 +93,8 @@ export interface LeituraOMRRegistro {
   totalQuestoes: number;
   notaCalculada: number;
   dataLeitura: string;
-  respostasDetectadas: Record<number, string>;
+  respostasDetectadas: Record<number, string | null>;
+  gabaritoOficial?: Record<number, string>;
+  detalhesQuestoes?: OMRQuestionResult[];
+  fiduciaisDetectados?: boolean;
 }
