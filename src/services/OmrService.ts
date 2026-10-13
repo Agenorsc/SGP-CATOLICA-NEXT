@@ -2,6 +2,7 @@ import { OmrRepository } from '@/repositories/OmrRepository';
 import { AlunoModel } from '@/models/AlunoModel';
 import { TurmaModel } from '@/models/TurmaModel';
 import { LeituraOMRRegistro, Question, SecureQrPayload, OMRQuestionResult } from '@/types';
+import { lerGradeOmrPorAjuste } from '@/services/omr/GridOmrEngine';
 
 export interface ValidacaoQrResult {
   sucesso: boolean;
@@ -215,7 +216,19 @@ export class OmrService {
     fillRates: Record<number, number>;
     detalhesLetras: Record<number, Record<string, number>>;
     coordenadasDetectadas?: Record<number, Record<string, { x: number; y: number; fill: number; boxSize?: number }>>;
+    confianca?: number;
+    metodo?: string;
   } {
+    // Motor principal: localiza a grade de quadrados real na foto (robusto a escala de impressão)
+    if (qrAnchor) {
+      try {
+        const resultadoGrade = lerGradeOmrPorAjuste(imgData, totalQuestoes, qrAnchor);
+        if (resultadoGrade) return resultadoGrade;
+      } catch (e) {
+        console.warn('Falha no motor de ajuste de grade, usando método legado:', e);
+      }
+    }
+
     const { width, height, data } = imgData;
     const letras = ['A', 'B', 'C', 'D', 'E'];
 
@@ -270,9 +283,9 @@ export class OmrService {
         qrH = distV;
       }
 
-      // Candidato 1: Layout Compacto A4 Impresso (proporção padrão do navegador)
+      // Candidato 0: Formato Real de Bancada Impresso A4 (relRowsY0 ~ 2.22, relColsX ~ [-1.42..-0.30])
       candidates.push({
-        name: 'compact-stacked',
+        name: 'user-print-real',
         type: 'affine',
         qrX,
         qrY,
@@ -282,51 +295,15 @@ export class OmrService {
         uy,
         vx,
         vy,
-        relColsX: [-1.45, -1.18, -0.91, -0.64, -0.37],
-        relRowsY0: 1.95,
-        rowStep: 0.25,
-        boxHalf: Math.max(3, Math.round(qrW * 0.04))
-      });
-
-      // Candidato 1B: Layout Impressão A4 4 Questões (proporção real da folha impressa vertical)
-      candidates.push({
-        name: 'user-print-4q-stacked',
-        type: 'affine',
-        qrX,
-        qrY,
-        qrW,
-        qrH,
-        ux,
-        uy,
-        vx,
-        vy,
-        relColsX: [-1.55, -1.26, -0.97, -0.68, -0.39],
-        relRowsY0: 2.18,
-        rowStep: 0.38,
-        boxHalf: Math.max(3, Math.round(qrW * 0.04))
-      });
-
-      // Candidato 1C: Layout Impressão 4 Questões Ajustado
-      candidates.push({
-        name: 'user-print-4q-tight',
-        type: 'affine',
-        qrX,
-        qrY,
-        qrW,
-        qrH,
-        ux,
-        uy,
-        vx,
-        vy,
-        relColsX: [-1.48, -1.21, -0.94, -0.67, -0.40],
+        relColsX: [-1.42, -1.14, -0.86, -0.58, -0.30],
         relRowsY0: 2.22,
-        rowStep: 0.36,
-        boxHalf: Math.max(3, Math.round(qrW * 0.04))
+        rowStep: 0.295,
+        boxHalf: Math.max(3, Math.round(qrW * 0.045))
       });
 
-      // Candidato 2: Layout Compacto com Y intermediário
+      // Candidato 0B: Ajuste leve para cima no formato real de bancada
       candidates.push({
-        name: 'compact-stacked-midY',
+        name: 'user-print-real-up',
         type: 'affine',
         qrX,
         qrY,
@@ -336,13 +313,31 @@ export class OmrService {
         uy,
         vx,
         vy,
-        relColsX: [-1.45, -1.18, -0.91, -0.64, -0.37],
-        relRowsY0: 2.15,
-        rowStep: 0.26,
-        boxHalf: Math.max(3, Math.round(qrW * 0.04))
+        relColsX: [-1.42, -1.14, -0.86, -0.58, -0.30],
+        relRowsY0: 2.18,
+        rowStep: 0.295,
+        boxHalf: Math.max(3, Math.round(qrW * 0.045))
       });
 
-      // Candidato 3: Layout Amplo (proporção ampliada / margens maiores)
+      // Candidato 0C: Ajuste leve para baixo no formato real de bancada
+      candidates.push({
+        name: 'user-print-real-down',
+        type: 'affine',
+        qrX,
+        qrY,
+        qrW,
+        qrH,
+        ux,
+        uy,
+        vx,
+        vy,
+        relColsX: [-1.42, -1.14, -0.86, -0.58, -0.30],
+        relRowsY0: 2.26,
+        rowStep: 0.295,
+        boxHalf: Math.max(3, Math.round(qrW * 0.045))
+      });
+
+      // Candidato 1: Proporção Oficial Impressa A4 Vertical (Wide Stacked)
       candidates.push({
         name: 'wide-stacked',
         type: 'affine',
@@ -360,9 +355,9 @@ export class OmrService {
         boxHalf: Math.max(3, Math.round(qrW * 0.04))
       });
 
-      // Candidato 4: Layout Médio
+      // Candidato 2: Ajuste Vertical Superior Leve
       candidates.push({
-        name: 'mid-stacked',
+        name: 'wide-stacked-high',
         type: 'affine',
         qrX,
         qrY,
@@ -372,9 +367,99 @@ export class OmrService {
         uy,
         vx,
         vy,
-        relColsX: [-1.62, -1.33, -1.05, -0.77, -0.49],
-        relRowsY0: 2.25,
-        rowStep: 0.27,
+        relColsX: [-1.80, -1.492, -1.20, -0.908, -0.608],
+        relRowsY0: 2.43,
+        rowStep: 0.285,
+        boxHalf: Math.max(3, Math.round(qrW * 0.04))
+      });
+
+      // Candidato 3: Ajuste Vertical Inferior Leve
+      candidates.push({
+        name: 'wide-stacked-low',
+        type: 'affine',
+        qrX,
+        qrY,
+        qrW,
+        qrH,
+        ux,
+        uy,
+        vx,
+        vy,
+        relColsX: [-1.80, -1.492, -1.20, -0.908, -0.608],
+        relRowsY0: 2.52,
+        rowStep: 0.285,
+        boxHalf: Math.max(3, Math.round(qrW * 0.04))
+      });
+
+      // Candidato 4: Ajuste de Espaçamento Entre Linhas Compacto
+      candidates.push({
+        name: 'wide-stacked-compact-step',
+        type: 'affine',
+        qrX,
+        qrY,
+        qrW,
+        qrH,
+        ux,
+        uy,
+        vx,
+        vy,
+        relColsX: [-1.80, -1.492, -1.20, -0.908, -0.608],
+        relRowsY0: 2.477,
+        rowStep: 0.270,
+        boxHalf: Math.max(3, Math.round(qrW * 0.04))
+      });
+
+      // Candidato 5: Ajuste de Espaçamento Entre Linhas Expandido
+      candidates.push({
+        name: 'wide-stacked-expanded-step',
+        type: 'affine',
+        qrX,
+        qrY,
+        qrW,
+        qrH,
+        ux,
+        uy,
+        vx,
+        vy,
+        relColsX: [-1.80, -1.492, -1.20, -0.908, -0.608],
+        relRowsY0: 2.477,
+        rowStep: 0.300,
+        boxHalf: Math.max(3, Math.round(qrW * 0.04))
+      });
+
+      // Candidato 6: Ajuste Horizontal Levemente à Esquerda
+      candidates.push({
+        name: 'wide-stacked-left',
+        type: 'affine',
+        qrX,
+        qrY,
+        qrW,
+        qrH,
+        ux,
+        uy,
+        vx,
+        vy,
+        relColsX: [-1.86, -1.55, -1.25, -0.95, -0.65],
+        relRowsY0: 2.477,
+        rowStep: 0.285,
+        boxHalf: Math.max(3, Math.round(qrW * 0.04))
+      });
+
+      // Candidato 7: Ajuste Horizontal Levemente à Direita
+      candidates.push({
+        name: 'wide-stacked-right',
+        type: 'affine',
+        qrX,
+        qrY,
+        qrW,
+        qrH,
+        ux,
+        uy,
+        vx,
+        vy,
+        relColsX: [-1.74, -1.44, -1.15, -0.86, -0.56],
+        relRowsY0: 2.477,
+        rowStep: 0.285,
         boxHalf: Math.max(3, Math.round(qrW * 0.04))
       });
 

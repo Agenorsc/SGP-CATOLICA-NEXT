@@ -60,6 +60,7 @@ export function LeituraTab({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isStartingCamera, setIsStartingCamera] = useState(false);
   const [autoProgresso, setAutoProgresso] = useState<number>(0);
+  const [etapaAnalise, setEtapaAnalise] = useState<string>('');
 
   // Dispositivos de Câmera Disponíveis
   const [camerasDisponiveis, setCamerasDisponiveis] = useState<Array<{ id: string; label: string }>>([]);
@@ -96,6 +97,8 @@ export function LeituraTab({
     coordenadasDetectadas?: Record<number, Record<string, { x: number; y: number; fill: number; boxSize?: number }>>;
   } | null>(null);
   const stageRef = useRef<StageCorrection>(stage);
+  const alunoIdentificadoRef = useRef<AlunoModel | null>(null);
+  const versaoIdentificadaRef = useRef<string>('A');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -380,12 +383,26 @@ export function LeituraTab({
             }
           }
 
-          if (textoDecodificado) {
-            if (detectedAnchor) {
-              qrAnchorRef.current = detectedAnchor;
+          if (textoDecodificado && detectedAnchor) {
+            qrAnchorRef.current = detectedAnchor;
+
+            // Aluno reconhecido -> bate o print IMEDIATAMENTE e analisa a foto estática
+            if (stageRef.current === 'READING_STUDENT') {
+              const validacao = omrService.validarPayloadQrCode(textoDecodificado, alunos);
+              if (!validacao.sucesso || !validacao.payload || !validacao.aluno) {
+                setCameraErro(validacao.erro || 'QR Code inválido ou não autorizado.');
+              } else {
+                setCameraErro(null);
+                setAlunoAutenticado(validacao.aluno);
+                alunoIdentificadoRef.current = validacao.aluno;
+                setPayloadAutenticado(validacao.payload);
+                const versao = validacao.payload.examVersion || 'A';
+                setVersaoAutenticada(versao);
+                versaoIdentificadaRef.current = versao;
+                executarCapturaFinalEProcessamento(video);
+                return;
+              }
             }
-            handleQrCodeDetectado(textoDecodificado);
-            return;
           }
         }
       }
@@ -426,38 +443,199 @@ export function LeituraTab({
   };
 
   /**
-   * 2. Etapa 1: Leitura e Autenticação Automática do Aluno (QR Code)
+   * 2. Print Instantâneo + Análise Cuidadosa do Gabarito na Foto Estática
+   * Assim que o QR Code é lido e o aluno identificado, o frame é congelado na hora (print).
+   * Em seguida, com a imagem parada, o sistema leva alguns segundos para:
+   *   a) relocalizar o QR Code exatamente nessa foto;
+   *   b) encontrar o Quadro de Respostas (grade de quadrados 5 × N) por ajuste de grade;
+   *   c) medir o preenchimento de cada quadrado e calcular a nota.
    */
-  const handleQrCodeDetectado = (decodedText: string) => {
-    if (stageRef.current !== 'READING_STUDENT') return;
-
-    // Busca aluno em todo o cadastro para aceitar Beatriz Ramos, Agenor Alvise ou qualquer estudante
-    const validacao = omrService.validarPayloadQrCode(
-      decodedText,
-      alunos
-    );
-
-    if (!validacao.sucesso || !validacao.payload || !validacao.aluno) {
-      setCameraErro(validacao.erro || 'QR Code inválido ou não autorizado.');
-      return;
+  const executarCapturaFinalEProcessamento = (video: HTMLVideoElement) => {
+    // 1. Interrompe a varredura contínua
+    if (scanLoopRef.current) {
+      cancelAnimationFrame(scanLoopRef.current);
+      scanLoopRef.current = null;
     }
 
-    // Sinal sonoro de leitura
+    const aluno = alunoIdentificadoRef.current;
+    if (!aluno) return;
+    const versao = versaoIdentificadaRef.current || 'A';
+
+    const vw = video.videoWidth || 960;
+    const vh = video.videoHeight || 720;
+
+    // 2. PRINT IMEDIATO: congela o frame atual em resolução nativa do sensor
+    const snap = document.createElement('canvas');
+    snap.width = vw;
+    snap.height = vh;
+    const snapCtx = snap.getContext('2d', { willReadFrequently: true });
+    if (!snapCtx) return;
+    snapCtx.drawImage(video, 0, 0, vw, vh);
+
+    try {
+      video.pause();
+    } catch (_) {}
+
+    const rCanvas = resultCanvasRef.current;
+    if (rCanvas) {
+      rCanvas.width = vw;
+      rCanvas.height = vh;
+      rCanvas.getContext('2d')?.drawImage(snap, 0, 0);
+    }
+
     playBeep();
-
-    setCameraErro(null);
-    setAlunoAutenticado(validacao.aluno);
-    setPayloadAutenticado(validacao.payload);
-    setVersaoAutenticada(validacao.payload.examVersion || 'A');
-
-    // Feedback visual instantâneo (flash de tela) SEM fechar a câmera
     setShowFlash(true);
-    setTimeout(() => {
-      setShowFlash(false);
-    }, 280);
-
-    // Transição automática para a Etapa 2
+    setTimeout(() => setShowFlash(false), 280);
     setStage('READING_OMR');
+    setAutoProgresso(5);
+    setEtapaAnalise('📸 Print capturado! Aluno identificado.');
+
+    const esperar = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+    const inicio = performance.now();
+
+    const desenharGrade = (
+      coords: Record<number, Record<string, { x: number; y: number; fill: number; boxSize?: number }>> | undefined,
+      registro?: LeituraOMRRegistro
+    ) => {
+      const canvasEl = resultCanvasRef.current;
+      const ctx2 = canvasEl?.getContext('2d');
+      if (!canvasEl || !ctx2) return;
+      ctx2.drawImage(snap, 0, 0);
+      if (!coords) return;
+      Object.entries(coords).forEach(([qNum, letrasCoords]) => {
+        const questaoDet = registro?.detalhesQuestoes?.find(d => d.numero === parseInt(qNum, 10));
+        const status = questaoDet?.status;
+        const respostaMarcada = questaoDet?.respostaMarcada;
+        const fillsQuestao = Object.values(letrasCoords).map(p => p.fill).sort((a, b) => b - a);
+
+        Object.entries(letrasCoords).forEach(([letra, pt]) => {
+          const bSize = pt.boxSize || 22;
+          const half = bSize / 2;
+
+          // Contorno fino em todos os quadrados localizados (mostra o alinhamento da grade)
+          ctx2.beginPath();
+          ctx2.rect(pt.x - half, pt.y - half, bSize, bSize);
+          ctx2.lineWidth = 1.5;
+          ctx2.strokeStyle = 'rgba(56, 189, 248, 0.85)';
+          ctx2.stroke();
+
+          if (!registro || !status || status === 'EM_BRANCO') return;
+
+          let cor: { stroke: string; fill: string } | null = null;
+          if (status === 'ANULADA') {
+            // Destaca os dois quadrados mais preenchidos da questão anulada
+            if (pt.fill >= fillsQuestao[1]) cor = { stroke: '#f59e0b', fill: 'rgba(245, 158, 11, 0.35)' };
+          } else if (letra === respostaMarcada) {
+            cor = status === 'CORRETA'
+              ? { stroke: '#10b981', fill: 'rgba(16, 185, 129, 0.35)' }
+              : { stroke: '#ef4444', fill: 'rgba(239, 68, 68, 0.35)' };
+          }
+          if (cor) {
+            ctx2.beginPath();
+            ctx2.rect(pt.x - half, pt.y - half, bSize, bSize);
+            ctx2.lineWidth = 3.5;
+            ctx2.strokeStyle = cor.stroke;
+            ctx2.fillStyle = cor.fill;
+            ctx2.fill();
+            ctx2.stroke();
+          }
+        });
+      });
+    };
+
+    const analisar = async () => {
+      try {
+        await esperar(350);
+        const imgData = snapCtx.getImageData(0, 0, vw, vh);
+
+        // a) Relocaliza o QR Code exatamente nesta foto (o frame pode diferir do frame da varredura)
+        setEtapaAnalise('🔎 Localizando o QR Code na foto...');
+        setAutoProgresso(20);
+        await esperar(50);
+        let anchor: any = qrAnchorRef.current;
+        const qr = jsQR(imgData.data, vw, vh, { inversionAttempts: 'attemptBoth' });
+        if (qr && qr.location) {
+          const loc = qr.location;
+          anchor = {
+            x: loc.topLeftCorner.x,
+            y: loc.topLeftCorner.y,
+            width: Math.hypot(loc.topRightCorner.x - loc.topLeftCorner.x, loc.topRightCorner.y - loc.topLeftCorner.y),
+            height: Math.hypot(loc.bottomLeftCorner.x - loc.topLeftCorner.x, loc.bottomLeftCorner.y - loc.topLeftCorner.y),
+            location: loc
+          };
+          qrAnchorRef.current = anchor;
+        }
+
+        // b) Encontra a grade de quadrados e mede as marcações
+        await esperar(300);
+        setEtapaAnalise('📐 Encontrando o Quadro de Respostas...');
+        setAutoProgresso(40);
+        await esperar(60);
+
+        const totalObjetivas = Math.max(1, questoesSelecionadas.filter(q => q.tipo === 'objetiva').length);
+        const resOMR = omrService.processarGradeOMRFromImageData(imgData, totalObjetivas, anchor || undefined);
+        omrUltimaLeituraRef.current = resOMR;
+
+        desenharGrade(resOMR.coordenadasDetectadas);
+        setEtapaAnalise('✏️ Lendo as marcações de cada quadrado...');
+        setAutoProgresso(70);
+        await esperar(600);
+
+        if (resOMR.metodo !== 'grid-fit') {
+          setCameraErro(
+            'O Quadro de Respostas não foi localizado com precisão nesta foto. ' +
+            'Confira o espelho abaixo e, se necessário, corrija pela Auditoria Docente ou leia novamente.'
+          );
+        }
+
+        // c) Calcula a nota e persiste
+        setEtapaAnalise('🧮 Calculando a nota...');
+        setAutoProgresso(90);
+
+        const registro = omrService.processarCorrecaoAutomatica({
+          aluno,
+          turma: turmaAtiva,
+          materia: tituloProva,
+          versaoLetra: versao,
+          questoesBase: questoesSelecionadas,
+          shuffleQ,
+          shuffleAlt,
+          respostasDetectadas: resOMR.respostas,
+          statusCustom: resOMR.statusQuestoes,
+          fillRatesCustom: resOMR.fillRates,
+          fiduciaisValidados: true,
+          simular: false
+        });
+
+        const alunoAtualizado = new AlunoModel({
+          ...aluno,
+          n2: registro.notaCalculada
+        });
+
+        // Garante um tempo mínimo de análise (~2,2 s) para leitura cuidadosa e feedback visível
+        const restante = 2200 - (performance.now() - inicio);
+        if (restante > 0) await esperar(restante);
+
+        desenharGrade(resOMR.coordenadasDetectadas, registro);
+        onSalvarLeitura(registro, alunoAtualizado);
+        setResultadoAtual(registro);
+        setAutoProgresso(100);
+        setEtapaAnalise('✅ Correção concluída.');
+
+        // Desliga o hardware da webcam e mostra o espelho de resultados
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(t => t.stop());
+          streamRef.current = null;
+        }
+        setCameraAtiva(false);
+        setStage('RESULT_MIRROR');
+      } catch (err: any) {
+        setCameraErro(err.message || 'Erro ao processar grade OMR.');
+        setStage('IDLE');
+      }
+    };
+
+    void analisar();
   };
 
   /**
@@ -618,88 +796,7 @@ export function LeituraTab({
     }
   };
 
-  /**
-   * 3. Etapa 2: Leitura AUTOMÁTICA do Gabarito OMR com Ancoragem Dinâmica
-   */
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    let timer: NodeJS.Timeout;
 
-    if (stage === 'READING_OMR' && alunoAutenticado) {
-      setAutoProgresso(0);
-      omrUltimaLeituraRef.current = null;
-      const startTime = Date.now();
-      const duracao = 2500; // 2.5s para foco óptico e amostragem estável
-      const totalObjetivas = Math.max(1, questoesSelecionadas.filter(q => q.tipo === 'objetiva').length);
-
-      interval = setInterval(() => {
-        const decorrido = Date.now() - startTime;
-        const pct = Math.min(100, Math.floor((decorrido / duracao) * 100));
-        setAutoProgresso(pct);
-
-        // Amostragem contínua dos pixels do feed da câmera ancorada pelo QR Code
-        const video = videoRef.current;
-        if (video && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 0) {
-          const offCanvas = document.createElement('canvas');
-          offCanvas.width = video.videoWidth;
-          offCanvas.height = video.videoHeight;
-          const ctx = offCanvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(video, 0, 0);
-            const imgData = ctx.getImageData(0, 0, offCanvas.width, offCanvas.height);
-
-            // Tenta obter ancoragem ao vivo em alta resolução
-            const liveCode = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'attemptBoth' });
-            if (liveCode && liveCode.location) {
-              qrAnchorRef.current = {
-                x: liveCode.location.topLeftCorner.x,
-                y: liveCode.location.topLeftCorner.y,
-                width: Math.hypot(liveCode.location.topRightCorner.x - liveCode.location.topLeftCorner.x, liveCode.location.topRightCorner.y - liveCode.location.topLeftCorner.y),
-                height: Math.hypot(liveCode.location.bottomLeftCorner.x - liveCode.location.topLeftCorner.x, liveCode.location.bottomLeftCorner.y - liveCode.location.topLeftCorner.y),
-                location: liveCode.location
-              };
-            }
-
-            const resOMR = omrService.processarGradeOMRFromImageData(
-              imgData,
-              totalObjetivas,
-              qrAnchorRef.current || undefined
-            );
-
-            // Mantém sempre a última leitura da câmera; prioriza leituras com questões identificadas (respostas ou anulações)
-            const countDetectadas = (l: { statusQuestoes: Record<number, string> }) =>
-              Object.values(l.statusQuestoes).filter(s => s !== 'EM_BRANCO').length;
-
-            if (!omrUltimaLeituraRef.current) {
-              omrUltimaLeituraRef.current = resOMR;
-            } else {
-              const prevCount = countDetectadas(omrUltimaLeituraRef.current);
-              const newCount = countDetectadas(resOMR);
-              if (newCount >= prevCount) {
-                omrUltimaLeituraRef.current = resOMR;
-              }
-            }
-          }
-        }
-      }, 70);
-
-      timer = setTimeout(() => {
-        const ultima = omrUltimaLeituraRef.current;
-        handleProcessarOMR(
-          ultima ? ultima.respostas : {},
-          ultima ? ultima.statusQuestoes : {},
-          ultima ? ultima.fillRates : {}
-        );
-      }, duracao);
-    } else {
-      setAutoProgresso(0);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-      if (timer) clearTimeout(timer);
-    };
-  }, [stage, alunoAutenticado, questoesSelecionadas]);
 
   const handleProcessarOMR = (
     respostasCustom?: Record<number, string | null>,
@@ -871,8 +968,11 @@ export function LeituraTab({
     setResultadoAtual(null);
     setAlunoAutenticado(null);
     setPayloadAutenticado(null);
+    alunoIdentificadoRef.current = null;
+    versaoIdentificadaRef.current = 'A';
     setCameraErro(null);
     setAutoProgresso(0);
+    setEtapaAnalise('');
     qrAnchorRef.current = null;
     omrUltimaLeituraRef.current = null;
     if (resultCanvasRef.current) {
@@ -937,7 +1037,15 @@ export function LeituraTab({
       examVersion: 'B'
     };
 
-    handleQrCodeDetectado(JSON.stringify(payloadSeguro));
+    setAlunoAutenticado(aluno);
+    alunoIdentificadoRef.current = aluno;
+    setPayloadAutenticado(payloadSeguro);
+    setVersaoAutenticada('B');
+    versaoIdentificadaRef.current = 'B';
+
+    if (videoRef.current) {
+      executarCapturaFinalEProcessamento(videoRef.current);
+    }
   };
 
   return (
@@ -970,9 +1078,9 @@ export function LeituraTab({
           )}
 
           {stage === 'READING_OMR' && (
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black bg-emerald-600 text-white shadow-sm animate-pulse">
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black bg-amber-600 text-white shadow-sm animate-pulse">
               <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-              2. Leitura do Gabarito (Auto: {autoProgresso}%)
+              2. Lendo Gabarito na Foto: {autoProgresso}%
             </span>
           )}
 
@@ -1001,23 +1109,23 @@ export function LeituraTab({
 
           {/* CARD INFORMATIVO DE ALUNO CONFIRMADO (ETAPA 1 SUCESSO) */}
           {alunoAutenticado && stage === 'READING_OMR' && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 text-xs text-emerald-900 flex items-center justify-between shadow-sm animate-fadeIn">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-900 flex items-center justify-between shadow-sm animate-fadeIn">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
                   <UserCheck className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="font-black text-slate-900">
                     Aluno Confirmado: {alunoAutenticado.nome}
                   </div>
-                  <div className="text-[11px] text-emerald-800 font-medium">
+                  <div className="text-[11px] text-amber-800 font-medium">
                     RA: {alunoAutenticado.ra} | Versão da Prova: <strong className="font-black">Versão {versaoAutenticada}</strong>
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] bg-emerald-600 text-white font-bold px-2.5 py-1 rounded-md uppercase tracking-wider animate-pulse flex items-center gap-1">
-                  <Zap className="w-3 h-3" /> Auto-Leitura: {autoProgresso}%
+                <span className="text-[10px] bg-amber-600 text-white font-bold px-2.5 py-1 rounded-md uppercase tracking-wider animate-pulse flex items-center gap-1">
+                  <Zap className="w-3 h-3" /> {etapaAnalise || `Lendo Gabarito: ${autoProgresso}%`}
                 </span>
               </div>
             </div>
@@ -1037,15 +1145,21 @@ export function LeituraTab({
                     </span>
                   )}
                   {stage === 'READING_OMR' && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-600 text-white shadow-lg border border-emerald-400/40">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-600 text-white shadow-lg border border-amber-400/40">
                       <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                      Status: 2. LEITURA AUTOMÁTICA DO GABARITO ({autoProgresso}%)
+                      Status: 2. 📸 FOTO CONGELADA • LENDO GABARITO ({autoProgresso}%)
+                    </span>
+                  )}
+                  {stage === 'RESULT_MIRROR' && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-700 text-white shadow-lg border border-emerald-500/40">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Status: CORREÇÃO CONCLUÍDA
                     </span>
                   )}
                 </div>
 
                 <div className="bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] text-slate-200 font-mono border border-slate-700/60 font-bold">
-                  {stage === 'READING_STUDENT' ? 'Aponte o QR Code' : 'Segure a Folha Firme'}
+                  {stage === 'READING_STUDENT' ? 'Aponte o QR Code' : etapaAnalise || '📸 Imagem Estática Congelada'}
                 </div>
               </div>
             )}
@@ -1056,12 +1170,12 @@ export function LeituraTab({
               autoPlay
               playsInline
               muted
-              className={`w-full h-full object-contain bg-black ${stage === 'RESULT_MIRROR' ? 'hidden' : 'block'}`}
+              className={`w-full h-full object-contain bg-black ${stage === 'READING_STUDENT' ? 'block' : 'hidden'}`}
             />
-            {/* Instantâneo Óptico com Anotações dos Quadrados Detectados */}
+            {/* Instantâneo Óptico Congelado com Anotações dos Quadrados Detectados */}
             <canvas
               ref={resultCanvasRef}
-              className={`w-full h-full object-contain bg-black ${stage === 'RESULT_MIRROR' ? 'block' : 'hidden'}`}
+              className={`w-full h-full object-contain bg-black ${stage === 'READING_STUDENT' ? 'hidden' : 'block'}`}
             />
             <div id="reader-omr" className="hidden" />
 
@@ -1069,7 +1183,7 @@ export function LeituraTab({
             {showFlash && (
               <div className="absolute inset-0 bg-white z-50 transition-opacity duration-300 opacity-95 flex items-center justify-center">
                 <div className="text-slate-900 font-black text-xs uppercase tracking-widest flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-catolica-primary" /> Aluno Identificado! Iniciando Leitura do Gabarito...
+                  <Sparkles className="w-5 h-5 text-catolica-primary" /> 📸 Print Capturado! Analisando Gabarito na Foto...
                 </div>
               </div>
             )}
@@ -1130,44 +1244,44 @@ export function LeituraTab({
               </div>
             )}
 
-            {/* MIRA E LASER ÓPTICO DA ETAPA 2: LEITURA AUTOMÁTICA DO GABARITO (OMR) */}
+            {/* MIRA E LASER ÓPTICO DA ETAPA 2: ANÁLISE DO GABARITO NA FOTO ESTÁTICA */}
             {cameraAtiva && stage === 'READING_OMR' && (
               <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-between p-5 z-10">
                 {/* 4 Marcadores de Enquadramento Óptico nos Cantos */}
                 <div className="w-full flex justify-between">
-                  <div className="w-7 h-7 border-2 border-emerald-400 bg-emerald-500/40 rounded flex items-center justify-center">
-                    <span className="w-2.5 h-2.5 bg-emerald-400" />
+                  <div className="w-7 h-7 border-2 border-amber-400 bg-amber-500/40 rounded flex items-center justify-center">
+                    <span className="w-2.5 h-2.5 bg-amber-400" />
                   </div>
-                  <div className="w-7 h-7 border-2 border-emerald-400 bg-emerald-500/40 rounded flex items-center justify-center">
-                    <span className="w-2.5 h-2.5 bg-emerald-400" />
+                  <div className="w-7 h-7 border-2 border-amber-400 bg-amber-500/40 rounded flex items-center justify-center">
+                    <span className="w-2.5 h-2.5 bg-amber-400" />
                   </div>
                 </div>
 
-                {/* Laser de Varredura Óptica Animado */}
-                <div className="relative w-80 h-44 border-2 border-dashed border-emerald-400/90 rounded-xl flex flex-col items-center justify-center p-2 bg-emerald-950/30 overflow-hidden">
-                  <div className="absolute inset-x-0 h-1 bg-emerald-400 shadow-[0_0_15px_#10b981] animate-pulse top-1/2" />
-                  <span className="text-xs font-black text-emerald-300 bg-emerald-950/95 px-3 py-1 rounded-md border border-emerald-500/40 z-10">
-                    Leitura Automática: {autoProgresso}%
+                {/* Laser de Varredura Óptica Animado sobre a Imagem Congelada */}
+                <div className="relative w-80 h-44 border-2 border-dashed border-amber-400/90 rounded-xl flex flex-col items-center justify-center p-2 bg-amber-950/30 overflow-hidden">
+                  <div className="absolute inset-x-0 h-1 bg-amber-400 shadow-[0_0_15px_#f59e0b] animate-pulse top-1/2" />
+                  <span className="text-xs font-black text-amber-300 bg-amber-950/95 px-3 py-1 rounded-md border border-amber-500/40 z-10">
+                    {etapaAnalise || `Analisando Foto: ${autoProgresso}%`}
                   </span>
-                  <span className="text-[10px] text-emerald-400 mt-1 font-semibold z-10">
-                    Enquadre o Quadro de Respostas (Quadrados A B C D E)
+                  <span className="text-[10px] text-amber-400 mt-1 font-semibold z-10">
+                    Foto congelada na tela — calculando respostas...
                   </span>
 
                   {/* Barra de Progresso de Leitura Automática */}
                   <div className="absolute bottom-2 inset-x-4 h-1.5 bg-slate-800 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-emerald-400 transition-all duration-75"
+                      className="h-full bg-amber-400 transition-all duration-75"
                       style={{ width: `${autoProgresso}%` }}
                     />
                   </div>
                 </div>
 
                 <div className="w-full flex justify-between">
-                  <div className="w-7 h-7 border-2 border-emerald-400 bg-emerald-500/40 rounded flex items-center justify-center">
-                    <span className="w-2.5 h-2.5 bg-emerald-400" />
+                  <div className="w-7 h-7 border-2 border-amber-400 bg-amber-500/40 rounded flex items-center justify-center">
+                    <span className="w-2.5 h-2.5 bg-amber-400" />
                   </div>
-                  <div className="w-7 h-7 border-2 border-emerald-400 bg-emerald-500/40 rounded flex items-center justify-center">
-                    <span className="w-2.5 h-2.5 bg-emerald-400" />
+                  <div className="w-7 h-7 border-2 border-amber-400 bg-amber-500/40 rounded flex items-center justify-center">
+                    <span className="w-2.5 h-2.5 bg-amber-400" />
                   </div>
                 </div>
               </div>
