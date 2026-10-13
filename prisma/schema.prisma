@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Turma {
+  id            String   @id @default(uuid())
+  nome          String
+  curso         String   @default("Engenharia de Software")
+  semestre      String   @default("2026/2")
+  codigoConvite String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  alunos        Aluno[]
+  leiturasOMR   LeituraOMR[]
+
+  @@map("turmas")
+}
+
+model Aluno {
+  id        String   @id @default(uuid())
+  nome      String
+  ra        String   @unique
+  curso     String   @default("Engenharia de Software")
+  turno     String   @default("Noturno")
+  n1        Float    @default(0.0)
+  n2        Float    @default(0.0)
+  n3        Float    @default(0.0)
+  contato   Json?
+  endereco  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  turmaId   String
+  turma     Turma    @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+
+  leiturasOMR LeituraOMR[]
+
+  @@map("alunos")
+}
+
+model Questao {
+  id           String        @id @default(uuid())
+  tipo         String        @default("objetiva") // "objetiva" | "discursiva"
+  enunciado    String
+  pontuacao    Float         @default(2.5)
+  tags         String[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  alternativas Alternativa[]
+
+  @@map("questoes")
+}
+
+model Alternativa {
+  id            String   @id @default(uuid())
+  letraOriginal String   // "A", "B", "C", "D", "E"
+  texto         String
+  correta       Boolean  @default(false)
+
+  questaoId     String
+  questao       Questao  @relation(fields: [questaoId], references: [id], onDelete: Cascade)
+
+  @@map("alternativas")
+}
+
+model LeituraOMR {
+  id                  String   @id @default(uuid())
+  alunoId             String
+  alunoNome           String
+  ra                  String
+  turmaId             String?
+  turmaNome           String
+  materia             String
+  versao              String
+  acertos             Int
+  totalQuestoes       Int
+  notaCalculada       Float
+  dataLeitura         String
+  respostasDetectadas Json     // Record<number, string | null>
+  gabaritoOficial     Json?    // Record<number, string>
+  detalhesQuestoes    Json?    // OMRQuestionResult[]
+  fiduciaisDetectados Boolean? @default(true)
+  createdAt           DateTime @default(now())
+
+  aluno               Aluno    @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+  turma               Turma?   @relation(fields: [turmaId], references: [id], onDelete: SetNull)
+
+  @@map("leituras_omr")
+}

@@ -1,7 +1,8 @@
 import { AlunoModel } from '@/models/AlunoModel';
+import { IBaseRepository } from './base/IBaseRepository';
 
-export class AlunoRepository {
-  private alunos: AlunoModel[] = [
+export class AlunoRepository implements IBaseRepository<AlunoModel> {
+  private fallbackAlunos: AlunoModel[] = [
     new AlunoModel({
       id: 'alu-01',
       nome: 'AGENOR ALVISE',
@@ -69,34 +70,96 @@ export class AlunoRepository {
   ];
 
   async findAll(): Promise<AlunoModel[]> {
-    return [...this.alunos];
+    if (typeof window !== 'undefined') {
+      try {
+        const res = await fetch('/api/alunos');
+        if (res.ok) {
+          const data = await res.json();
+          this.fallbackAlunos = data.map((d: any) => new AlunoModel(d));
+          return this.fallbackAlunos;
+        }
+      } catch (err) {
+        console.warn('Falha ao buscar alunos da API, usando cache local:', err);
+      }
+    }
+    return [...this.fallbackAlunos];
   }
 
   async findById(id: string): Promise<AlunoModel | undefined> {
-    return this.alunos.find(a => a.id === id);
+    const list = await this.findAll();
+    return list.find(a => a.id === id);
   }
 
   async findByRa(ra: string): Promise<AlunoModel | undefined> {
-    return this.alunos.find(a => a.ra === ra);
+    const list = await this.findAll();
+    return list.find(a => a.ra === ra);
   }
 
   async findByTurmaId(turmaId: string): Promise<AlunoModel[]> {
-    return this.alunos.filter(a => a.turmaId === turmaId);
+    if (typeof window !== 'undefined') {
+      try {
+        const res = await fetch(`/api/alunos?turmaId=${encodeURIComponent(turmaId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          return data.map((d: any) => new AlunoModel(d));
+        }
+      } catch (err) {
+        console.warn('Falha ao buscar alunos por turma na API:', err);
+      }
+    }
+    return this.fallbackAlunos.filter(a => a.turmaId === turmaId);
   }
 
   async save(aluno: AlunoModel): Promise<AlunoModel> {
-    const index = this.alunos.findIndex(a => a.id === aluno.id);
+    if (typeof window !== 'undefined') {
+      try {
+        const res = await fetch('/api/alunos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(aluno)
+        });
+        if (res.ok) {
+          const savedData = await res.json();
+          const savedModel = new AlunoModel(savedData);
+          const idx = this.fallbackAlunos.findIndex(a => a.id === savedModel.id);
+          if (idx >= 0) {
+            this.fallbackAlunos[idx] = savedModel;
+          } else {
+            this.fallbackAlunos.push(savedModel);
+          }
+          return savedModel;
+        }
+      } catch (err) {
+        console.warn('Falha ao salvar aluno na API, salvando localmente:', err);
+      }
+    }
+
+    const index = this.fallbackAlunos.findIndex(a => a.id === aluno.id);
     if (index >= 0) {
-      this.alunos[index] = aluno;
+      this.fallbackAlunos[index] = aluno;
     } else {
-      this.alunos.push(aluno);
+      this.fallbackAlunos.push(aluno);
     }
     return aluno;
   }
 
   async delete(id: string): Promise<boolean> {
-    const initialLength = this.alunos.length;
-    this.alunos = this.alunos.filter(a => a.id !== id);
-    return this.alunos.length < initialLength;
+    if (typeof window !== 'undefined') {
+      try {
+        const res = await fetch(`/api/alunos/${id}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          this.fallbackAlunos = this.fallbackAlunos.filter(a => a.id !== id);
+          return true;
+        }
+      } catch (err) {
+        console.warn('Falha ao excluir aluno na API:', err);
+      }
+    }
+
+    const initialLength = this.fallbackAlunos.length;
+    this.fallbackAlunos = this.fallbackAlunos.filter(a => a.id !== id);
+    return this.fallbackAlunos.length < initialLength;
   }
 }

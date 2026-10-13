@@ -1,7 +1,8 @@
 import { Question } from '@/types';
+import { IBaseRepository } from './base/IBaseRepository';
 
-export class QuestionRepository {
-  private questions: Question[] = [
+export class QuestionRepository implements IBaseRepository<Question> {
+  private fallbackQuestions: Question[] = [
     {
       id: 'q1',
       tipo: 'objetiva',
@@ -52,26 +53,75 @@ export class QuestionRepository {
   ];
 
   async findAll(): Promise<Question[]> {
-    return JSON.parse(JSON.stringify(this.questions));
+    if (typeof window !== 'undefined') {
+      try {
+        const res = await fetch('/api/questoes');
+        if (res.ok) {
+          const data = await res.json();
+          this.fallbackQuestions = data;
+          return this.fallbackQuestions;
+        }
+      } catch (err) {
+        console.warn('Falha ao buscar questões da API, usando cache local:', err);
+      }
+    }
+    return JSON.parse(JSON.stringify(this.fallbackQuestions));
   }
 
   async findById(id: string): Promise<Question | undefined> {
-    return this.questions.find(q => q.id === id);
+    const list = await this.findAll();
+    return list.find(q => q.id === id);
   }
 
   async save(question: Question): Promise<Question> {
-    const index = this.questions.findIndex(q => q.id === question.id);
+    if (typeof window !== 'undefined') {
+      try {
+        const res = await fetch('/api/questoes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(question)
+        });
+        if (res.ok) {
+          const savedData = await res.json();
+          const idx = this.fallbackQuestions.findIndex(q => q.id === savedData.id);
+          if (idx >= 0) {
+            this.fallbackQuestions[idx] = savedData;
+          } else {
+            this.fallbackQuestions.unshift(savedData);
+          }
+          return savedData;
+        }
+      } catch (err) {
+        console.warn('Falha ao salvar questão na API, salvando localmente:', err);
+      }
+    }
+
+    const index = this.fallbackQuestions.findIndex(q => q.id === question.id);
     if (index >= 0) {
-      this.questions[index] = question;
+      this.fallbackQuestions[index] = question;
     } else {
-      this.questions.unshift(question);
+      this.fallbackQuestions.unshift(question);
     }
     return question;
   }
 
   async delete(id: string): Promise<boolean> {
-    const initialLength = this.questions.length;
-    this.questions = this.questions.filter(q => q.id !== id);
-    return this.questions.length < initialLength;
+    if (typeof window !== 'undefined') {
+      try {
+        const res = await fetch(`/api/questoes/${id}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          this.fallbackQuestions = this.fallbackQuestions.filter(q => q.id !== id);
+          return true;
+        }
+      } catch (err) {
+        console.warn('Falha ao excluir questão na API:', err);
+      }
+    }
+
+    const initialLength = this.fallbackQuestions.length;
+    this.fallbackQuestions = this.fallbackQuestions.filter(q => q.id !== id);
+    return this.fallbackQuestions.length < initialLength;
   }
 }
