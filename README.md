@@ -372,6 +372,14 @@ Para cumprir a exigência docente de evidenciação clara de atividades individu
 | **PR #05** | `feature/abnt-docs-and-sql-schema` | **Edinei Junio Machado** | Relatório acadêmico ABNT, modelagem UML formal e DDL SQL relacional (`schema-n2.sql`). | Documento acadêmico completo e integridade do script SQL PostgreSQL. |
 | **PR #06** | `feature/inspecao-espelho-omr` | **Johnatan Vargas da Fonseca** | Módulo de inspeção do espelho OMR e ajuste manual de notas pelo professor. | Acesso do docente ao espelho detalhado com opções de auditoria. |
 
+#### Registros complementares de PRs recentes
+
+| PR mesclada | Data | Branch | Complemento registrado |
+|---|---|---|---|
+| [PR #4](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/4) | 02/10/2026 | `feat/portal-aluno` | Portal do aluno com acesso por e-mail. |
+| [PR #5](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/5) | 02/10/2026 | `feat/portal-aluno` | Documentação do portal do aluno e captura da tela. |
+| [PR #7](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/7) | 09/10/2026 | `feat/portal-aluno` | Remoção do acesso e do e-mail dos alunos. |
+
 
 ### 6.2 Fluxo Git e Rastreabilidade
 O repositório adota o modelo de ramificação **Git Flow simplificado**, com proteção de branch na `main`. Todo código integrado passa obrigatoriamente pela esteira automatizada de CI/CD, que valida compilação, suíte de testes unitários Jest e linters antes da aprovação do merge.
