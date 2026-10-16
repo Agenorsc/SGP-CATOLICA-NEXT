@@ -30,7 +30,7 @@
 
 ---
 
-## 👥 Equipe de Desenvolvimento e Matriz de Autores
+##  Equipe de Desenvolvimento e Matriz de Autores
 
 | Integrante | Papel / Especialidade Principal | Escopo Técnico Central no Repositório |
 |---|---|---|
@@ -45,7 +45,7 @@
 
 ---
 
-## 📄 Resumo Executivo
+##  Resumo Executivo
 
 O presente documento técnico-acadêmico consolida a concepção, os requisitos, o modelo arquitetural em 5 camadas, a persistência relacional normalizada e a modelagem formal em Linguagem de Modelagem Unificada (UML 2.5) do **Sistema de Geração e Correção de Provas (SGP)**. Desenvolvido para atender às demandas didático-pedagógicas do Centro Universitário Católica de Santa Catarina, o projeto moderniza e otimiza a rotina avaliativa docente diante de ciclos com 200 a 400 estudantes simultâneos por semestre letivo.
 
@@ -248,7 +248,7 @@ Conforme a metodologia de modelagem orientada pela Católica SC no documento de 
 
 ### 4.1 Diagrama de Casos de Uso
 
-#### 🔎 Passo 1A — Análise do Cenário ("Caça aos Atores e Ações")
+#### Passo 1A — Análise do Cenário ("Caça aos Atores e Ações")
 
 **Atores identificados:**
 
@@ -257,7 +257,7 @@ Conforme a metodologia de modelagem orientada pela Católica SC no documento de 
 | **Professor (Docente)** | Ator Principal (Humano) | Autentica-se com e-mail `@catolicasc.org.br`, gerencia turmas e alunos, mantém o banco de questões, monta e parametriza avaliações, dispara a impressão física em A4, aciona a leitura óptica via câmera/webcam, inspeciona espelhos e exporta relatórios pedagógicos. |
 | **Câmera / Scanner** | Ator Secundário (Hardware) | Periférico físico especializado que captura o fluxo contínuo de quadros ópticos (*video frames*) do cartão-resposta e os transmite para decodificação em tempo real. |
 
-> 💡 **Nota Metodológica:** O estudante participa ativamente como agente do processo físico da avaliação presencial (recebendo a prova em papel, resolvendo as questões, preenchendo as bolhas a caneta e destacando a folha de respostas), **não operando diretamente a plataforma de software online**.
+> **Nota Metodológica:** O estudante participa ativamente como agente do processo físico da avaliação presencial (recebendo a prova em papel, resolvendo as questões, preenchendo as bolhas a caneta e destacando a folha de respostas), **não operando diretamente a plataforma de software online**.
 
 **Ações / Casos de uso identificados:**
 
@@ -275,7 +275,7 @@ Conforme a metodologia de modelagem orientada pela Católica SC no documento de 
 - Inspecionar Espelho OMR do Aluno
 - Exportar Notas e Relatório em Planilha CSV / Excel
 
-#### 🖼️ Representação Gráfica Oficial (Figura 1)
+####  Representação Gráfica Oficial (Figura 1)
 
 <div align="center">
   <img src="docs/diagramas/figura1-casos-de-uso.png" alt="Figura 1 - Diagrama de Casos de Uso SGP Católica SC" width="800" />
@@ -286,7 +286,7 @@ Conforme a metodologia de modelagem orientada pela Católica SC no documento de 
 
 ### 4.2 Diagrama de Atividades com Raias (Swimlanes)
 
-#### 🔎 Passo 2A — Análise do Fluxo Cronológico
+####  Passo 2A — Análise do Fluxo Cronológico
 
 **Sequência lógica extraída do processo avaliativo:**
 
@@ -311,9 +311,9 @@ Conforme a metodologia de modelagem orientada pela Católica SC no documento de 
 | **Sistema SGP (Full-Stack)** | Embaralhar questões/alternativas com seed, diagramar páginas A4 com folha em branco, capturar frames da webcam, decodificar QR Code e calcular notas. |
 | **Banco de Dados SQL** | Persistir as matrizes de versões materializadas, salvar leituras OMR de forma idempotente e atualizar atômica e imediatamente a nota N2 do aluno. |
 
-> 💡 Cada raia (coluna) representa a transferência contínua de responsabilidades entre os participantes do ciclo avaliativo — notação exigida pela UML quando o processo envolve múltiplos agentes físicos e lógicos.
+>  Cada raia (coluna) representa a transferência contínua de responsabilidades entre os participantes do ciclo avaliativo — notação exigida pela UML quando o processo envolve múltiplos agentes físicos e lógicos.
 
-#### 🖼️ Representação Gráfica Oficial (Figura 2)
+####  Representação Gráfica Oficial (Figura 2)
 
 <div align="center">
   <img src="docs/diagramas/figura2-atividades.png" alt="Figura 2 - Diagrama de Atividades com Raias do Ciclo Avaliativo" width="850" />
@@ -324,7 +324,7 @@ Conforme a metodologia de modelagem orientada pela Católica SC no documento de 
 
 ### 4.3 Diagrama de Classes de Domínio
 
-#### 🔎 Passo 3A — Extração do Texto ("Truque do Detetive")
+####  Passo 3A — Extração do Texto ("Truque do Detetive")
 
 #### Identificando as classes (substantivos)
 
@@ -364,20 +364,20 @@ Pergunta-chave: *"Quantos desse podem estar ligados a aquele?"*
 - **`RelatorioDesempenho` ↔ `LeituraOMRRegistro` (Agregação):**
   O relatório consolida o conjunto de leituras OMR realizadas (`0..*`) para extrair médias e índices de distratores da turma. Multiplicidade: `1` — `0..*`.
 
-#### 🖼️ Representação Gráfica Oficial (Figura 3)
+####  Representação Gráfica Oficial (Figura 3)
 
 <div align="center">
   <img src="docs/diagramas/figura3-classes.png" alt="Figura 3 - Diagrama de Classes UML do Domínio do SGP" width="850" />
-  <p><strong>Figura 3 – Diagrama de Classes de Domínio e Associações do SGP</strong> (AUTOR: ERIC RICARDO LANGE)</p>
+  <p><strong>Figura 3 – Diagrama de Classes de Domínio e Associações do SGP</strong> (AUTOR: ERIC EDUARDO LANGE)</p>
 </div>
 
 ---
 
 ### 4.4 Diagrama de Sequência UML
 
-#### 🔎 Passo 4A — Como Analisar e Ler o Diagrama
+####  Passo 4A — Como Analisar e Ler o Diagrama
 
-> 💡 **Regra de ouro:** Leia sempre de cima para baixo, como se fosse a linha do tempo de uma conversa ou feed, onde o tempo corre no sentido vertical.
+>  **Regra de ouro:** Leia sempre de cima para baixo, como se fosse a linha do tempo de uma conversa ou feed, onde o tempo corre no sentido vertical.
 
 **Cenário analisado:** **Leitura Óptica OMR, Correção Automatizada e Atualização Instantânea da Nota N2.**
 
@@ -393,11 +393,11 @@ Pergunta-chave: *"Quantos desse podem estar ligados a aquele?"*
    - **Caso A `[Leitura e Validação Bem-Sucedida]`:** O serviço extrai o RA e a versão do QR Code, valida as marcações contra o gabarito oficial, persiste o log de leitura com chave idempotente, atualiza atomicamente a nota N2 do discente no banco de dados e retorna `200 OK`, exibindo card verde de aprovação no painel do professor.
    - **Caso B `[Falha de Leitura ou Enquadramento]`:** Caso ocorra má iluminação ou QR Code ilegível, o controller retorna `400 Bad Request` e a interface emite aviso visual/sonoro orientando o docente a reposicionar o gabarito.
 
-#### 🖼️ Representação Gráfica Oficial (Figura 4)
+####  Representação Gráfica Oficial (Figura 4)
 
 <div align="center">
   <img src="docs/diagramas/figura4-sequencia.png" alt="Figura 4 - Diagrama de Sequência UML da Correção Automatizada" width="850" />
-  <p><strong>Figura 4 – Diagrama de Sequência UML: Leitura Óptica, Correção e Atualização da Nota N2</strong> (AUTOR: ERICK ANDREAS PONTECELLI)</p>
+  <p><strong>Figura 4 – Diagrama de Sequência UML: Leitura Óptica, Correção e Atualização da Nota N2</strong> (AUTOR: ERICK ANDREAS PONTICELLI)</p>
 </div>
 
 ---
