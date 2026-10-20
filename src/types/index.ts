@@ -1,3 +1,5 @@
+export type AvaliacaoCiclo = 'N1' | 'N2' | 'N3' | 'N-1' | 'GERAL';
+
 export interface Alternative {
   id: string;
   letraOriginal: string;
@@ -12,6 +14,8 @@ export interface Question {
   pontuacao: number;
   tags: string[];
   alternativas?: Alternative[];
+  turmaId?: string;
+  avaliacao?: AvaliacaoCiclo;
 }
 
 export interface Student {

@@ -19,6 +19,7 @@ model Turma {
 
   alunos        Aluno[]
   leiturasOMR   LeituraOMR[]
+  questoes      Questao[]
 
   @@map("turmas")
 }
@@ -51,9 +52,12 @@ model Questao {
   enunciado    String
   pontuacao    Float         @default(2.5)
   tags         String[]
+  turmaId      String?
+  avaliacao    String?       @default("N2") // "N1" | "N2" | "N3" | "N-1" | "GERAL"
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
+  turma        Turma?        @relation(fields: [turmaId], references: [id], onDelete: SetNull)
   alternativas Alternativa[]
 
   @@map("questoes")

@@ -25,7 +25,8 @@ import {
 import { 
   Question, 
   AlternativaCadastro, 
-  LeituraOMRRegistro 
+  LeituraOMRRegistro,
+  AvaliacaoCiclo
 } from '@/types';
 
 // Camada de Componentes de Apresentação
@@ -123,6 +124,10 @@ export default function Home() {
   const [novoTipo, setNovoTipo] = useState<'objetiva' | 'discursiva'>('objetiva');
   const [novaPontuacao, setNovaPontuacao] = useState(2.5);
   const [novasTags, setNovasTags] = useState('N2, PostgreSQL, Arquitetura');
+  const [cicloSelecionado, setCicloSelecionado] = useState<AvaliacaoCiclo | 'TODAS'>('TODAS');
+  const [filtroApenasTurma, setFiltroApenasTurma] = useState<boolean>(false);
+  const [novaTurmaId, setNovaTurmaId] = useState<string>('');
+  const [novaAvaliacao, setNovaAvaliacao] = useState<AvaliacaoCiclo>('N2');
   const [alternativasCadastro, setAlternativasCadastro] = useState<AlternativaCadastro[]>([
     { letra: 'A', texto: '', correta: true },
     { letra: 'B', texto: '', correta: false },
@@ -199,9 +204,18 @@ export default function Home() {
     return questionService.calcularPontuacaoTotal(questoesSelecionadas);
   }, [questionService, questoesSelecionadas]);
 
+  const contagemCiclos = useMemo(() => {
+    return questionService.contarQuestoesPorCiclo(bancoQuestoes, turmaSelecionadaId, filtroApenasTurma);
+  }, [questionService, bancoQuestoes, turmaSelecionadaId, filtroApenasTurma]);
+
   const questoesFiltradas = useMemo(() => {
-    return questionService.filtrarQuestoes(bancoQuestoes, buscaQuestao);
-  }, [questionService, bancoQuestoes, buscaQuestao]);
+    return questionService.filtrarQuestoesAvancado(bancoQuestoes, {
+      termoBusca: buscaQuestao,
+      turmaId: turmaSelecionadaId,
+      apenasTurma: filtroApenasTurma,
+      ciclo: cicloSelecionado
+    });
+  }, [questionService, bancoQuestoes, buscaQuestao, turmaSelecionadaId, filtroApenasTurma, cicloSelecionado]);
 
   const alunosFiltradosRelatorio = useMemo(() => {
     return alunoService.filtrarAlunos(alunos, buscaRelatorio);
@@ -233,6 +247,8 @@ export default function Home() {
     setNovoTipo('objetiva');
     setNovaPontuacao(2.5);
     setNovasTags('N2, PostgreSQL, Arquitetura');
+    setNovaTurmaId(turmaSelecionadaId || '');
+    setNovaAvaliacao(cicloSelecionado !== 'TODAS' ? cicloSelecionado : 'N2');
     setAlternativasCadastro([
       { letra: 'A', texto: '', correta: true },
       { letra: 'B', texto: '', correta: false },
@@ -249,6 +265,8 @@ export default function Home() {
     setNovoTipo(q.tipo);
     setNovaPontuacao(q.pontuacao);
     setNovasTags(q.tags.join(', '));
+    setNovaTurmaId(q.turmaId || '');
+    setNovaAvaliacao(q.avaliacao || 'N2');
     if (q.tipo === 'objetiva' && q.alternativas) {
       setAlternativasCadastro(
         ['A', 'B', 'C', 'D', 'E'].map((letra, i) => {
@@ -282,6 +300,8 @@ export default function Home() {
       enunciado: novoEnunciado,
       pontuacao: Number(novaPontuacao),
       tags: novasTags.split(',').map(t => t.trim()).filter(Boolean),
+      turmaId: novaTurmaId || undefined,
+      avaliacao: novaAvaliacao,
       alternativas: novoTipo === 'objetiva' ? alternativasCadastro.map((alt, idx) => ({
         id: `alt_${Date.now()}_${idx}`,
         letraOriginal: alt.letra,
@@ -527,6 +547,11 @@ export default function Home() {
             setTituloProva={setTituloProva}
             buscaQuestao={buscaQuestao}
             setBuscaQuestao={setBuscaQuestao}
+            cicloSelecionado={cicloSelecionado}
+            setCicloSelecionado={setCicloSelecionado}
+            filtroApenasTurma={filtroApenasTurma}
+            setFiltroApenasTurma={setFiltroApenasTurma}
+            contagemCiclos={contagemCiclos}
             shuffleQ={shuffleQ}
             setShuffleQ={setShuffleQ}
             shuffleAlt={shuffleAlt}
@@ -602,6 +627,11 @@ export default function Home() {
           setNovaPontuacao={setNovaPontuacao}
           novasTags={novasTags}
           setNovasTags={setNovasTags}
+          novaTurmaId={novaTurmaId}
+          setNovaTurmaId={setNovaTurmaId}
+          novaAvaliacao={novaAvaliacao}
+          setNovaAvaliacao={setNovaAvaliacao}
+          turmas={turmas}
           alternativasCadastro={alternativasCadastro}
           setAlternativasCadastro={setAlternativasCadastro}
           onSubmit={handleSaveQuestaoSubmit}

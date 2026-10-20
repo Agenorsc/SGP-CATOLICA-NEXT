@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { Question } from '@/types';
+import { Question, AvaliacaoCiclo } from '@/types';
 import { IBaseRepository } from '@/repositories/base/IBaseRepository';
 
 export class PrismaQuestionRepository implements IBaseRepository<Question> {
@@ -15,6 +15,8 @@ export class PrismaQuestionRepository implements IBaseRepository<Question> {
       enunciado: q.enunciado,
       pontuacao: q.pontuacao,
       tags: q.tags,
+      turmaId: q.turmaId || undefined,
+      avaliacao: (q.avaliacao as AvaliacaoCiclo) || 'N2',
       alternativas: q.alternativas.map(a => ({
         id: a.id,
         letraOriginal: a.letraOriginal,
@@ -38,6 +40,8 @@ export class PrismaQuestionRepository implements IBaseRepository<Question> {
       enunciado: q.enunciado,
       pontuacao: q.pontuacao,
       tags: q.tags,
+      turmaId: q.turmaId || undefined,
+      avaliacao: (q.avaliacao as AvaliacaoCiclo) || 'N2',
       alternativas: q.alternativas.map(a => ({
         id: a.id,
         letraOriginal: a.letraOriginal,
@@ -47,6 +51,35 @@ export class PrismaQuestionRepository implements IBaseRepository<Question> {
     };
   }
 
+  async findByTurmaId(turmaId: string): Promise<Question[]> {
+    const records = await prisma.questao.findMany({
+      where: {
+        OR: [
+          { turmaId: turmaId },
+          { turmaId: null } // Inclui questões de banco geral
+        ]
+      },
+      include: { alternativas: true },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    return records.map(q => ({
+      id: q.id,
+      tipo: q.tipo as 'objetiva' | 'discursiva',
+      enunciado: q.enunciado,
+      pontuacao: q.pontuacao,
+      tags: q.tags,
+      turmaId: q.turmaId || undefined,
+      avaliacao: (q.avaliacao as AvaliacaoCiclo) || 'N2',
+      alternativas: q.alternativas.map(a => ({
+        id: a.id,
+        letraOriginal: a.letraOriginal,
+        texto: a.texto,
+        correta: a.correta
+      }))
+    }));
+  }
+
   async save(question: Question): Promise<Question> {
     await prisma.questao.upsert({
       where: { id: question.id },
@@ -54,14 +87,18 @@ export class PrismaQuestionRepository implements IBaseRepository<Question> {
         tipo: question.tipo,
         enunciado: question.enunciado,
         pontuacao: question.pontuacao,
-        tags: question.tags
+        tags: question.tags,
+        turmaId: question.turmaId || null,
+        avaliacao: question.avaliacao || 'N2'
       },
       create: {
         id: question.id,
         tipo: question.tipo,
         enunciado: question.enunciado,
         pontuacao: question.pontuacao,
-        tags: question.tags
+        tags: question.tags,
+        turmaId: question.turmaId || null,
+        avaliacao: question.avaliacao || 'N2'
       }
     });
 

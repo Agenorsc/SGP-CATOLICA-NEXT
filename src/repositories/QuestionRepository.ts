@@ -9,6 +9,8 @@ export class QuestionRepository implements IBaseRepository<Question> {
       enunciado: 'Qual camada é responsável exclusiva pelo isolamento do acesso ao banco de dados no padrão em 5 camadas?',
       pontuacao: 2.5,
       tags: ['Arquitetura', 'Backend', 'PostgreSQL'],
+      turmaId: 't1',
+      avaliacao: 'N1',
       alternativas: [
         { id: 'alt_1_1', letraOriginal: 'A', texto: 'Repositório (Repository)', correta: true },
         { id: 'alt_1_2', letraOriginal: 'B', texto: 'Controle (Controller)', correta: false },
@@ -23,6 +25,8 @@ export class QuestionRepository implements IBaseRepository<Question> {
       enunciado: 'No contexto de persistência de versões de avaliação (ExamVersion), por que a ordem das alternativas deve ser materializada no banco?',
       pontuacao: 2.5,
       tags: ['Persistência', 'OMR', 'Algoritmos'],
+      turmaId: 't1',
+      avaliacao: 'N2',
       alternativas: [
         { id: 'alt_2_1', letraOriginal: 'A', texto: 'Para o leitor óptico relacionar a letra assinalada com a alternativa original correta.', correta: true },
         { id: 'alt_2_2', letraOriginal: 'B', texto: 'Para economizar memória no cache do aplicativo móvel.', correta: false },
@@ -36,6 +40,8 @@ export class QuestionRepository implements IBaseRepository<Question> {
       enunciado: 'Qual estratégia garante que a leitura de cartões-resposta funcione em locais sem acesso à internet no momento da correção?',
       pontuacao: 2.5,
       tags: ['Offline', 'Mobile', 'Sincronização'],
+      turmaId: 't1',
+      avaliacao: 'N2',
       alternativas: [
         { id: 'alt_3_1', letraOriginal: 'A', texto: 'Cache local prévio do snapshot do gabarito e fila idempotente via clientCorrectionId.', correta: true },
         { id: 'alt_3_2', letraOriginal: 'B', texto: 'Bloqueio total do app até o sinal 4G/Wi-Fi ser restabelecido.', correta: false },
@@ -48,7 +54,24 @@ export class QuestionRepository implements IBaseRepository<Question> {
       tipo: 'discursiva',
       enunciado: 'Explique a importância da separação física entre a folha de respostas OMR e o caderno descritivo de questões para o estudante.',
       pontuacao: 2.5,
-      tags: ['Pedagógico', 'OMR', 'Avaliação']
+      tags: ['Pedagógico', 'OMR', 'Avaliação'],
+      turmaId: 't1',
+      avaliacao: 'N3'
+    },
+    {
+      id: 'q5',
+      tipo: 'objetiva',
+      enunciado: 'No padrão Ports and Adapters (Hexagonal), qual é o papel dos adaptadores secundários (driven) no acesso a repositórios externos?',
+      pontuacao: 2.5,
+      tags: ['Recuperação', 'Arquitetura', 'N-1'],
+      turmaId: 't1',
+      avaliacao: 'N-1',
+      alternativas: [
+        { id: 'alt_5_1', letraOriginal: 'A', texto: 'Implementar as interfaces definidas pelo domínio para interagir com bancos de dados e serviços externos.', correta: true },
+        { id: 'alt_5_2', letraOriginal: 'B', texto: 'Substituir a camada de apresentação web diretamente no cliente.', correta: false },
+        { id: 'alt_5_3', letraOriginal: 'C', texto: 'Eliminar a necessidade de tipagem estática no backend.', correta: false },
+        { id: 'alt_5_4', letraOriginal: 'D', texto: 'Executar consultas SQL diretamente na camada de visão.', correta: false }
+      ]
     }
   ];
 
