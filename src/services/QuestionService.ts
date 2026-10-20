@@ -1,7 +1,16 @@
 import { QuestionRepository } from '@/repositories/QuestionRepository';
-import { Question } from '@/types';
+import { Question, AvaliacaoCiclo } from '@/types';
 
 export const LIMITE_MAXIMO_QUESTOES = 20;
+
+export interface ContagemCiclos {
+  todas: number;
+  n1: number;
+  n2: number;
+  n3: number;
+  exame: number;
+  geral: number;
+}
 
 export class QuestionService {
   constructor(private questionRepository: QuestionRepository = new QuestionRepository()) {}
@@ -22,6 +31,9 @@ export class QuestionService {
     return this.questionRepository.delete(id);
   }
 
+  /**
+   * Filtro padrão por texto de busca (enunciado ou tags)
+   */
   filtrarQuestoes(questoes: Question[], busca: string): Question[] {
     if (!busca.trim()) return questoes;
     const termo = busca.toLowerCase();
@@ -31,8 +43,79 @@ export class QuestionService {
     );
   }
 
+  /**
+   * Filtro avançado combinando Turma, Ciclo Avaliativo (N1, N2, N3, N-1) e Busca textual
+   */
+  filtrarQuestoesAvancado(
+    questoes: Question[],
+    filtros: {
+      termoBusca?: string;
+      turmaId?: string;
+      apenasTurma?: boolean;
+      ciclo?: AvaliacaoCiclo | 'TODAS';
+    }
+  ): Question[] {
+    const { termoBusca = '', turmaId, apenasTurma = false, ciclo = 'TODAS' } = filtros;
+
+    let resultado = [...questoes];
+
+    // 1. Filtro por Turma
+    if (turmaId) {
+      if (apenasTurma) {
+        resultado = resultado.filter(q => q.turmaId === turmaId);
+      } else {
+        // Exibe questões da turma selecionada + questões do banco geral (sem turmaId definido ou geral)
+        resultado = resultado.filter(q => !q.turmaId || q.turmaId === turmaId);
+      }
+    }
+
+    // 2. Filtro por Ciclo Avaliativo (N1, N2, N3, N-1, GERAL)
+    if (ciclo && ciclo !== 'TODAS') {
+      resultado = resultado.filter(q => {
+        const avaliacaoQuestao = q.avaliacao || 'N2';
+        return avaliacaoQuestao.toUpperCase() === ciclo.toUpperCase();
+      });
+    }
+
+    // 3. Filtro por Texto / Tags
+    if (termoBusca.trim()) {
+      const termo = termoBusca.toLowerCase();
+      resultado = resultado.filter(q =>
+        q.enunciado.toLowerCase().includes(termo) ||
+        q.tags.some(t => t.toLowerCase().includes(termo))
+      );
+    }
+
+    return resultado;
+  }
+
+  /**
+   * Calcula contadores de questões disponíveis por ciclo avaliativo para a turma selecionada
+   */
+  contarQuestoesPorCiclo(questoes: Question[], turmaId?: string, apenasTurma: boolean = false): ContagemCiclos {
+    // Filtra pelo escopo da turma primeiro
+    let escopo = questoes;
+    if (turmaId) {
+      escopo = apenasTurma
+        ? questoes.filter(q => q.turmaId === turmaId)
+        : questoes.filter(q => !q.turmaId || q.turmaId === turmaId);
+    }
+
+    return {
+      todas: escopo.length,
+      n1: escopo.filter(q => (q.avaliacao || 'N2').toUpperCase() === 'N1').length,
+      n2: escopo.filter(q => (q.avaliacao || 'N2').toUpperCase() === 'N2').length,
+      n3: escopo.filter(q => (q.avaliacao || 'N2').toUpperCase() === 'N3').length,
+      exame: escopo.filter(q => {
+        const av = (q.avaliacao || '').toUpperCase();
+        return av === 'N-1' || av === 'EXAME';
+      }).length,
+      geral: escopo.filter(q => (q.avaliacao || '').toUpperCase() === 'GERAL').length
+    };
+  }
+
   calcularPontuacaoTotal(questoes: Question[]): number {
-    return questoes.reduce((acc, q) => acc + q.pontuacao, 0);
+    return Number(questoes.reduce((acc, q) => acc + (q.pontuacao || 0), 0).toFixed(1));
   }
 
   validarLimite(questoesSelecionadas: Question[]): boolean {

@@ -9,10 +9,14 @@ import {
   Trash2, 
   Plus, 
   Check, 
-  Printer 
+  Printer,
+  Layers,
+  GraduationCap,
+  Globe
 } from 'lucide-react';
-import { Question } from '@/types';
+import { Question, AvaliacaoCiclo } from '@/types';
 import { TurmaModel } from '@/models/TurmaModel';
+import { ContagemCiclos } from '@/services/QuestionService';
 
 interface MontadorTabProps {
   bancoQuestoes: Question[];
@@ -25,6 +29,11 @@ interface MontadorTabProps {
   setTituloProva: (titulo: string) => void;
   buscaQuestao: string;
   setBuscaQuestao: (busca: string) => void;
+  cicloSelecionado: AvaliacaoCiclo | 'TODAS';
+  setCicloSelecionado: (ciclo: AvaliacaoCiclo | 'TODAS') => void;
+  filtroApenasTurma: boolean;
+  setFiltroApenasTurma: (val: boolean) => void;
+  contagemCiclos: ContagemCiclos;
   shuffleQ: boolean;
   setShuffleQ: (shuffle: boolean) => void;
   shuffleAlt: boolean;
@@ -51,6 +60,11 @@ export function MontadorTab({
   setTituloProva,
   buscaQuestao,
   setBuscaQuestao,
+  cicloSelecionado,
+  setCicloSelecionado,
+  filtroApenasTurma,
+  setFiltroApenasTurma,
+  contagemCiclos,
   shuffleQ,
   setShuffleQ,
   shuffleAlt,
@@ -65,14 +79,55 @@ export function MontadorTab({
   onRemoverDaProva,
   onIrParaImpressao
 }: MontadorTabProps) {
+  const turmaSelecionada = turmas.find(t => t.id === turmaSelecionadaId);
+
+  const getBadgeCiclo = (ciclo?: string) => {
+    const c = (ciclo || 'N2').toUpperCase();
+    switch (c) {
+      case 'N1':
+        return (
+          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-200">
+            N1
+          </span>
+        );
+      case 'N2':
+        return (
+          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-purple-100 text-purple-800 border border-purple-200">
+            N2 (OMR)
+          </span>
+        );
+      case 'N3':
+        return (
+          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
+            N3
+          </span>
+        );
+      case 'N-1':
+      case 'EXAME':
+        return (
+          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-200">
+            Exame (N-1)
+          </span>
+        );
+      default:
+        return (
+          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+            Geral
+          </span>
+        );
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <header className="flex justify-between items-center print:hidden">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
         <div>
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
             <FileText className="text-catolica-primary" /> Montador de Avaliações
           </h2>
-          <p className="text-xs text-slate-500">Selecione a turma e monte a avaliação com as questões do banco.</p>
+          <p className="text-xs text-slate-500">
+            Banco de questões organizado por Turma e Ciclo Avaliativo (N1, N2, N3 e N-1).
+          </p>
         </div>
         <button
           onClick={onOpenNovaQuestao}
@@ -83,102 +138,172 @@ export function MontadorTab({
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* COLUNA ESQUERDA: BANCO DE QUESTÕES ORGANIZADO POR TURMA E CICLO */}
         <div className="lg:col-span-6 space-y-4">
           <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <h3 className="font-bold text-slate-800 text-sm">Banco de Questões</h3>
-                <p className="text-xs text-slate-500">Selecione para incluir no caderno</p>
+                <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-catolica-primary" /> Banco de Questões
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {turmaSelecionada ? `Turma: ${turmaSelecionada.nome}` : 'Todas as Turmas'}
+                </p>
               </div>
-              <span className="text-xs bg-slate-100 font-bold px-3 py-1 rounded-lg text-slate-600">
-                {bancoQuestoes.length} disponíveis
+              <span className="text-xs bg-slate-100 font-bold px-3 py-1 rounded-lg text-slate-700 self-start sm:self-auto">
+                {questoesFiltradas.length} / {bancoQuestoes.length} disponíveis
               </span>
             </div>
 
-            <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
-              <Search className="w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Filtrar por enunciado ou tag..."
-                value={buscaQuestao}
-                onChange={(e) => setBuscaQuestao(e.target.value)}
-                className="bg-transparent text-xs w-full outline-none"
-              />
+            {/* Abas de Ciclo Avaliativo (N1, N2, N3 e N-1) */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 border-t border-slate-100">
+              {[
+                { id: 'TODAS', label: 'Todas', count: contagemCiclos.todas },
+                { id: 'N1', label: 'N1', count: contagemCiclos.n1 },
+                { id: 'N2', label: 'N2 (OMR)', count: contagemCiclos.n2 },
+                { id: 'N3', label: 'N3', count: contagemCiclos.n3 },
+                { id: 'N-1', label: 'Exame (N-1)', count: contagemCiclos.exame }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setCicloSelecionado(tab.id as any)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 ${
+                    cicloSelecionado === tab.id
+                      ? 'bg-slate-900 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                    cicloSelecionado === tab.id
+                      ? 'bg-white/20 text-white'
+                      : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {tab.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Busca textual e Filtro de Turma */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
+                <Search className="w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Filtrar por enunciado ou tag (#N1, #N2, #OMR...)"
+                  value={buscaQuestao}
+                  onChange={(e) => setBuscaQuestao(e.target.value)}
+                  className="bg-transparent text-xs w-full outline-none"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-slate-600 hover:text-slate-900 transition">
+                <input
+                  type="checkbox"
+                  checked={filtroApenasTurma}
+                  onChange={(e) => setFiltroApenasTurma(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-catolica-primary rounded"
+                />
+                <span>Exibir apenas questões exclusivas da turma selecionada</span>
+              </label>
             </div>
           </div>
 
+          {/* Lista de Questões do Banco */}
           <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
-            {questoesFiltradas.map((q, idx) => {
-              const jaAdicionada = questoesSelecionadas.some(item => item.id === q.id);
-              return (
-                <div
-                  key={q.id}
-                  className={`bg-white p-5 rounded-2xl border transition-all ${
-                    jaAdicionada
-                      ? 'border-catolica-primary/40 bg-catolica-light/30'
-                      : 'border-slate-200 hover:border-slate-300 shadow-sm'
-                  }`}
-                >
-                  <div className="mb-2.5 flex items-start justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-slate-900 text-white">
-                        Q{idx + 1} - {q.tipo.toUpperCase()}
-                      </span>
-                      <span className="text-[10px] font-semibold text-slate-500">
-                        {q.pontuacao.toFixed(1)} pts
-                      </span>
-                    </div>
+            {questoesFiltradas.length === 0 ? (
+              <div className="p-8 text-center bg-white border border-dashed border-slate-200 rounded-2xl text-xs text-slate-400 space-y-2">
+                <p className="font-semibold text-slate-600">Nenhuma questão encontrada para este filtro.</p>
+                <p>Tente selecionar outro ciclo avaliativo (N1, N2, N3, N-1) ou criar uma nova questão.</p>
+              </div>
+            ) : (
+              questoesFiltradas.map((q, idx) => {
+                const jaAdicionada = questoesSelecionadas.some(item => item.id === q.id);
+                const turmaOrigem = turmas.find(t => t.id === q.turmaId);
 
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => onEditQuestao(q)}
-                        className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition"
-                        title="Editar Questão"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => onDeleteQuestao(q.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                        title="Excluir Questão"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                      <button
-                        onClick={() => onAdicionarNaProva(q)}
-                        disabled={jaAdicionada}
-                        className={`text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1 transition ml-1 ${
-                          jaAdicionada
-                            ? 'bg-emerald-100 text-emerald-800 cursor-default'
-                            : 'bg-slate-900 text-white hover:bg-catolica-primary'
-                        }`}
-                      >
-                        {jaAdicionada ? (
-                          <><Check className="w-3 h-3" /> No Caderno</>
+                return (
+                  <div
+                    key={q.id}
+                    className={`bg-white p-5 rounded-2xl border transition-all ${
+                      jaAdicionada
+                        ? 'border-catolica-primary/40 bg-catolica-light/30'
+                        : 'border-slate-200 hover:border-slate-300 shadow-sm'
+                    }`}
+                  >
+                    <div className="mb-2.5 flex items-start justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-slate-900 text-white">
+                          Q{idx + 1} • {q.tipo.toUpperCase()}
+                        </span>
+                        {getBadgeCiclo(q.avaliacao)}
+                        <span className="text-[10px] font-semibold text-slate-500">
+                          {q.pontuacao.toFixed(1)} pts
+                        </span>
+                        {turmaOrigem ? (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600 flex items-center gap-1">
+                            <GraduationCap className="w-3 h-3 text-slate-500" /> {turmaOrigem.nome}
+                          </span>
                         ) : (
-                          <><Plus className="w-3 h-3" /> Adicionar</>
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 flex items-center gap-1 border border-emerald-100">
+                            <Globe className="w-3 h-3 text-emerald-600" /> Banco Geral
+                          </span>
                         )}
-                      </button>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => onEditQuestao(q)}
+                          className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition"
+                          title="Editar Questão"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => onDeleteQuestao(q.id)}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                          title="Excluir Questão"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => onAdicionarNaProva(q)}
+                          disabled={jaAdicionada}
+                          className={`text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1 transition ml-1 ${
+                            jaAdicionada
+                              ? 'bg-emerald-100 text-emerald-800 cursor-default'
+                              : 'bg-slate-900 text-white hover:bg-catolica-primary'
+                          }`}
+                        >
+                          {jaAdicionada ? (
+                            <><Check className="w-3 h-3" /> No Caderno</>
+                          ) : (
+                            <><Plus className="w-3 h-3" /> Adicionar</>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-800 font-medium leading-relaxed mb-3">
+                      {q.enunciado}
+                    </p>
+
+                    <div className="flex gap-1.5 flex-wrap">
+                      {q.tags.map(t => (
+                        <span key={t} className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                          #{t}
+                        </span>
+                      ))}
                     </div>
                   </div>
-
-                  <p className="text-xs text-slate-800 font-medium leading-relaxed mb-3">
-                    {q.enunciado}
-                  </p>
-
-                  <div className="flex gap-1.5 flex-wrap">
-                    {q.tags.map(t => (
-                      <span key={t} className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                        #{t}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 
+        {/* COLUNA DIREITA: CONFIGURAÇÃO DO CADERNO E RESUMO DA AVALIAÇÃO */}
         <div className="lg:col-span-6 space-y-4">
           <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <div className="border-b border-slate-100 pb-4 space-y-2">
@@ -270,11 +395,12 @@ export function MontadorTab({
                           {q.enunciado}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0">
+                        {getBadgeCiclo(q.avaliacao)}
                         <span className="font-bold text-catolica-primary">{q.pontuacao.toFixed(1)} pts</span>
                         <button
                           onClick={() => onRemoverDaProva(q.id)}
-                          className="text-slate-400 hover:text-red-600 transition"
+                          className="text-slate-400 hover:text-red-600 transition ml-1"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
