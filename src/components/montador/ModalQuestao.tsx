@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
-import { AlternativaCadastro, Question } from '@/types';
+import { AlternativaCadastro, AvaliacaoCiclo } from '@/types';
+import { TurmaModel } from '@/models/TurmaModel';
 
 interface ModalQuestaoProps {
   isOpen: boolean;
@@ -16,6 +17,11 @@ interface ModalQuestaoProps {
   setNovaPontuacao: (val: number) => void;
   novasTags: string;
   setNovasTags: (val: string) => void;
+  novaTurmaId?: string;
+  setNovaTurmaId: (val: string) => void;
+  novaAvaliacao?: AvaliacaoCiclo;
+  setNovaAvaliacao: (val: AvaliacaoCiclo) => void;
+  turmas: TurmaModel[];
   alternativasCadastro: AlternativaCadastro[];
   setAlternativasCadastro: React.Dispatch<React.SetStateAction<AlternativaCadastro[]>>;
   onSubmit: (e: React.FormEvent) => void;
@@ -33,6 +39,11 @@ export function ModalQuestao({
   setNovaPontuacao,
   novasTags,
   setNovasTags,
+  novaTurmaId = '',
+  setNovaTurmaId,
+  novaAvaliacao = 'N2',
+  setNovaAvaliacao,
+  turmas,
   alternativasCadastro,
   setAlternativasCadastro,
   onSubmit
@@ -47,7 +58,7 @@ export function ModalQuestao({
             <h3 className="text-base font-bold text-slate-900">
               {questaoEmEdicaoId ? 'Editar Questão' : 'Nova Questão do Banco'}
             </h3>
-            <p className="text-xs text-slate-500">Configure o enunciado e as alternativas de resposta</p>
+            <p className="text-xs text-slate-500">Organize a questão por Turma e Ciclo Avaliativo (N1, N2, N3 ou N-1)</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition">
             <X size={20} />
@@ -55,6 +66,40 @@ export function ModalQuestao({
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
+          {/* Organização por Turma e Ciclo */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Turma da Questão:</label>
+              <select
+                value={novaTurmaId}
+                onChange={e => setNovaTurmaId(e.target.value)}
+                className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:border-catolica-primary outline-none"
+              >
+                <option value="">Banco Geral (Todas as Turmas)</option>
+                {turmas.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.nome} ({t.semestre})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Ciclo Avaliativo:</label>
+              <select
+                value={novaAvaliacao}
+                onChange={e => setNovaAvaliacao(e.target.value as AvaliacaoCiclo)}
+                className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-catolica-primary outline-none"
+              >
+                <option value="N1">N1 (1ª Avaliação Bimestral)</option>
+                <option value="N2">N2 (2ª Avaliação / Prova OMR)</option>
+                <option value="N3">N3 (3ª Avaliação / Projetos)</option>
+                <option value="N-1">N-1 (Exame / Prova Substitutiva)</option>
+                <option value="GERAL">Geral (Simulado / Treino)</option>
+              </select>
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Enunciado da Questão:</label>
             <textarea
@@ -97,6 +142,7 @@ export function ModalQuestao({
                 type="text"
                 value={novasTags}
                 onChange={e => setNovasTags(e.target.value)}
+                placeholder="Arquitetura, Backend, N2..."
                 className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"
               />
             </div>
@@ -114,26 +160,29 @@ export function ModalQuestao({
                     placeholder={`Texto da Alternativa ${alt.letra}`}
                     value={alt.texto}
                     onChange={e => {
-                      const clone = [...alternativasCadastro];
-                      clone[idx].texto = e.target.value;
-                      setAlternativasCadastro(clone);
+                      const updated = [...alternativasCadastro];
+                      updated[idx].texto = e.target.value;
+                      setAlternativasCadastro(updated);
                     }}
-                    className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                    className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:border-catolica-primary"
                   />
-                  <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 cursor-pointer">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold">
                     <input
                       type="radio"
-                      name="alternativaCorretaRadio"
+                      name="correta"
                       checked={alt.correta}
                       onChange={() => {
-                        setAlternativasCadastro(alternativasCadastro.map((a, i) => ({
+                        const updated = alternativasCadastro.map((a, i) => ({
                           ...a,
                           correta: i === idx
-                        })));
+                        }));
+                        setAlternativasCadastro(updated);
                       }}
-                      className="w-3.5 h-3.5 accent-catolica-primary"
+                      className="accent-emerald-600"
                     />
-                    Correta
+                    <span className={alt.correta ? 'text-emerald-700 font-bold' : 'text-slate-500'}>
+                      {alt.correta ? 'Correta' : 'Incorreta'}
+                    </span>
                   </label>
                 </div>
               ))}
@@ -144,13 +193,13 @@ export function ModalQuestao({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border rounded-xl text-xs font-bold"
+              className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 bg-catolica-primary text-white rounded-xl text-xs font-bold shadow-md hover:bg-catolica-dark transition"
+              className="px-5 py-2 bg-catolica-primary hover:bg-catolica-dark text-white rounded-xl text-xs font-bold shadow-md shadow-catolica-primary/20 transition"
             >
               {questaoEmEdicaoId ? 'Atualizar Questão' : 'Salvar no Banco'}
             </button>
