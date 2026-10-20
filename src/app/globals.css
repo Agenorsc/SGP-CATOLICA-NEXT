@@ -18,3 +18,18 @@
     font-size: 16px;
   }
 }
+
+/* Impressão: padroniza A4 retrato e evita corte de conteúdo entre navegadores */
+@page {
+  size: A4 portrait;
+  margin: 10mm 12mm;
+}
+
+@media print {
+  html,
+  body {
+    overflow: visible !important;
+    height: auto !important;
+    background: #ffffff;
+  }
+}
