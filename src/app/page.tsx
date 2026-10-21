@@ -125,7 +125,7 @@ export default function Home() {
   const [novaPontuacao, setNovaPontuacao] = useState(2.5);
   const [novasTags, setNovasTags] = useState('N2, PostgreSQL, Arquitetura');
   const [cicloSelecionado, setCicloSelecionado] = useState<AvaliacaoCiclo | 'TODAS'>('TODAS');
-  const [filtroApenasTurma, setFiltroApenasTurma] = useState<boolean>(false);
+  const [filtroApenasTurma, setFiltroApenasTurma] = useState<boolean>(true);
   const [novaTurmaId, setNovaTurmaId] = useState<string>('');
   const [novaAvaliacao, setNovaAvaliacao] = useState<AvaliacaoCiclo>('N2');
   const [alternativasCadastro, setAlternativasCadastro] = useState<AlternativaCadastro[]>([
