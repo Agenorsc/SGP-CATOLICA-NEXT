@@ -93,7 +93,7 @@ export function MontadorTab({
       case 'N2':
         return (
           <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-purple-100 text-purple-800 border border-purple-200">
-            N2 (OMR)
+            N2
           </span>
         );
       case 'N3':
@@ -155,36 +155,38 @@ export function MontadorTab({
               </span>
             </div>
 
-            {/* Abas de Ciclo Avaliativo (N1, N2, N3 e N-1) */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 border-t border-slate-100">
+            {/* Abas de Ciclo Avaliativo (N1, N2, N3 e N-1) com Destaque Visual */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 border-t border-slate-100">
               {[
-                { id: 'TODAS', label: 'Todas', count: contagemCiclos.todas },
-                { id: 'N1', label: 'N1', count: contagemCiclos.n1 },
-                { id: 'N2', label: 'N2 (OMR)', count: contagemCiclos.n2 },
-                { id: 'N3', label: 'N3', count: contagemCiclos.n3 },
-                { id: 'N-1', label: 'Exame (N-1)', count: contagemCiclos.exame }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setCicloSelecionado(tab.id as any)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 ${
-                    cicloSelecionado === tab.id
-                      ? 'bg-slate-900 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                    cicloSelecionado === tab.id
-                      ? 'bg-white/20 text-white'
-                      : 'bg-slate-200 text-slate-700'
-                  }`}>
-                    {tab.count}
-                  </span>
-                </button>
-              ))}
+                { id: 'TODAS', label: 'Todas', count: contagemCiclos.todas, activeClass: 'bg-slate-900 text-white shadow-md shadow-slate-900/20 ring-2 ring-slate-900/30', inactiveClass: 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200', activeBadge: 'bg-white/20 text-white', inactiveBadge: 'bg-slate-200 text-slate-700' },
+                { id: 'N1', label: 'N1', count: contagemCiclos.n1, activeClass: 'bg-blue-600 text-white shadow-md shadow-blue-500/30 ring-2 ring-blue-600/30', inactiveClass: 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200', activeBadge: 'bg-white/25 text-white', inactiveBadge: 'bg-blue-200 text-blue-800' },
+                { id: 'N2', label: 'N2', count: contagemCiclos.n2, activeClass: 'bg-purple-700 text-white shadow-md shadow-purple-600/30 ring-2 ring-purple-700/30', inactiveClass: 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200', activeBadge: 'bg-white/25 text-white', inactiveBadge: 'bg-purple-200 text-purple-800' },
+                { id: 'N3', label: 'N3', count: contagemCiclos.n3, activeClass: 'bg-amber-600 text-white shadow-md shadow-amber-500/30 ring-2 ring-amber-600/30', inactiveClass: 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200', activeBadge: 'bg-white/25 text-white', inactiveBadge: 'bg-amber-200 text-amber-900' },
+                { id: 'N-1', label: 'Exame (N-1)', count: contagemCiclos.exame, activeClass: 'bg-rose-600 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-600/30', inactiveClass: 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200', activeBadge: 'bg-white/25 text-white', inactiveBadge: 'bg-rose-200 text-rose-900' }
+              ].map(tab => {
+                const isActive = cicloSelecionado === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setCicloSelecionado(tab.id as any)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 shrink-0 ${isActive ? tab.activeClass : tab.inactiveClass}`}
+                  >
+                    <span>{tab.label}</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${isActive ? tab.activeBadge : tab.inactiveBadge}`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
+
+            {cicloSelecionado === 'N-1' && (
+              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 animate-fadeIn">
+                <span className="font-bold bg-rose-200 text-rose-900 px-2 py-0.5 rounded text-[10px] uppercase tracking-wide shrink-0">Cumulativo</span>
+                <span className="text-[11px] leading-tight">O <strong>Exame (N-1)</strong> reúne automaticamente todas as questões cadastradas para <strong>N1</strong>, <strong>N2</strong> e <strong>N3</strong> desta turma.</span>
+              </div>
+            )}
 
             {/* Busca textual e Filtro de Turma */}
             <div className="space-y-2">

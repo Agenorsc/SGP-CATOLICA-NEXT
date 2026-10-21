@@ -71,10 +71,18 @@ export class QuestionService {
 
     // 2. Filtro por Ciclo Avaliativo (N1, N2, N3, N-1, GERAL)
     if (ciclo && ciclo !== 'TODAS') {
-      resultado = resultado.filter(q => {
-        const avaliacaoQuestao = q.avaliacao || 'N2';
-        return avaliacaoQuestao.toUpperCase() === ciclo.toUpperCase();
-      });
+      if (ciclo === 'N-1') {
+        // N-1 é o exame cumulativo: agrega automaticamente todas as questões cadastradas em N1, N2, N3 e N-1
+        resultado = resultado.filter(q => {
+          const av = (q.avaliacao || 'N2').toUpperCase();
+          return ['N1', 'N2', 'N3', 'N-1', 'EXAME'].includes(av);
+        });
+      } else {
+        resultado = resultado.filter(q => {
+          const avaliacaoQuestao = q.avaliacao || 'N2';
+          return avaliacaoQuestao.toUpperCase() === ciclo.toUpperCase();
+        });
+      }
     }
 
     // 3. Filtro por Texto / Tags
@@ -107,8 +115,8 @@ export class QuestionService {
       n2: escopo.filter(q => (q.avaliacao || 'N2').toUpperCase() === 'N2').length,
       n3: escopo.filter(q => (q.avaliacao || 'N2').toUpperCase() === 'N3').length,
       exame: escopo.filter(q => {
-        const av = (q.avaliacao || '').toUpperCase();
-        return av === 'N-1' || av === 'EXAME';
+        const av = (q.avaliacao || 'N2').toUpperCase();
+        return ['N1', 'N2', 'N3', 'N-1', 'EXAME'].includes(av);
       }).length,
       geral: escopo.filter(q => (q.avaliacao || '').toUpperCase() === 'GERAL').length
     };

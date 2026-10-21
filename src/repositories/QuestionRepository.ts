@@ -4,74 +4,91 @@ import { IBaseRepository } from './base/IBaseRepository';
 export class QuestionRepository implements IBaseRepository<Question> {
   private fallbackQuestions: Question[] = [
     {
-      id: 'q1',
+      id: 'q1_t1_n1',
       tipo: 'objetiva',
-      enunciado: 'Qual camada é responsável exclusiva pelo isolamento do acesso ao banco de dados no padrão em 5 camadas?',
+      enunciado: 'No levantamento de requisitos de software, qual técnica garante a validação funcional contínua das necessidades do usuário por meio de critérios de aceitação objetivos no formato Given-When-Then?',
       pontuacao: 2.5,
-      tags: ['Arquitetura', 'Backend', 'PostgreSQL'],
+      tags: ['Requisitos', 'Engenharia de Software', 'BDD'],
       turmaId: 't1',
       avaliacao: 'N1',
       alternativas: [
-        { id: 'alt_1_1', letraOriginal: 'A', texto: 'Repositório (Repository)', correta: true },
-        { id: 'alt_1_2', letraOriginal: 'B', texto: 'Controle (Controller)', correta: false },
-        { id: 'alt_1_3', letraOriginal: 'C', texto: 'Serviço (Service)', correta: false },
-        { id: 'alt_1_4', letraOriginal: 'D', texto: 'Rota (Router)', correta: false },
-        { id: 'alt_1_5', letraOriginal: 'E', texto: 'Model (Entidade)', correta: false }
+        { id: 'alt_t1_1_1', letraOriginal: 'A', texto: 'Especificação Baseada em Comportamento com validação orientada ao negócio e critérios objetivos de aceitação.', correta: true },
+        { id: 'alt_t1_1_2', letraOriginal: 'B', texto: 'Documentação monolítica estática entregue exclusivamente no encerramento do semestre.', correta: false },
+        { id: 'alt_t1_1_3', letraOriginal: 'C', texto: 'Eliminação formal das reuniões de alinhamento com os usuários-chave.', correta: false },
+        { id: 'alt_t1_1_4', letraOriginal: 'D', texto: 'Codificação direta nos ambientes produtivos sem validação prévia de regras.', correta: false },
+        { id: 'alt_t1_1_5', letraOriginal: 'E', texto: 'Transferência de toda a responsabilidade de requisitos para os usuários finais.', correta: false }
       ]
     },
     {
-      id: 'q2',
+      id: 'q2_t1_n2',
       tipo: 'objetiva',
-      enunciado: 'No contexto de persistência de versões de avaliação (ExamVersion), por que a ordem das alternativas deve ser materializada no banco?',
+      enunciado: 'Durante a execução de testes automatizados na esteira de integração contínua (CI), qual o principal objetivo dos testes de regressão?',
       pontuacao: 2.5,
-      tags: ['Persistência', 'OMR', 'Algoritmos'],
+      tags: ['Qualidade', 'Testes', 'CI/CD'],
       turmaId: 't1',
       avaliacao: 'N2',
       alternativas: [
-        { id: 'alt_2_1', letraOriginal: 'A', texto: 'Para o leitor óptico relacionar a letra assinalada com a alternativa original correta.', correta: true },
-        { id: 'alt_2_2', letraOriginal: 'B', texto: 'Para economizar memória no cache do aplicativo móvel.', correta: false },
-        { id: 'alt_2_3', letraOriginal: 'C', texto: 'Apenas para formatar a margem visual do documento impresso.', correta: false },
-        { id: 'alt_2_4', letraOriginal: 'D', texto: 'Para permitir ao estudante visualizar o gabarito antes da publicação.', correta: false }
+        { id: 'alt_t1_2_1', letraOriginal: 'A', texto: 'Garantir que alterações recentes no código ou correções de defeitos não introduzam falhas em funcionalidades pré-existentes.', correta: true },
+        { id: 'alt_t1_2_2', letraOriginal: 'B', texto: 'Avaliar unicamente a velocidade de conexão física entre roteadores locais.', correta: false },
+        { id: 'alt_t1_2_3', letraOriginal: 'C', texto: 'Substituir integralmente todos os testes unitários por verificações manuais ocasionais.', correta: false },
+        { id: 'alt_t1_2_4', letraOriginal: 'D', texto: 'Monitorar a temperatura física dos servidores de hospedagem.', correta: false }
       ]
     },
     {
-      id: 'q3',
+      id: 'q3_t1_n2',
       tipo: 'objetiva',
-      enunciado: 'Qual estratégia garante que a leitura de cartões-resposta funcione em locais sem acesso à internet no momento da correção?',
+      enunciado: 'Em um fluxo de entrega contínua (CD), como a estratégia de Feature Flags auxilia na redução de riscos durante o lançamento de novas funcionalidades funcionais?',
       pontuacao: 2.5,
-      tags: ['Offline', 'Mobile', 'Sincronização'],
+      tags: ['Entrega Contínua', 'DevOps', 'Deploy'],
       turmaId: 't1',
       avaliacao: 'N2',
       alternativas: [
-        { id: 'alt_3_1', letraOriginal: 'A', texto: 'Cache local prévio do snapshot do gabarito e fila idempotente via clientCorrectionId.', correta: true },
-        { id: 'alt_3_2', letraOriginal: 'B', texto: 'Bloqueio total do app até o sinal 4G/Wi-Fi ser restabelecido.', correta: false },
-        { id: 'alt_3_3', letraOriginal: 'C', texto: 'Envio assíncrono por e-mail para processamento no servidor.', correta: false },
-        { id: 'alt_3_4', letraOriginal: 'D', texto: 'Uso de processamento de visão exclusivamente na nuvem.', correta: false }
+        { id: 'alt_t1_3_1', letraOriginal: 'A', texto: 'Permite habilitar ou desabilitar funcionalidades em produção para grupos específicos sem exigir um novo deploy do sistema.', correta: true },
+        { id: 'alt_t1_3_2', letraOriginal: 'B', texto: 'Apaga o histórico de logs do servidor sempre que um novo deploy é concluído.', correta: false },
+        { id: 'alt_t1_3_3', letraOriginal: 'C', texto: 'Obriga o encerramento manual das conexões de rede em horário comercial.', correta: false },
+        { id: 'alt_t1_3_4', letraOriginal: 'D', texto: 'Transforma automaticamente código legado em funções serverless.', correta: false }
       ]
     },
     {
-      id: 'q4',
+      id: 'q4_t1_n3',
       tipo: 'discursiva',
-      enunciado: 'Explique a importância da separação física entre a folha de respostas OMR e o caderno descritivo de questões para o estudante.',
+      enunciado: 'Apresente uma proposta prática de gestão de dívida técnica em um time ágil, descrevendo critérios para balancear itens de refatoração e novas entregas de valor no backlog.',
       pontuacao: 2.5,
-      tags: ['Pedagógico', 'OMR', 'Avaliação'],
+      tags: ['Dívida Técnica', 'Gestão Ágil', 'Qualidade'],
       turmaId: 't1',
       avaliacao: 'N3'
     },
     {
-      id: 'q5',
+      id: 'q5_t1_exame',
       tipo: 'objetiva',
-      enunciado: 'No padrão Ports and Adapters (Hexagonal), qual é o papel dos adaptadores secundários (driven) no acesso a repositórios externos?',
+      enunciado: 'No ciclo de vida de desenvolvimento de software, qual prática sintetiza a integração contínua e a entrega rápida de valor apoiada em feedback contínuo?',
       pontuacao: 2.5,
-      tags: ['Recuperação', 'Arquitetura', 'N-1'],
+      tags: ['Ciclo de Vida', 'Feedback', 'Engenharia de Software'],
       turmaId: 't1',
       avaliacao: 'N-1',
       alternativas: [
-        { id: 'alt_5_1', letraOriginal: 'A', texto: 'Implementar as interfaces definidas pelo domínio para interagir com bancos de dados e serviços externos.', correta: true },
-        { id: 'alt_5_2', letraOriginal: 'B', texto: 'Substituir a camada de apresentação web diretamente no cliente.', correta: false },
-        { id: 'alt_5_3', letraOriginal: 'C', texto: 'Eliminar a necessidade de tipagem estática no backend.', correta: false },
-        { id: 'alt_5_4', letraOriginal: 'D', texto: 'Executar consultas SQL diretamente na camada de visão.', correta: false }
+        { id: 'alt_t1_5_1', letraOriginal: 'A', texto: 'Ciclos iterativos com automação de compilação, testes de cobertura e entregas frequentes orientadas a feedback.', correta: true },
+        { id: 'alt_t1_5_2', letraOriginal: 'B', texto: 'Abordagem sequencial pura sem entregas incrementais ou validações parciais.', correta: false },
+        { id: 'alt_t1_5_3', letraOriginal: 'C', texto: 'Transferência da etapa de testes de aceitação para o final do projeto de implantação.', correta: false },
+        { id: 'alt_t1_5_4', letraOriginal: 'D', texto: 'Armazenamento manual de versões em diretórios locais de desenvolvedores.', correta: false }
       ]
+    },
+    {
+      id: 'q1_t2_n1', tipo: 'objetiva', enunciado: 'Qual princípio do acrônimo SOLID preconiza que módulos de alto nível não devem depender diretamente de módulos de baixo nível, mas sim de contratos ou abstrações?', pontuacao: 2.5, tags: ['SOLID', 'Design Patterns', 'Arquitetura'], turmaId: 't2', avaliacao: 'N1',
+      alternativas: [{ id: 'alt_t2_1_1', letraOriginal: 'A', texto: 'Princípio da Inversão de Dependência (Dependency Inversion Principle).', correta: true }, { id: 'alt_t2_1_2', letraOriginal: 'B', texto: 'Princípio da Responsabilidade Única (Single Responsibility Principle).', correta: false }, { id: 'alt_t2_1_3', letraOriginal: 'C', texto: 'Princípio Aberto/Fechado (Open/Closed Principle).', correta: false }, { id: 'alt_t2_1_4', letraOriginal: 'D', texto: 'Princípio da Segregação de Interfaces (Interface Segregation Principle).', correta: false }, { id: 'alt_t2_1_5', letraOriginal: 'E', texto: 'Princípio da Substituição de Liskov (Liskov Substitution Principle).', correta: false }]
+    },
+    {
+      id: 'q2_t2_n2', tipo: 'objetiva', enunciado: 'Em uma arquitetura de serviços distribuídos, qual padrão de resiliência impede o efeito dominó de falhas ao interromper temporariamente requisições a um serviço instável?', pontuacao: 2.5, tags: ['Resiliência', 'Microsserviços', 'Arquitetura Distribuída'], turmaId: 't2', avaliacao: 'N2',
+      alternativas: [{ id: 'alt_t2_2_1', letraOriginal: 'A', texto: 'Circuit Breaker (Disjuntor de Circuito), operando nos estados Fechado, Aberto e Meio-Aberto.', correta: true }, { id: 'alt_t2_2_2', letraOriginal: 'B', texto: 'Polling síncrono contínuo com repetições sem intervalo de espera.', correta: false }, { id: 'alt_t2_2_3', letraOriginal: 'C', texto: 'Centralização de toda a lógica em um único processo monolítico compartilhado.', correta: false }, { id: 'alt_t2_2_4', letraOriginal: 'D', texto: 'Compartilhamento síncrono de variáveis globais entre instâncias remotas.', correta: false }]
+    },
+    {
+      id: 'q3_t2_n2', tipo: 'objetiva', enunciado: 'Ao projetar uma arquitetura orientada a eventos assíncronos, qual benefício fundamental o uso de uma Dead Letter Queue (DLQ) agrega à confiabilidade do sistema?', pontuacao: 2.5, tags: ['Event-Driven', 'Mensageria', 'Confiabilidade'], turmaId: 't2', avaliacao: 'N2',
+      alternativas: [{ id: 'alt_t2_3_1', letraOriginal: 'A', texto: 'Captura e isolamento de mensagens com falhas recorrentes de processamento, impedindo o travamento da fila principal.', correta: true }, { id: 'alt_t2_3_2', letraOriginal: 'B', texto: 'Execução obrigatória de consultas síncronas diretamente no banco principal.', correta: false }, { id: 'alt_t2_3_3', letraOriginal: 'C', texto: 'Eliminação completa de mecanismos de tolerância a falhas na infraestrutura.', correta: false }, { id: 'alt_t2_3_4', letraOriginal: 'D', texto: 'Limitação do tráfego a uma única mensagem por segundo.', correta: false }]
+    },
+    { id: 'q4_t2_n3', tipo: 'discursiva', enunciado: 'Analise os trade-offs entre um monólito modular e uma arquitetura orientada a microsserviços, comparando acoplamento funcional, sobrecarga operacional e consistência de dados.', pontuacao: 2.5, tags: ['Trade-offs', 'Monólito Modular', 'Microsserviços'], turmaId: 't2', avaliacao: 'N3' },
+    {
+      id: 'q5_t2_exame', tipo: 'objetiva', enunciado: 'Na Arquitetura Limpa (Clean Architecture), qual é a regra primordial sobre a direção das dependências entre as camadas do sistema?', pontuacao: 2.5, tags: ['Clean Architecture', 'Camadas', 'Dependências'], turmaId: 't2', avaliacao: 'N-1',
+      alternativas: [{ id: 'alt_t2_5_1', letraOriginal: 'A', texto: 'As dependências no código-fonte devem apontar sempre para dentro, em direção às regras de negócio e entidades de domínio.', correta: true }, { id: 'alt_t2_5_2', letraOriginal: 'B', texto: 'As entidades de domínio devem importar componentes da interface com o usuário e bibliotecas externas.', correta: false }, { id: 'alt_t2_5_3', letraOriginal: 'C', texto: 'Os controladores web devem acessar diretamente arquivos físicos de configuração sem intermediários.', correta: false }, { id: 'alt_t2_5_4', letraOriginal: 'D', texto: 'A camada de banco de dados deve orquestrar as rotas de navegação da interface.', correta: false }]
     }
   ];
 

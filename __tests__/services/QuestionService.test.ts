@@ -139,14 +139,13 @@ describe('QuestionService - Organização por Turma e Ciclo Avaliativo (N1, N2, 
       expect(filtradas[0].id).toBe('q4');
     });
 
-    it('deve filtrar questões de Exame / Substitutiva (N-1)', () => {
+    it('deve agregar questões de N1, N2, N3 e exame no ciclo N-1', () => {
       const filtradas = service.filtrarQuestoesAvancado(mockQuestions, {
         turmaId: 't1',
         ciclo: 'N-1'
       });
-      expect(filtradas).toHaveLength(1);
-      expect(filtradas[0].id).toBe('q5');
-      expect(filtradas[0].enunciado).toContain('Exame Substitutivo');
+      expect(filtradas).toHaveLength(5);
+      expect(filtradas.map(q => q.id)).toEqual(['q1', 'q2', 'q3', 'q4', 'q5']);
     });
 
     it('deve retornar todas as questões quando o ciclo for TODAS', () => {
@@ -167,7 +166,7 @@ describe('QuestionService - Organização por Turma e Ciclo Avaliativo (N1, N2, 
       expect(contagem.n1).toBe(1);    // q1
       expect(contagem.n2).toBe(2);    // q2, q3
       expect(contagem.n3).toBe(1);    // q4
-      expect(contagem.exame).toBe(1); // q5
+      expect(contagem.exame).toBe(5); // N1, N2, N3 e q5 (N-1)
       expect(contagem.geral).toBe(1); // q7
     });
 
@@ -178,7 +177,7 @@ describe('QuestionService - Organização por Turma e Ciclo Avaliativo (N1, N2, 
       expect(contagem.n1).toBe(1);
       expect(contagem.n2).toBe(2);
       expect(contagem.n3).toBe(1);
-      expect(contagem.exame).toBe(1);
+      expect(contagem.exame).toBe(5);
       expect(contagem.geral).toBe(0);
     });
   });
