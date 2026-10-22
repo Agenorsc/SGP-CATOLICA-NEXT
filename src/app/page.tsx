@@ -405,8 +405,8 @@ export default function Home() {
       avaliacao: novaAvaliacao,
       alternativas: novoTipo === 'objetiva' ? alternativasCadastro
         .filter((alt, idx) => idx < 4 || alt.texto.trim().length > 0)
-        .map((alt, idx) => ({
-          id: `alt_${Date.now()}_${idx}`,
+        .map((alt) => ({
+          id: `alt_${questaoEmEdicaoId || Date.now()}_${alt.letra}`,
           letraOriginal: alt.letra,
           texto: alt.texto,
           correta: alt.correta
