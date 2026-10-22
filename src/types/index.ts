@@ -1,5 +1,25 @@
 export type AvaliacaoCiclo = 'N1' | 'N2' | 'N3' | 'N-1' | 'GERAL';
 
+export type UserRole = 'ADMIN' | 'PROFESSOR';
+
+export interface UserSession {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  disciplina?: string;
+}
+
+export interface Professor {
+  id: string;
+  nome: string;
+  email: string;
+  senha?: string;
+  role: UserRole;
+  disciplina?: string;
+  createdAt?: string;
+}
+
 export interface Alternative {
   id: string;
   letraOriginal: string;

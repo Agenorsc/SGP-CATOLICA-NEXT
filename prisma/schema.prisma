@@ -8,12 +8,29 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model Usuario {
+  id         String   @id @default(uuid())
+  nome       String
+  email      String   @unique
+  senha      String
+  role       String   @default("PROFESSOR") // "ADMIN" | "PROFESSOR"
+  disciplina String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  turmas     Turma[]
+
+  @@map("usuarios")
+}
+
 model Turma {
   id            String   @id @default(uuid())
   nome          String
   curso         String   @default("Engenharia de Software")
   semestre      String   @default("2026/2")
   codigoConvite String   @unique
+  professorId   String?
+  professor     Usuario? @relation(fields: [professorId], references: [id], onDelete: SetNull)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

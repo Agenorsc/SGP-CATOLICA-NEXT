@@ -4,3 +4,5 @@ export * from './QuestionService';
 export * from './ExamService';
 export * from './OmrService';
 export * from './ExportService';
+export * from './AuthService';
+export * from './ProfessorService';

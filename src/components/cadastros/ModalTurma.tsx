@@ -1,12 +1,14 @@
 'use client';
 
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, GraduationCap } from 'lucide-react';
+import { UsuarioModel } from '@/models/UsuarioModel';
 
 export interface FormTurmaState {
   nome: string;
   curso: string;
   semestre: string;
+  professorId?: string;
 }
 
 interface ModalTurmaProps {
@@ -16,6 +18,8 @@ interface ModalTurmaProps {
   formTurma: FormTurmaState;
   setFormTurma: React.Dispatch<React.SetStateAction<FormTurmaState>>;
   onSubmit: (e: React.FormEvent) => void;
+  professores?: UsuarioModel[];
+  isAdmin?: boolean;
 }
 
 export function ModalTurma({
@@ -24,7 +28,9 @@ export function ModalTurma({
   isEditing,
   formTurma,
   setFormTurma,
-  onSubmit
+  onSubmit,
+  professores = [],
+  isAdmin = false
 }: ModalTurmaProps) {
   if (!isOpen) return null;
 
@@ -54,6 +60,7 @@ export function ModalTurma({
               className="w-full p-2.5 bg-slate-50 border rounded-xl text-xs"
             />
           </div>
+
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Curso</label>
             <input
@@ -63,6 +70,7 @@ export function ModalTurma({
               className="w-full p-2.5 bg-slate-50 border rounded-xl text-xs"
             />
           </div>
+
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Semestre Letivo</label>
             <input
@@ -72,6 +80,31 @@ export function ModalTurma({
               className="w-full p-2.5 bg-slate-50 border rounded-xl text-xs"
             />
           </div>
+
+          {/* Atribuição de Professor Responsável (exclusivo para Admin ou se houver lista de professores) */}
+          {isAdmin && professores.length > 0 && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1 flex items-center gap-1.5">
+                <GraduationCap className="w-3.5 h-3.5 text-catolica-primary" />
+                Professor Responsável
+              </label>
+              <select
+                value={formTurma.professorId || ''}
+                onChange={e => setFormTurma({ ...formTurma, professorId: e.target.value || undefined })}
+                className="w-full p-2.5 bg-slate-50 border rounded-xl text-xs"
+              >
+                <option value="">Selecione o professor responsável...</option>
+                {professores.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome} {p.disciplina ? `(${p.disciplina})` : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[11px] text-slate-400">
+                Apenas o professor atribuído terá acesso a esta turma e aos seus alunos.
+              </p>
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 border-t pt-4">
             <button

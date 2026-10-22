@@ -5,6 +5,7 @@ import { Menu } from 'lucide-react';
 
 // Camadas de Domínio (Models)
 import { AlunoModel, TurmaModel } from '@/models';
+import { UsuarioModel } from '@/models/UsuarioModel';
 
 // Camadas de Serviços e Repositórios
 import { 
@@ -12,13 +13,15 @@ import {
   TurmaService, 
   QuestionService, 
   OmrService, 
-  ExportService 
+  ExportService,
+  ProfessorService
 } from '@/services';
 import { 
   AlunoRepository, 
   TurmaRepository, 
   QuestionRepository, 
-  OmrRepository 
+  OmrRepository,
+  UsuarioRepository
 } from '@/repositories';
 
 // Camada de Tipos
@@ -26,7 +29,8 @@ import {
   Question, 
   AlternativaCadastro, 
   LeituraOMRRegistro,
-  AvaliacaoCiclo
+  AvaliacaoCiclo,
+  UserSession
 } from '@/types';
 
 // Camada de Componentes de Apresentação
@@ -34,6 +38,8 @@ import { Header } from '@/components/layout/Header';
 import { Sidebar, TabType } from '@/components/layout/Sidebar';
 import { LoginScreen } from '@/components/auth/LoginScreen';
 import { CadastrosTab } from '@/components/cadastros/CadastrosTab';
+import { ProfessoresTab } from '@/components/professores/ProfessoresTab';
+import { ModalProfessor } from '@/components/professores/ModalProfessor';
 import { ModalAluno, FormAlunoState } from '@/components/cadastros/ModalAluno';
 import { ModalTurma, FormTurmaState } from '@/components/cadastros/ModalTurma';
 import { MontadorTab } from '@/components/montador/MontadorTab';
@@ -48,44 +54,46 @@ export default function Home() {
   const turmaRepo = useMemo(() => new TurmaRepository(), []);
   const questionRepo = useMemo(() => new QuestionRepository(), []);
   const omrRepo = useMemo(() => new OmrRepository(), []);
+  const usuarioRepo = useMemo(() => new UsuarioRepository(), []);
 
   const alunoService = useMemo(() => new AlunoService(alunoRepo), [alunoRepo]);
   const turmaService = useMemo(() => new TurmaService(turmaRepo), [turmaRepo]);
   const questionService = useMemo(() => new QuestionService(questionRepo), [questionRepo]);
   const omrService = useMemo(() => new OmrService(omrRepo), [omrRepo]);
+  const professorService = useMemo(() => new ProfessorService(usuarioRepo), [usuarioRepo]);
 
-  // Autenticação e Navegação
-  const [session, setSession] = useState<{ name: string; email: string } | null>(null);
+  // Autenticação Real e Navegação
+  const [session, setSession] = useState<UserSession | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [currentTab, setCurrentTab] = useState<TabType>('cadastros');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const savedSession = window.localStorage.getItem('sgp-mock-session');
+    const savedSession = window.localStorage.getItem('sgp-user-session');
     if (savedSession) {
       try {
         setSession(JSON.parse(savedSession));
       } catch {
-        window.localStorage.removeItem('sgp-mock-session');
+        window.localStorage.removeItem('sgp-user-session');
       }
     }
     setSessionLoaded(true);
   }, []);
 
-  const handleLogin = (name: string, email: string) => {
-    const newSession = { name, email };
-    window.localStorage.setItem('sgp-mock-session', JSON.stringify(newSession));
-    setSession(newSession);
+  const handleLogin = (userSession: UserSession) => {
+    window.localStorage.setItem('sgp-user-session', JSON.stringify(userSession));
+    setSession(userSession);
   };
 
   const handleLogout = () => {
-    window.localStorage.removeItem('sgp-mock-session');
+    window.localStorage.removeItem('sgp-user-session');
     setSession(null);
   };
 
-  // Estados de Dados (Iniciados a partir dos Repositórios da camada de dados)
+  // Estados de Dados
   const [turmas, setTurmas] = useState<TurmaModel[]>([]);
   const [alunos, setAlunos] = useState<AlunoModel[]>([]);
+  const [professores, setProfessores] = useState<UsuarioModel[]>([]);
   const [bancoQuestoes, setBancoQuestoes] = useState<Question[]>([]);
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState<string>('t1');
 
@@ -93,7 +101,34 @@ export default function Home() {
     turmaService.listarTurmas().then(setTurmas);
     alunoService.listarAlunos().then(setAlunos);
     questionService.listarQuestoes().then(setBancoQuestoes);
-  }, [turmaService, alunoService, questionService]);
+    professorService.listarProfessores().then(setProfessores);
+  }, [turmaService, alunoService, questionService, professorService]);
+
+  // ISOLAMENTO DE DADOS POR PROFESSOR ("onde ambos vai ter seus próprios alunos")
+  const turmasVisiveis = useMemo(() => {
+    if (!session) return turmas;
+    if (session.role === 'ADMIN') return turmas;
+    // O professor vê apenas as suas disciplinas/turmas
+    return turmas.filter(t => t.professorId === session.id || !t.professorId);
+  }, [session, turmas]);
+
+  const alunosVisiveis = useMemo(() => {
+    if (!session) return alunos;
+    if (session.role === 'ADMIN') return alunos;
+    // O professor vê apenas os alunos matriculados nas suas turmas
+    const turmasIds = new Set(turmasVisiveis.map(t => t.id));
+    return alunos.filter(a => turmasIds.has(a.turmaId));
+  }, [session, alunos, turmasVisiveis]);
+
+  // Ajusta a turma selecionada para uma turma válida do usuário logado
+  useEffect(() => {
+    if (turmasVisiveis.length > 0) {
+      const existe = turmasVisiveis.some(t => t.id === turmaSelecionadaId);
+      if (!existe) {
+        setTurmaSelecionadaId(turmasVisiveis[0].id);
+      }
+    }
+  }, [turmasVisiveis, turmaSelecionadaId]);
 
   // Leitura OMR & Histórico
   const [leiturasOMR, setLeiturasOMR] = useState<LeituraOMRRegistro[]>([]);
@@ -101,10 +136,10 @@ export default function Home() {
 
   // Montador de Provas
   const [questoesSelecionadas, setQuestoesSelecionadas] = useState<Question[]>([]);
-  const [tituloProva, setTituloProva] = useState('Avaliação Escrita N2 - Arquitetura de Software');
+  const [tituloProva, setTituloProva] = useState('Avaliação Escrita N2 - Engenharia de Software');
   const [buscaQuestao, setBuscaQuestao] = useState('');
 
-  // Inicializa questões selecionadas quando o banco de questões for carregado
+  // Inicializa questões selecionadas quando o banco for carregado
   useEffect(() => {
     if (bancoQuestoes.length > 0 && questoesSelecionadas.length === 0) {
       setQuestoesSelecionadas([bancoQuestoes[0], bancoQuestoes[1], bancoQuestoes[2], bancoQuestoes[3]].filter(Boolean));
@@ -163,15 +198,20 @@ export default function Home() {
   const [formTurma, setFormTurma] = useState<FormTurmaState>({
     nome: '',
     curso: 'Engenharia de Software',
-    semestre: '2026/2'
+    semestre: '2026/2',
+    professorId: undefined
   });
+
+  // Modal de Professor (Exclusivo Admin)
+  const [modalProfessorAberto, setModalProfessorAberto] = useState(false);
+  const [professorEmEdicao, setProfessorEmEdicao] = useState<UsuarioModel | null>(null);
 
   // Memos e Cálculos Derivados
   const alunosDaTurmaSelecionada = useMemo(() => {
-    return alunos.filter(a => a.turmaId === turmaSelecionadaId);
-  }, [alunos, turmaSelecionadaId]);
+    return alunosVisiveis.filter(a => a.turmaId === turmaSelecionadaId);
+  }, [alunosVisiveis, turmaSelecionadaId]);
 
-  const alunoAtual = alunosDaTurmaSelecionada[selectedVersionIdx] || alunosDaTurmaSelecionada[0] || alunos[0];
+  const alunoAtual = alunosDaTurmaSelecionada[selectedVersionIdx] || alunosDaTurmaSelecionada[0] || alunosVisiveis[0];
 
   const questoesEmbaralhadas = useMemo(() => {
     let lista = [...questoesSelecionadas];
@@ -218,12 +258,12 @@ export default function Home() {
   }, [questionService, bancoQuestoes, buscaQuestao, turmaSelecionadaId, filtroApenasTurma, cicloSelecionado]);
 
   const alunosFiltradosRelatorio = useMemo(() => {
-    return alunoService.filtrarAlunos(alunos, buscaRelatorio);
-  }, [alunoService, alunos, buscaRelatorio]);
+    return alunoService.filtrarAlunos(alunosVisiveis, buscaRelatorio);
+  }, [alunoService, alunosVisiveis, buscaRelatorio]);
 
   // Exportação CSV via ExportService
   const exportarCSV = () => {
-    ExportService.gerarCsvNotas(alunos, turmas, tituloProva);
+    ExportService.gerarCsvNotas(alunosVisiveis, turmasVisiveis, tituloProva);
   };
 
   // Handlers do Montador
@@ -330,7 +370,7 @@ export default function Home() {
       ra: '',
       curso: 'ENGENHARIA DE SOFTWARE',
       turno: 'Noturno',
-      turmaId: turmas[0]?.id || 't1',
+      turmaId: turmasVisiveis[0]?.id || 't1',
       dataNascimento: '',
       naturalidade: 'Jaraguá do Sul',
       estadoNatal: 'SC',
@@ -355,18 +395,18 @@ export default function Home() {
       curso: aluno.curso,
       turno: aluno.turno,
       turmaId: aluno.turmaId,
-      dataNascimento: aluno.dataNascimento,
-      naturalidade: aluno.naturalidade,
-      estadoNatal: aluno.estadoNatal,
-      mae: aluno.filiacao.mae,
-      pai: aluno.filiacao.pai,
-      celular: aluno.contato.celular,
-      cep: aluno.endereco.cep,
-      logradouro: aluno.endereco.logradouro,
-      numero: aluno.endereco.numero,
-      bairro: aluno.endereco.bairro,
-      cidade: aluno.endereco.cidade,
-      estado: aluno.endereco.estado
+      dataNascimento: aluno.dataNascimento ? new Date(aluno.dataNascimento).toISOString().split('T')[0] : '',
+      naturalidade: aluno.naturalidade || '',
+      estadoNatal: aluno.estadoNatal || '',
+      mae: aluno.filiacao?.mae || '',
+      pai: aluno.filiacao?.pai || '',
+      celular: aluno.contato?.celular || '',
+      cep: aluno.endereco?.cep || '',
+      logradouro: aluno.endereco?.logradouro || '',
+      numero: aluno.endereco?.numero || '',
+      bairro: aluno.endereco?.bairro || '',
+      cidade: aluno.endereco?.cidade || '',
+      estado: aluno.endereco?.estado || ''
     });
     setModalAlunoAberto(true);
   };
@@ -380,55 +420,42 @@ export default function Home() {
 
   const handleSaveAlunoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formAluno.nome || !formAluno.ra) return;
+
+    const alunoFormatado = new AlunoModel({
+      id: alunoEmEdicaoId || `alu-${Date.now()}`,
+      nome: formAluno.nome,
+      ra: formAluno.ra,
+      curso: formAluno.curso,
+      turno: formAluno.turno,
+      turmaId: formAluno.turmaId,
+      dataNascimento: formAluno.dataNascimento || '',
+      naturalidade: formAluno.naturalidade,
+      estadoNatal: formAluno.estadoNatal,
+      filiacao: {
+        mae: formAluno.mae,
+        pai: formAluno.pai
+      },
+      contato: {
+        celular: formAluno.celular
+      },
+      endereco: {
+        cep: formAluno.cep,
+        logradouro: formAluno.logradouro,
+        numero: formAluno.numero,
+        bairro: formAluno.bairro,
+        cidade: formAluno.cidade,
+        estado: formAluno.estado
+      }
+    });
+
+    const saved = await alunoService.salvarAluno(alunoFormatado);
+
     if (alunoEmEdicaoId) {
-      const alunoAtualizado = new AlunoModel({
-        id: alunoEmEdicaoId,
-        nome: formAluno.nome,
-        ra: formAluno.ra,
-        curso: formAluno.curso,
-        turno: formAluno.turno,
-        turmaId: formAluno.turmaId,
-        dataNascimento: formAluno.dataNascimento,
-        naturalidade: formAluno.naturalidade,
-        estadoNatal: formAluno.estadoNatal,
-        filiacao: { mae: formAluno.mae, pai: formAluno.pai },
-        contato: { celular: formAluno.celular },
-        endereco: {
-          cep: formAluno.cep,
-          logradouro: formAluno.logradouro,
-          numero: formAluno.numero,
-          bairro: formAluno.bairro,
-          cidade: formAluno.cidade,
-          estado: formAluno.estado
-        }
-      });
-      const saved = await alunoService.salvarAluno(alunoAtualizado);
       setAlunos(alunos.map(a => a.id === alunoEmEdicaoId ? saved : a));
     } else {
-      const novoAluno = new AlunoModel({
-        nome: formAluno.nome,
-        ra: formAluno.ra || String(Math.floor(1000000 + Math.random() * 9000000)),
-        curso: formAluno.curso,
-        turno: formAluno.turno,
-        turmaId: formAluno.turmaId,
-        dataNascimento: formAluno.dataNascimento,
-        naturalidade: formAluno.naturalidade,
-        estadoNatal: formAluno.estadoNatal,
-        filiacao: { mae: formAluno.mae, pai: formAluno.pai },
-        contato: { celular: formAluno.celular },
-        endereco: {
-          cep: formAluno.cep,
-          logradouro: formAluno.logradouro,
-          numero: formAluno.numero,
-          bairro: formAluno.bairro,
-          cidade: formAluno.cidade,
-          estado: formAluno.estado
-        }
-      });
-      const saved = await alunoService.salvarAluno(novoAluno);
       setAlunos([...alunos, saved]);
     }
-
     setModalAlunoAberto(false);
   };
 
@@ -438,7 +465,8 @@ export default function Home() {
     setFormTurma({
       nome: '',
       curso: 'Engenharia de Software',
-      semestre: '2026/2'
+      semestre: '2026/2',
+      professorId: session?.role === 'PROFESSOR' ? session.id : undefined
     });
     setModalTurmaAberto(true);
   };
@@ -448,7 +476,8 @@ export default function Home() {
     setFormTurma({
       nome: turma.nome,
       curso: turma.curso,
-      semestre: turma.semestre
+      semestre: turma.semestre,
+      professorId: turma.professorId || undefined
     });
     setModalTurmaAberto(true);
   };
@@ -457,17 +486,23 @@ export default function Home() {
     if (confirm('Tem certeza que deseja excluir esta turma?')) {
       await turmaService.excluirTurma(id);
       setTurmas(turmas.filter(t => t.id !== id));
+      if (turmaSelecionadaId === id && turmasVisiveis.length > 1) {
+        setTurmaSelecionadaId(turmasVisiveis.find(t => t.id !== id)?.id || '');
+      }
     }
   };
 
   const handleSaveTurmaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const profAtribuido = formTurma.professorId || (session?.role === 'PROFESSOR' ? session.id : undefined);
+
     if (turmaEmEdicaoId) {
       const turmaAtualizada = new TurmaModel({
         id: turmaEmEdicaoId,
         nome: formTurma.nome,
         curso: formTurma.curso,
-        semestre: formTurma.semestre
+        semestre: formTurma.semestre,
+        professorId: profAtribuido
       });
       const saved = await turmaService.salvarTurma(turmaAtualizada);
       setTurmas(turmas.map(t => t.id === turmaEmEdicaoId ? saved : t));
@@ -475,12 +510,50 @@ export default function Home() {
       const novaTurma = new TurmaModel({
         nome: formTurma.nome,
         curso: formTurma.curso,
-        semestre: formTurma.semestre
+        semestre: formTurma.semestre,
+        professorId: profAtribuido
       });
       const saved = await turmaService.salvarTurma(novaTurma);
       setTurmas([...turmas, saved]);
     }
     setModalTurmaAberto(false);
+  };
+
+  // Handlers de Professores (Exclusivo Admin)
+  const abrirModalNovoProfessor = () => {
+    setProfessorEmEdicao(null);
+    setModalProfessorAberto(true);
+  };
+
+  const abrirModalEditarProfessor = (prof: UsuarioModel) => {
+    setProfessorEmEdicao(prof);
+    setModalProfessorAberto(true);
+  };
+
+  const handleSaveProfessorSubmit = async (dados: { nome: string; email: string; senha?: string; disciplina: string }) => {
+    const profFormatado = new UsuarioModel({
+      id: professorEmEdicao?.id || `usr_prof_${Date.now()}`,
+      nome: dados.nome,
+      email: dados.email,
+      senha: dados.senha || 'admin',
+      role: 'PROFESSOR',
+      disciplina: dados.disciplina
+    });
+
+    const saved = await professorService.salvarProfessor(profFormatado, session?.role || 'ADMIN');
+
+    if (professorEmEdicao) {
+      setProfessores(professores.map(p => p.id === professorEmEdicao.id ? saved : p));
+    } else {
+      setProfessores([...professores, saved]);
+    }
+  };
+
+  const excluirProfessor = async (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este professor?')) {
+      await professorService.excluirProfessor(id, session?.role || 'ADMIN');
+      setProfessores(professores.filter(p => p.id !== id));
+    }
   };
 
   if (!sessionLoaded) return <div className="min-h-screen bg-slate-100" />;
@@ -523,8 +596,8 @@ export default function Home() {
         {/* 1. ABA CADASTROS (ALUNOS E TURMAS) */}
         {currentTab === 'cadastros' && (
           <CadastrosTab
-            alunos={alunos}
-            turmas={turmas}
+            alunos={alunosVisiveis}
+            turmas={turmasVisiveis}
             onOpenNovoAluno={abrirModalNovoAluno}
             onOpenNovaTurma={abrirModalNovaTurma}
             onEditAluno={abrirModalEditarAluno}
@@ -534,13 +607,24 @@ export default function Home() {
           />
         )}
 
-        {/* 2. ABA MONTADOR DE PROVAS */}
+        {/* 2. ABA GESTÃO DE PROFESSORES (EXCLUSIVO ADMIN) */}
+        {currentTab === 'professores' && session.role === 'ADMIN' && (
+          <ProfessoresTab
+            professores={professores}
+            turmas={turmas}
+            onOpenNovoProfessor={abrirModalNovoProfessor}
+            onEditProfessor={abrirModalEditarProfessor}
+            onDeleteProfessor={excluirProfessor}
+          />
+        )}
+
+        {/* 3. ABA MONTADOR DE PROVAS */}
         {currentTab === 'montador' && (
           <MontadorTab
             bancoQuestoes={bancoQuestoes}
             questoesFiltradas={questoesFiltradas}
             questoesSelecionadas={questoesSelecionadas}
-            turmas={turmas}
+            turmas={turmasVisiveis}
             turmaSelecionadaId={turmaSelecionadaId}
             setTurmaSelecionadaId={setTurmaSelecionadaId}
             tituloProva={tituloProva}
@@ -568,7 +652,7 @@ export default function Home() {
           />
         )}
 
-        {/* 3. ABA IMPRESSÃO (CADERNO & GABARITO OMR) */}
+        {/* 4. ABA IMPRESSÃO (CADERNO & GABARITO OMR) */}
         {currentTab === 'impressao' && (
           <ImpressaoTab
             alunosDaTurmaSelecionada={alunosDaTurmaSelecionada}
@@ -582,11 +666,11 @@ export default function Home() {
           />
         )}
 
-        {/* 4. ABA LEITURA & CORREÇÃO OMR / QR CODE */}
+        {/* 5. ABA LEITURA & CORREÇÃO OMR / QR CODE */}
         {currentTab === 'leitura' && (
           <LeituraTab
-            alunos={alunos}
-            turmas={turmas}
+            alunos={alunosVisiveis}
+            turmas={turmasVisiveis}
             turmaSelecionadaId={turmaSelecionadaId}
             questoesSelecionadas={questoesSelecionadas}
             tituloProva={tituloProva}
@@ -601,16 +685,26 @@ export default function Home() {
           />
         )}
 
-        {/* 5. ABA RELATÓRIOS & HISTÓRICO */}
+        {/* 6. ABA RELATÓRIOS & HISTÓRICO */}
         {currentTab === 'relatorios' && (
           <RelatoriosTab
-            alunos={alunos}
+            alunos={alunosVisiveis}
             leiturasOMR={leiturasOMR}
-            turmas={turmas}
+            turmas={turmasVisiveis}
             buscaRelatorio={buscaRelatorio}
             setBuscaRelatorio={setBuscaRelatorio}
             alunosFiltradosRelatorio={alunosFiltradosRelatorio}
             onExportarCsv={exportarCSV}
+          />
+        )}
+
+        {/* MODAL DE PROFESSOR (EXCLUSIVO ADMIN) */}
+        {session.role === 'ADMIN' && (
+          <ModalProfessor
+            isOpen={modalProfessorAberto}
+            onClose={() => setModalProfessorAberto(false)}
+            professorEmEdicao={professorEmEdicao}
+            onSave={handleSaveProfessorSubmit}
           />
         )}
 
@@ -631,7 +725,7 @@ export default function Home() {
           setNovaTurmaId={setNovaTurmaId}
           novaAvaliacao={novaAvaliacao}
           setNovaAvaliacao={setNovaAvaliacao}
-          turmas={turmas}
+          turmas={turmasVisiveis}
           alternativasCadastro={alternativasCadastro}
           setAlternativasCadastro={setAlternativasCadastro}
           onSubmit={handleSaveQuestaoSubmit}
@@ -645,7 +739,7 @@ export default function Home() {
           formAluno={formAluno}
           setFormAluno={setFormAluno}
           onSubmit={handleSaveAlunoSubmit}
-          turmas={turmas}
+          turmas={turmasVisiveis}
         />
 
         {/* MODAL DE CADASTRO/EDIÇÃO DE TURMA */}
@@ -656,6 +750,8 @@ export default function Home() {
           formTurma={formTurma}
           setFormTurma={setFormTurma}
           onSubmit={handleSaveTurmaSubmit}
+          professores={professores}
+          isAdmin={session.role === 'ADMIN'}
         />
       </main>
     </div>

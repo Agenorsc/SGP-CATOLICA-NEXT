@@ -3,6 +3,9 @@ import { IBaseRepository } from './base/IBaseRepository';
 
 export class QuestionRepository implements IBaseRepository<Question> {
   private fallbackQuestions: Question[] = [
+    // ==========================================
+    // TURMA 1: Engenharia de Software IV (t1)
+    // ==========================================
     {
       id: 'q1_t1_n1',
       tipo: 'objetiva',

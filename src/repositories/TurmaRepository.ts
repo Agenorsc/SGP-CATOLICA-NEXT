@@ -8,14 +8,18 @@ export class TurmaRepository implements IBaseRepository<TurmaModel> {
       nome: 'Engenharia de Software IV',
       curso: 'Engenharia de Software',
       semestre: '2026/2',
-      codigoConvite: 'CAT-8842'
+      codigoConvite: 'CAT-8842',
+      professorId: 'usr-prof-01',
+      professorNome: 'Prof. Agenor Alvise'
     }),
     new TurmaModel({
       id: 't2',
       nome: 'Arquitetura de Software',
       curso: 'Engenharia de Software',
       semestre: '2026/2',
-      codigoConvite: 'CAT-9910'
+      codigoConvite: 'CAT-9910',
+      professorId: 'usr-prof-02',
+      professorNome: 'Prof. Marcos Silva'
     })
   ];
 

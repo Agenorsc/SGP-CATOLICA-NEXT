@@ -8,3 +8,5 @@ export * from './prisma/PrismaAlunoRepository';
 export * from './prisma/PrismaTurmaRepository';
 export * from './prisma/PrismaQuestionRepository';
 export * from './prisma/PrismaOmrRepository';
+export * from './UsuarioRepository';
+export * from './prisma/PrismaUsuarioRepository';

@@ -5,16 +5,38 @@ import { IBaseRepository } from '@/repositories/base/IBaseRepository';
 export class PrismaTurmaRepository implements IBaseRepository<TurmaModel> {
   async findAll(): Promise<TurmaModel[]> {
     const records = await prisma.turma.findMany({
+      include: {
+        professor: true
+      },
       orderBy: { createdAt: 'asc' }
     });
-    return records.map(r => new TurmaModel(r));
+    return records.map(r => new TurmaModel({
+      id: r.id,
+      nome: r.nome,
+      curso: r.curso,
+      semestre: r.semestre,
+      codigoConvite: r.codigoConvite,
+      professorId: r.professorId || undefined,
+      professorNome: r.professor?.nome || undefined
+    }));
   }
 
   async findById(id: string): Promise<TurmaModel | undefined> {
     const record = await prisma.turma.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        professor: true
+      }
     });
-    return record ? new TurmaModel(record) : undefined;
+    return record ? new TurmaModel({
+      id: record.id,
+      nome: record.nome,
+      curso: record.curso,
+      semestre: record.semestre,
+      codigoConvite: record.codigoConvite,
+      professorId: record.professorId || undefined,
+      professorNome: record.professor?.nome || undefined
+    }) : undefined;
   }
 
   async save(turma: TurmaModel): Promise<TurmaModel> {
@@ -24,17 +46,30 @@ export class PrismaTurmaRepository implements IBaseRepository<TurmaModel> {
         nome: turma.nome,
         curso: turma.curso,
         semestre: turma.semestre,
-        codigoConvite: turma.codigoConvite
+        codigoConvite: turma.codigoConvite,
+        professorId: turma.professorId || null
       },
       create: {
         id: turma.id,
         nome: turma.nome,
         curso: turma.curso,
         semestre: turma.semestre,
-        codigoConvite: turma.codigoConvite
+        codigoConvite: turma.codigoConvite,
+        professorId: turma.professorId || null
+      },
+      include: {
+        professor: true
       }
     });
-    return new TurmaModel(saved);
+    return new TurmaModel({
+      id: saved.id,
+      nome: saved.nome,
+      curso: saved.curso,
+      semestre: saved.semestre,
+      codigoConvite: saved.codigoConvite,
+      professorId: saved.professorId || undefined,
+      professorNome: saved.professor?.nome || undefined
+    });
   }
 
   async delete(id: string): Promise<boolean> {

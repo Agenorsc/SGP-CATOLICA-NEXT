@@ -50,7 +50,14 @@ export function TurmasGrid({
               </div>
             </div>
             <h4 className="font-bold text-base text-slate-800">{t.nome}</h4>
-            <p className="text-xs text-slate-500">{t.curso}</p>
+            <div className="flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
+              <span>{t.curso}</span>
+              {t.professorNome && (
+                <span className="font-semibold text-catolica-primary">
+                  • Prof. {t.professorNome}
+                </span>
+              )}
+            </div>
 
             <div className="border-t pt-3 space-y-2">
               <div className="flex justify-between items-center">

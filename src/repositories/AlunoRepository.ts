@@ -66,6 +66,39 @@ export class AlunoRepository implements IBaseRepository<AlunoModel> {
       n1: 8.5,
       n2: 0.0,
       n3: 8.5
+    }),
+    new AlunoModel({
+      id: 'alu-06',
+      nome: 'Carlos Eduardo Santos',
+      ra: '20261001',
+      curso: 'ENGENHARIA DE SOFTWARE',
+      turno: 'Noturno',
+      turmaId: 't2',
+      n1: 8.0,
+      n2: 8.5,
+      n3: 9.0
+    }),
+    new AlunoModel({
+      id: 'alu-07',
+      nome: 'Mariana Souza Oliveira',
+      ra: '20261002',
+      curso: 'ENGENHARIA DE SOFTWARE',
+      turno: 'Noturno',
+      turmaId: 't2',
+      n1: 9.0,
+      n2: 9.0,
+      n3: 9.5
+    }),
+    new AlunoModel({
+      id: 'alu-08',
+      nome: 'Gabriel Henrique Dias',
+      ra: '20261003',
+      curso: 'ENGENHARIA DE SOFTWARE',
+      turno: 'Noturno',
+      turmaId: 't2',
+      n1: 7.0,
+      n2: 7.5,
+      n3: 8.0
     })
   ];
 

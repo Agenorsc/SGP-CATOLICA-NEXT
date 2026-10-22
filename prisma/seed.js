@@ -5,21 +5,60 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('--- Iniciando Seed do Banco de Dados Supabase ---');
 
-  // 1. Turmas
+  // 1. Usuários do Sistema (Admin e Professores)
+  const usuarios = [
+    {
+      id: 'usr-admin-01',
+      nome: 'Administrador SGP',
+      email: 'admin@admin.com',
+      senha: 'admin',
+      role: 'ADMIN',
+      disciplina: 'Gestão Acadêmica'
+    },
+    {
+      id: 'usr-prof-01',
+      nome: 'Prof. Agenor Alvise',
+      email: 'prof.agenor@catolica.edu.br',
+      senha: 'admin',
+      role: 'PROFESSOR',
+      disciplina: 'Engenharia de Software IV'
+    },
+    {
+      id: 'usr-prof-02',
+      nome: 'Prof. Marcos Silva',
+      email: 'prof.marcos@catolica.edu.br',
+      senha: 'admin',
+      role: 'PROFESSOR',
+      disciplina: 'Arquitetura de Software'
+    }
+  ];
+
+  for (const u of usuarios) {
+    await prisma.usuario.upsert({
+      where: { email: u.email },
+      update: u,
+      create: u
+    });
+  }
+  console.log(`Usuários inseridos/atualizados: ${usuarios.length}`);
+
+  // 2. Turmas vinculadas aos Professores
   const turmas = [
     {
       id: 't1',
       nome: 'Engenharia de Software IV',
       curso: 'Engenharia de Software',
       semestre: '2026/2',
-      codigoConvite: 'CAT-8842'
+      codigoConvite: 'CAT-8842',
+      professorId: 'usr-prof-01'
     },
     {
       id: 't2',
       nome: 'Arquitetura de Software',
       curso: 'Engenharia de Software',
       semestre: '2026/2',
-      codigoConvite: 'CAT-9910'
+      codigoConvite: 'CAT-9910',
+      professorId: 'usr-prof-02'
     }
   ];
 
@@ -32,7 +71,7 @@ async function main() {
   }
   console.log(`Turmas inseridas/atualizadas: ${turmas.length}`);
 
-  // 2. Alunos
+  // 3. Alunos individualizados por Turma e Professor
   const alunos = [
     {
       id: 'alu-01',
@@ -97,6 +136,40 @@ async function main() {
       n1: 8.5,
       n2: 0.0,
       n3: 8.5
+    },
+    // Alunos da Turma 2 (Arquitetura de Software - Prof. Marcos)
+    {
+      id: 'alu-06',
+      nome: 'Carlos Eduardo Santos',
+      ra: '20261001',
+      curso: 'ENGENHARIA DE SOFTWARE',
+      turno: 'Noturno',
+      turmaId: 't2',
+      n1: 8.0,
+      n2: 8.5,
+      n3: 9.0
+    },
+    {
+      id: 'alu-07',
+      nome: 'Mariana Souza Oliveira',
+      ra: '20261002',
+      curso: 'ENGENHARIA DE SOFTWARE',
+      turno: 'Noturno',
+      turmaId: 't2',
+      n1: 9.0,
+      n2: 9.0,
+      n3: 9.5
+    },
+    {
+      id: 'alu-08',
+      nome: 'Gabriel Henrique Dias',
+      ra: '20261003',
+      curso: 'ENGENHARIA DE SOFTWARE',
+      turno: 'Noturno',
+      turmaId: 't2',
+      n1: 7.0,
+      n2: 7.5,
+      n3: 8.0
     }
   ];
 
@@ -111,6 +184,9 @@ async function main() {
 
   // 3. Questões e Alternativas estritamente individualizadas por Turma (t1 e t2) e Ciclo Avaliativo (N1, N2, N3, N-1)
   const questoes = [
+    // ==========================================
+    // TURMA 1: Engenharia de Software IV (t1)
+    // ==========================================
     {
       id: 'q1_t1_n1',
       tipo: 'objetiva',

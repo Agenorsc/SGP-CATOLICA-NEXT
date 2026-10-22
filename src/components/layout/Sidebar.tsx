@@ -8,22 +8,25 @@ import {
   Scan, 
   BarChart3, 
   X, 
-  LogOut 
+  LogOut,
+  GraduationCap
 } from 'lucide-react';
+import { UserSession } from '@/types';
 
-export type TabType = 'cadastros' | 'montador' | 'impressao' | 'leitura' | 'relatorios';
+export type TabType = 'cadastros' | 'professores' | 'montador' | 'impressao' | 'leitura' | 'relatorios';
 
 interface SidebarProps {
   currentTab: TabType;
   onSelectTab: (tab: TabType) => void;
   sidebarOpen: boolean;
   onCloseSidebar: () => void;
-  session: { name: string; email: string };
+  session: UserSession;
   onLogout: () => void;
 }
 
-const navItems: { id: TabType; label: string; icon: React.ElementType }[] = [
+const navItems: { id: TabType; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
   { id: 'cadastros', label: 'Cadastros (Aluno/Turma)', icon: UserPlus },
+  { id: 'professores', label: 'Professores & Disciplinas', icon: GraduationCap, adminOnly: true },
   { id: 'montador', label: 'Montador de Provas', icon: BookOpen },
   { id: 'impressao', label: 'Caderno & Gabarito OMR', icon: Printer },
   { id: 'leitura', label: 'Leitura & Correção OMR', icon: Scan },
@@ -38,6 +41,13 @@ export function Sidebar({
   session,
   onLogout
 }: SidebarProps) {
+  const visibleNavItems = navItems.filter(item => {
+    if (item.adminOnly) {
+      return session.role === 'ADMIN';
+    }
+    return true;
+  });
+
   return (
     <>
       {sidebarOpen && (
@@ -62,7 +72,7 @@ export function Sidebar({
               </div>
               <div>
                 <h2 className="text-base font-bold tracking-tight text-white">SGP Católica</h2>
-                <p className="text-[11px] text-slate-400 font-medium">Gestão & OMR Studio (N2)</p>
+                <p className="text-[11px] text-slate-400 font-medium">Gestão & OMR Studio</p>
               </div>
             </div>
             <button
@@ -76,7 +86,7 @@ export function Sidebar({
           </div>
 
           <nav className="space-y-1.5" aria-label="Navegação principal">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const Icon = item.icon;
               const active = currentTab === item.id;
               return (
@@ -93,7 +103,12 @@ export function Sidebar({
                   }`}
                 >
                   <Icon className="w-4 h-4" />
-                  {item.label}
+                  <span className="flex-1 text-left">{item.label}</span>
+                  {item.adminOnly && (
+                    <span className="text-[9px] bg-amber-400/20 text-amber-300 font-black px-1.5 py-0.5 rounded">
+                      ADMIN
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -102,15 +117,28 @@ export function Sidebar({
 
         <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-800/60 p-4 text-[11px] text-slate-400">
           <div className="border-b border-slate-700 pb-3">
-            <p className="truncate text-xs font-semibold text-slate-200">{session.name} autenticado(a)</p>
-            <p className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-500">Acesso de professor</p>
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <p className="truncate text-xs font-semibold text-slate-200">{session.name}</p>
+              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded shrink-0 ${
+                session.role === 'ADMIN'
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                  : 'bg-catolica-primary/20 text-catolica-primary border border-catolica-primary/30'
+              }`}>
+                {session.role === 'ADMIN' ? 'Admin' : 'Professor'}
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-400 font-mono truncate">{session.email}</p>
+            {session.disciplina && (
+              <p className="mt-1 text-[10px] text-slate-300 font-medium truncate">
+                {session.disciplina}
+              </p>
+            )}
           </div>
           <p className="font-semibold text-slate-300">Católica SC - Campus Jaraguá</p>
-          <p>Projeto de Arquitetura de Software</p>
           <button
             type="button"
             onClick={onLogout}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 transition hover:border-catolica-primary hover:bg-catolica-primary hover:text-white"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 transition hover:border-catolica-primary hover:bg-catolica-primary hover:text-white cursor-pointer"
             title="Sair da conta"
           >
             <LogOut className="h-4 w-4" /> Sair da conta
