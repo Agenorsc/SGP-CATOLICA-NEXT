@@ -16,7 +16,18 @@ export class PrismaQuestionRepository implements IBaseRepository<Question> {
       pontuacao: q.pontuacao,
       tags: q.tags,
       turmaId: q.turmaId || undefined,
+      teacherId: q.professorId || undefined,
+      classId: q.turmaId || undefined,
+      statement: q.enunciado,
+      type: q.tipo === 'objetiva' ? 'OBJECTIVE' : 'DISCURSIVE',
+      points: q.pontuacao,
+      stage: (q.avaliacao as any) || 'N2',
       avaliacao: (q.avaliacao as AvaliacaoCiclo) || 'N2',
+      options: q.alternativas.map(a => ({
+        letter: a.letraOriginal as 'A' | 'B' | 'C' | 'D' | 'E',
+        text: a.texto,
+        isCorrect: a.correta
+      })),
       alternativas: q.alternativas.map(a => ({
         id: a.id,
         letraOriginal: a.letraOriginal,
@@ -41,7 +52,18 @@ export class PrismaQuestionRepository implements IBaseRepository<Question> {
       pontuacao: q.pontuacao,
       tags: q.tags,
       turmaId: q.turmaId || undefined,
+      teacherId: q.professorId || undefined,
+      classId: q.turmaId || undefined,
+      statement: q.enunciado,
+      type: q.tipo === 'objetiva' ? 'OBJECTIVE' : 'DISCURSIVE',
+      points: q.pontuacao,
+      stage: (q.avaliacao as any) || 'N2',
       avaliacao: (q.avaliacao as AvaliacaoCiclo) || 'N2',
+      options: q.alternativas.map(a => ({
+        letter: a.letraOriginal as 'A' | 'B' | 'C' | 'D' | 'E',
+        text: a.texto,
+        isCorrect: a.correta
+      })),
       alternativas: q.alternativas.map(a => ({
         id: a.id,
         letraOriginal: a.letraOriginal,
@@ -70,7 +92,18 @@ export class PrismaQuestionRepository implements IBaseRepository<Question> {
       pontuacao: q.pontuacao,
       tags: q.tags,
       turmaId: q.turmaId || undefined,
+      teacherId: q.professorId || undefined,
+      classId: q.turmaId || undefined,
+      statement: q.enunciado,
+      type: q.tipo === 'objetiva' ? 'OBJECTIVE' : 'DISCURSIVE',
+      points: q.pontuacao,
+      stage: (q.avaliacao as any) || 'N2',
       avaliacao: (q.avaliacao as AvaliacaoCiclo) || 'N2',
+      options: q.alternativas.map(a => ({
+        letter: a.letraOriginal as 'A' | 'B' | 'C' | 'D' | 'E',
+        text: a.texto,
+        isCorrect: a.correta
+      })),
       alternativas: q.alternativas.map(a => ({
         id: a.id,
         letraOriginal: a.letraOriginal,
@@ -88,8 +121,9 @@ export class PrismaQuestionRepository implements IBaseRepository<Question> {
         enunciado: question.enunciado,
         pontuacao: question.pontuacao,
         tags: question.tags,
-        turmaId: question.turmaId || null,
-        avaliacao: question.avaliacao || 'N2'
+        turmaId: question.turmaId || question.classId || null,
+        professorId: question.teacherId || null,
+        avaliacao: question.avaliacao || question.stage || 'N2'
       },
       create: {
         id: question.id,
@@ -97,8 +131,9 @@ export class PrismaQuestionRepository implements IBaseRepository<Question> {
         enunciado: question.enunciado,
         pontuacao: question.pontuacao,
         tags: question.tags,
-        turmaId: question.turmaId || null,
-        avaliacao: question.avaliacao || 'N2'
+        turmaId: question.turmaId || question.classId || null,
+        professorId: question.teacherId || null,
+        avaliacao: question.avaliacao || question.stage || 'N2'
       }
     });
 

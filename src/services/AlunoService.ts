@@ -16,6 +16,38 @@ export class AlunoService {
     return this.alunoRepository.findByTurmaId(turmaId);
   }
 
+  /**
+   * Validação de regras acadêmicas para cadastro de alunos
+   */
+  validarCadastroAluno(
+    dados: Partial<AlunoModel>,
+    turmasDisponiveis: { id: string }[],
+    alunosExistentes: AlunoModel[] = [],
+    idEmEdicao?: string | null
+  ): { valido: boolean; erro?: string } {
+    // 1. Validação Obrigatória de Turma
+    if (turmasDisponiveis.length === 0 || !dados.turmaId || dados.turmaId.trim() === '') {
+      return { valido: false, erro: 'Cadastre a turma antes!' };
+    }
+
+    // 2. Validação de RA Duplicado
+    const raTrim = (dados.ra || '').trim();
+    if (!raTrim) {
+      return { valido: false, erro: 'Informe o Registro Acadêmico (RA).' };
+    }
+
+    const raDuplicado = alunosExistentes.some(a => {
+      const mesmoId = idEmEdicao && a.id === idEmEdicao;
+      return !mesmoId && (a.ra || '').trim().toLowerCase() === raTrim.toLowerCase();
+    });
+
+    if (raDuplicado) {
+      return { valido: false, erro: 'RA duplicado!' };
+    }
+
+    return { valido: true };
+  }
+
   async salvarAluno(dados: Partial<AlunoModel>): Promise<AlunoModel> {
     const aluno = new AlunoModel(dados);
     return this.alunoRepository.save(aluno);

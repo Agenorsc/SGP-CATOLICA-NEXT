@@ -3,6 +3,7 @@ import { AlunoModel } from '@/models/AlunoModel';
 import { TurmaModel } from '@/models/TurmaModel';
 import { LeituraOMRRegistro, Question, SecureQrPayload, OMRQuestionResult } from '@/types';
 import { lerGradeOmrPorAjuste } from '@/services/omr/GridOmrEngine';
+import { shuffleArray } from '@/lib/shuffle';
 
 export interface ValidacaoQrResult {
   sucesso: boolean;
@@ -33,19 +34,7 @@ export class OmrService {
 
   // Algoritmo determinístico de shuffle compartilhado
   private shuffleArray<T>(array: T[], seed: number): T[] {
-    const copy = [...array];
-    let currentIndex = copy.length;
-    let temporaryValue: T;
-    let randomIndex: number;
-
-    while (currentIndex !== 0) {
-      randomIndex = Math.floor(Math.abs(Math.sin(seed++) * 10000)) % currentIndex;
-      currentIndex -= 1;
-      temporaryValue = copy[currentIndex];
-      copy[currentIndex] = copy[randomIndex];
-      copy[randomIndex] = temporaryValue;
-    }
-    return copy;
+    return shuffleArray(array, seed);
   }
 
   /**
@@ -175,7 +164,7 @@ export class OmrService {
     shuffleQ: boolean,
     shuffleAlt: boolean
   ): Record<number, string> {
-    const objetivas = questoesBase.filter(q => q.tipo === 'objetiva');
+    const objetivas = questoesBase.filter(q => q.tipo === 'objetiva' || q.type === 'OBJECTIVE');
     const versaoIndex = Math.max(0, versaoLetra.toUpperCase().charCodeAt(0) - 65);
 
     let versionQuestions = JSON.parse(JSON.stringify(objetivas)) as Question[];
@@ -188,13 +177,30 @@ export class OmrService {
     const gabaritoOficial: Record<number, string> = {};
 
     versionQuestions.forEach((q, qIndex) => {
-      let alts = q.alternativas ? [...q.alternativas] : [];
-      if (shuffleAlt && alts.length > 0) {
-        alts = this.shuffleArray(alts, (versaoIndex + 1) * 10 + (qIndex + 1));
+      let alts: { letter: string; text: string; isCorrect: boolean }[] = [];
+
+      if (q.options && q.options.length > 0) {
+        alts = q.options.map((opt, i) => ({
+          letter: String(opt.letter || letras[i]).trim().toUpperCase(),
+          text: opt.text || '',
+          isCorrect: !!opt.isCorrect
+        }));
+      } else if (q.alternativas && q.alternativas.length > 0) {
+        alts = q.alternativas.map((alt, i) => ({
+          letter: String(alt.letraOriginal || letras[i]).trim().toUpperCase(),
+          text: alt.texto || '',
+          isCorrect: !!alt.correta
+        }));
       }
 
-      const indexCorreta = alts.findIndex(a => a.correta === true);
-      gabaritoOficial[qIndex + 1] = indexCorreta >= 0 ? letras[indexCorreta] : 'A';
+      if (shuffleAlt && alts.length > 0) {
+        alts = this.shuffleArray(alts, (versaoIndex + 1) * 10 + (qIndex + 1));
+        const indexCorreta = alts.findIndex(a => a.isCorrect);
+        gabaritoOficial[qIndex + 1] = indexCorreta >= 0 ? letras[indexCorreta] : 'A';
+      } else {
+        const correta = alts.find(a => a.isCorrect);
+        gabaritoOficial[qIndex + 1] = correta ? correta.letter : 'A';
+      }
     });
 
     return gabaritoOficial;
@@ -680,22 +686,35 @@ export class OmrService {
       throw new Error('Falha no alinhamento óptico: 4 marcadores de canto não foram validados.');
     }
 
-    const objetivas = questoesBase.filter(q => q.tipo === 'objetiva');
+    const objetivas = questoesBase.filter(q => q.tipo === 'objetiva' || q.type === 'OBJECTIVE');
     const totalQuestoes = Math.min(20, Math.max(1, objetivas.length));
+    const versaoIndex = Math.max(0, versaoLetra.toUpperCase().charCodeAt(0) - 65);
+
+    let versionQuestions = JSON.parse(JSON.stringify(objetivas)) as Question[];
+    if (shuffleQ) {
+      versionQuestions = this.shuffleArray(versionQuestions, versaoIndex + 1);
+    }
+
     const gabaritoOficial = this.gerarGabaritoOficialVersao(questoesBase, versaoLetra, shuffleQ, shuffleAlt);
 
     const respostasFinais: Record<number, string | null> = {};
     const detalhesQuestoes: OMRQuestionResult[] = [];
     let acertos = 0;
+    let somaPontosObtidos = 0;
+    let somaPontosPossiveis = 0;
 
     for (let numero = 1; numero <= totalQuestoes; numero++) {
-      const gabarito = gabaritoOficial[numero] || 'A';
+      const q = versionQuestions[numero - 1];
+      const pontosQuestao = Number(q?.pontuacao ?? q?.points ?? (10 / totalQuestoes));
+      somaPontosPossiveis += pontosQuestao;
+
+      const gabarito = String(gabaritoOficial[numero] || 'A').trim().toUpperCase();
       let respostaMarcada: string | null = null;
       let status: 'CORRETA' | 'INCORRETA' | 'ANULADA' | 'EM_BRANCO' = 'EM_BRANCO';
       let fillRate = 0;
 
       if (respostasDetectadas && respostasDetectadas[numero] !== undefined) {
-        respostaMarcada = respostasDetectadas[numero];
+        respostaMarcada = respostasDetectadas[numero] !== null ? String(respostasDetectadas[numero]).trim().toUpperCase() : null;
         if (statusCustom && statusCustom[numero]) {
           status = statusCustom[numero];
         } else if (respostaMarcada === null) {
@@ -711,8 +730,9 @@ export class OmrService {
           respostaMarcada = gabarito;
           fillRate = Math.floor(65 + Math.random() * 32); // 65% a 97% fill rate
         } else if (roll < 0.95) {
-          const outras = ['A', 'B', 'C', 'D', 'E'].filter(l => l !== gabarito);
-          respostaMarcada = outras[Math.floor(Math.random() * outras.length)];
+          const numOpts = q?.options?.length || q?.alternativas?.length || 5;
+          const outras = ['A', 'B', 'C', 'D', 'E'].slice(0, numOpts).filter(l => l !== gabarito);
+          respostaMarcada = outras.length > 0 ? outras[Math.floor(Math.random() * outras.length)] : (gabarito === 'A' ? 'B' : 'A');
           fillRate = Math.floor(62 + Math.random() * 30);
         } else if (roll < 0.98) {
           // Rasura / dupla marcação
@@ -728,9 +748,12 @@ export class OmrService {
 
       if (respostaMarcada) {
         if (!fillRate) fillRate = Math.floor(65 + Math.random() * 30);
-        if (respostaMarcada === gabarito) {
+        // Comparação estrita sem divergência de tipo ou case
+        const estaCorreta = String(respostaMarcada).trim().toUpperCase() === gabarito;
+        if (estaCorreta) {
           status = 'CORRETA';
           acertos += 1;
+          somaPontosObtidos += pontosQuestao;
         } else {
           status = 'INCORRETA';
         }
@@ -752,8 +775,10 @@ export class OmrService {
       });
     }
 
-    // Fórmula da avaliação N2: (total de acertos / total de questoes) * 10
-    const notaCalculada = Number(((acertos / totalQuestoes) * 10).toFixed(1));
+    // Cálculo da nota com precisão matemática (respeita soma de 10.0 pts das questões)
+    const notaCalculada = somaPontosPossiveis > 0 && Math.abs(somaPontosPossiveis - 10) < 0.05
+      ? Number(Math.min(10, Math.max(0, somaPontosObtidos)).toFixed(1))
+      : Number(((acertos / totalQuestoes) * 10).toFixed(1));
 
     const registro: LeituraOMRRegistro = {
       id: `scan_${Date.now()}_${aluno.ra}`,

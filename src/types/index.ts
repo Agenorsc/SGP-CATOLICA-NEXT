@@ -2,12 +2,28 @@ export type AvaliacaoCiclo = 'N1' | 'N2' | 'N3' | 'N-1' | 'GERAL';
 
 export type UserRole = 'ADMIN' | 'PROFESSOR';
 
+export interface Teacher {
+  id: string;
+  name: string;
+  email: string;
+  campus: string;
+}
+
+export type EvaluationStage = 'N1' | 'N2' | 'N3' | 'N-1';
+
+export interface QuestionOption {
+  letter: 'A' | 'B' | 'C' | 'D' | 'E';
+  text: string;
+  isCorrect: boolean;
+}
+
 export interface UserSession {
   id: string;
   name: string;
   email: string;
   role: UserRole;
   disciplina?: string;
+  campus?: string;
 }
 
 export interface Professor {
@@ -17,6 +33,7 @@ export interface Professor {
   senha?: string;
   role: UserRole;
   disciplina?: string;
+  campus?: string;
   createdAt?: string;
 }
 
@@ -29,13 +46,54 @@ export interface Alternative {
 
 export interface Question {
   id: string;
+  // Especificação nova:
+  teacherId?: string;
+  classId?: string;
+  stage?: EvaluationStage;
+  statement?: string;
+  type?: 'OBJECTIVE' | 'DISCURSIVE' | 'objetiva' | 'discursiva';
+  points?: number;
+  tags: string[];
+  options?: QuestionOption[];
+
+  // Compatibilidade legada preservada:
   tipo: 'objetiva' | 'discursiva';
   enunciado: string;
   pontuacao: number;
-  tags: string[];
-  alternativas?: Alternative[];
   turmaId?: string;
   avaliacao?: AvaliacaoCiclo;
+  alternativas?: Alternative[];
+}
+
+export interface ClassRoom {
+  id: string;
+  teacherId: string;
+  name: string;
+  course: string;
+  semester: string;
+}
+
+export interface ExamVersion {
+  id: string;
+  teacherId: string;
+  classId: string;
+  title: string;
+  stage: EvaluationStage;
+  selectedQuestions: Question[];
+  shuffleQuestions: boolean;
+  shuffleAlternatives: boolean;
+  nominalQrCode: boolean;
+}
+
+export interface ExamGradeReport {
+  teacherId: string;
+  classId: string;
+  examId: string;
+  studentId: string;
+  studentName: string;
+  score: number;
+  stage: EvaluationStage;
+  correctedAt: string;
 }
 
 export interface Student {
@@ -110,6 +168,7 @@ export interface LeituraOMRRegistro {
   alunoNome: string;
   ra: string;
   turmaId?: string;
+  professorId?: string;
   turmaNome: string;
   materia: string;
   versao: string;

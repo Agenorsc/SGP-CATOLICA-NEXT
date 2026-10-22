@@ -460,5 +460,77 @@ describe('OmrService - Leitura e Correção Automatizada em Dois Estágios', () 
       expect(res.respostas[4]).toBeNull();
       expect(res.statusQuestoes[4]).toBe('EM_BRANCO');
     });
+
+    it('deve comparar estritamente a alternativa marcada com o gabarito oficial sem divergência de tipo ou case', () => {
+      const questoesComOpcoes: Question[] = [
+        {
+          id: 'q_options_1',
+          tipo: 'objetiva',
+          type: 'OBJECTIVE',
+          enunciado: 'Qual o padrão de projeto arquitetural?',
+          pontuacao: 2.5,
+          tags: ['Arquitetura'],
+          options: [
+            { letter: 'A', text: 'Singleton', isCorrect: false },
+            { letter: 'B', text: 'Factory', isCorrect: false },
+            { letter: 'C', text: 'MVC', isCorrect: true },
+            { letter: 'D', text: 'Observer', isCorrect: false }
+          ]
+        },
+        {
+          id: 'q_options_2',
+          tipo: 'objetiva',
+          type: 'OBJECTIVE',
+          enunciado: 'Qual a finalidade de um DTO?',
+          pontuacao: 2.5,
+          tags: ['Arquitetura'],
+          options: [
+            { letter: 'A', text: 'Transferência de dados', isCorrect: true },
+            { letter: 'B', text: 'Persistência direta', isCorrect: false },
+            { letter: 'C', text: 'Renderização de tela', isCorrect: false },
+            { letter: 'D', text: 'Regra de negócio', isCorrect: false }
+          ]
+        },
+        {
+          id: 'q_options_3',
+          tipo: 'objetiva',
+          type: 'OBJECTIVE',
+          enunciado: 'O que é Injeção de Dependência?',
+          pontuacao: 5.0,
+          tags: ['Arquitetura'],
+          options: [
+            { letter: 'A', text: 'Design Pattern de criação', isCorrect: false },
+            { letter: 'B', text: 'Inversão de controle para desacoplamento', isCorrect: true },
+            { letter: 'C', text: 'Algoritmo de ordenação', isCorrect: false },
+            { letter: 'D', text: 'Protocolo de rede', isCorrect: false }
+          ]
+        }
+      ]; // Soma: 2.5 + 2.5 + 5.0 = 10.0 pts
+
+      const gabarito = omrService.gerarGabaritoOficialVersao(questoesComOpcoes, 'A', false, false);
+      expect(gabarito[1]).toBe('C');
+      expect(gabarito[2]).toBe('A');
+      expect(gabarito[3]).toBe('B');
+
+      // Testando resposta "c" em minúsculo na Q1 (acerto = 2.5 pts), e errando Q2 e Q3
+      const res = omrService.processarCorrecaoAutomatica({
+        aluno: mockAlunosTurma[0],
+        turma: mockTurma,
+        materia: 'Engenharia de Software',
+        versaoLetra: 'A',
+        questoesBase: questoesComOpcoes,
+        shuffleQ: false,
+        shuffleAlt: false,
+        respostasDetectadas: { 1: 'c', 2: 'b', 3: 'd' },
+        fiduciaisValidados: true
+      });
+
+      expect(res.detalhesQuestoes?.[0].respostaMarcada).toBe('C');
+      expect(res.detalhesQuestoes?.[0].correta).toBe(true);
+      expect(res.detalhesQuestoes?.[0].status).toBe('CORRETA');
+      expect(res.detalhesQuestoes?.[1].correta).toBe(false);
+      expect(res.acertos).toBe(1);
+      expect(res.notaCalculada).toBe(2.5);
+    });
   });
 });

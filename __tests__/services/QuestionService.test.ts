@@ -139,13 +139,28 @@ describe('QuestionService - Organização por Turma e Ciclo Avaliativo (N1, N2, 
       expect(filtradas[0].id).toBe('q4');
     });
 
-    it('deve agregar questões de N1, N2, N3 e exame no ciclo N-1', () => {
+    it('deve filtrar questões de Exame / Substitutiva (N-1) agregando cumulativamente N1, N2, N3 e N-1 da turma', () => {
       const filtradas = service.filtrarQuestoesAvancado(mockQuestions, {
         turmaId: 't1',
+        apenasTurma: true,
         ciclo: 'N-1'
       });
+      // Deve conter todas as 5 questões da turma t1 (q1 [N1], q2 [N2], q3 [N2], q4 [N3], q5 [N-1])
       expect(filtradas).toHaveLength(5);
       expect(filtradas.map(q => q.id)).toEqual(['q1', 'q2', 'q3', 'q4', 'q5']);
+      expect(filtradas.some(q => q.id === 'q6')).toBe(false); // q6 é de t2
+    });
+
+    it('deve garantir que o ciclo N-1 da turma t2 agregue apenas as questões de t2', () => {
+      const filtradas = service.filtrarQuestoesAvancado(mockQuestions, {
+        turmaId: 't2',
+        apenasTurma: true,
+        ciclo: 'N-1'
+      });
+      // Apenas as questões da turma t2 (q6)
+      expect(filtradas).toHaveLength(1);
+      expect(filtradas[0].id).toBe('q6');
+      expect(filtradas.some(q => q.turmaId === 't1')).toBe(false);
     });
 
     it('deve retornar todas as questões quando o ciclo for TODAS', () => {
@@ -159,25 +174,25 @@ describe('QuestionService - Organização por Turma e Ciclo Avaliativo (N1, N2, 
   });
 
   describe('Contagem de Questões por Ciclo', () => {
-    it('deve calcular contadores corretos para a turma t1', () => {
+    it('deve calcular contadores corretos para a turma t1 incluindo agregação cumulativa em exame', () => {
       const contagem = service.contarQuestoesPorCiclo(mockQuestions, 't1', false);
 
       expect(contagem.todas).toBe(6); // 5 de t1 + 1 geral
       expect(contagem.n1).toBe(1);    // q1
       expect(contagem.n2).toBe(2);    // q2, q3
       expect(contagem.n3).toBe(1);    // q4
-      expect(contagem.exame).toBe(5); // N1, N2, N3 e q5 (N-1)
+      expect(contagem.exame).toBe(5); // Cumulativo N1 + N2 + N3 + N-1 de t1 = 5
       expect(contagem.geral).toBe(1); // q7
     });
 
-    it('deve calcular contadores quando apenasTurma for verdadeiro', () => {
+    it('deve calcular contadores quando apenasTurma for verdadeiro com exame cumulativo', () => {
       const contagem = service.contarQuestoesPorCiclo(mockQuestions, 't1', true);
 
       expect(contagem.todas).toBe(5);
       expect(contagem.n1).toBe(1);
       expect(contagem.n2).toBe(2);
       expect(contagem.n3).toBe(1);
-      expect(contagem.exame).toBe(5);
+      expect(contagem.exame).toBe(5); // Cumulativo 5 questões de t1
       expect(contagem.geral).toBe(0);
     });
   });

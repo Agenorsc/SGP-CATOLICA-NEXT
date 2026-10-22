@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FileText, 
   PlusCircle, 
@@ -9,10 +9,11 @@ import {
   Trash2, 
   Plus, 
   Check, 
-  Printer,
-  Layers,
-  GraduationCap,
-  Globe
+  Printer, 
+  Layers, 
+  GraduationCap, 
+  Globe,
+  AlertCircle
 } from 'lucide-react';
 import { Question, AvaliacaoCiclo } from '@/types';
 import { TurmaModel } from '@/models/TurmaModel';
@@ -79,7 +80,33 @@ export function MontadorTab({
   onRemoverDaProva,
   onIrParaImpressao
 }: MontadorTabProps) {
+  const [avisoValidacao, setAvisoValidacao] = useState('');
+
   const turmaSelecionada = turmas.find(t => t.id === turmaSelecionadaId);
+
+  useEffect(() => {
+    if (questoesSelecionadas.length > 0 && Math.abs(pontuacaoTotal - 10.0) < 0.05 && avisoValidacao) {
+      setAvisoValidacao('');
+    }
+  }, [questoesSelecionadas.length, pontuacaoTotal, avisoValidacao]);
+
+  const handleGerarCaderno = () => {
+    if (questoesSelecionadas.length === 0) {
+      setAvisoValidacao('Adicione ao menos 1 questão ao caderno para gerar a avaliação e o gabarito.');
+      return;
+    }
+
+    const somaPontos = Number(pontuacaoTotal.toFixed(1));
+    if (somaPontos !== 10.0) {
+      setAvisoValidacao(
+        `A soma das questões deve ser exatamente 10.0 pontos para gerar o gabarito. Pontuação atual: ${somaPontos.toFixed(1)} pts`
+      );
+      return;
+    }
+
+    setAvisoValidacao('');
+    onIrParaImpressao();
+  };
 
   const getBadgeCiclo = (ciclo?: string) => {
     const c = (ciclo || 'N2').toUpperCase();
@@ -137,6 +164,48 @@ export function MontadorTab({
         </button>
       </header>
 
+      {/* 1. ABAS SUPERIORES PARA ALTERNAR ENTRE AS TURMAS DO PROFESSOR */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+            <GraduationCap className="w-4 h-4 text-catolica-primary" />
+            Turmas / Disciplinas do Professor:
+          </span>
+          <span className="text-[11px] text-slate-400 font-semibold">
+            {turmas.length} {turmas.length === 1 ? 'turma disponível' : 'turmas disponíveis'}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {turmas.length === 0 ? (
+            <p className="text-xs text-slate-400 italic">Nenhuma turma atribuída ao professor.</p>
+          ) : (
+            turmas.map(t => {
+              const isSelected = turmaSelecionadaId === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTurmaSelecionadaId(t.id)}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shrink-0 cursor-pointer ${
+                    isSelected
+                      ? 'bg-catolica-primary text-white shadow-md shadow-catolica-primary/25 ring-2 ring-catolica-primary/30'
+                      : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+                  }`}
+                >
+                  <span>{t.nome}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    {t.semestre}
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* COLUNA ESQUERDA: BANCO DE QUESTÕES ORGANIZADO POR TURMA E CICLO */}
         <div className="lg:col-span-6 space-y-4">
@@ -155,14 +224,54 @@ export function MontadorTab({
               </span>
             </div>
 
-            {/* Abas de Ciclo Avaliativo (N1, N2, N3 e N-1) com Destaque Visual */}
+            {/* Sub-abas de Ciclo Avaliativo: N1, N2, N3 e N-1 com Destaque Visual */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 border-t border-slate-100">
               {[
-                { id: 'TODAS', label: 'Todas', count: contagemCiclos.todas, activeClass: 'bg-slate-900 text-white shadow-md shadow-slate-900/20 ring-2 ring-slate-900/30', inactiveClass: 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200', activeBadge: 'bg-white/20 text-white', inactiveBadge: 'bg-slate-200 text-slate-700' },
-                { id: 'N1', label: 'N1', count: contagemCiclos.n1, activeClass: 'bg-blue-600 text-white shadow-md shadow-blue-500/30 ring-2 ring-blue-600/30', inactiveClass: 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200', activeBadge: 'bg-white/25 text-white', inactiveBadge: 'bg-blue-200 text-blue-800' },
-                { id: 'N2', label: 'N2', count: contagemCiclos.n2, activeClass: 'bg-purple-700 text-white shadow-md shadow-purple-600/30 ring-2 ring-purple-700/30', inactiveClass: 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200', activeBadge: 'bg-white/25 text-white', inactiveBadge: 'bg-purple-200 text-purple-800' },
-                { id: 'N3', label: 'N3', count: contagemCiclos.n3, activeClass: 'bg-amber-600 text-white shadow-md shadow-amber-500/30 ring-2 ring-amber-600/30', inactiveClass: 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200', activeBadge: 'bg-white/25 text-white', inactiveBadge: 'bg-amber-200 text-amber-900' },
-                { id: 'N-1', label: 'Exame (N-1)', count: contagemCiclos.exame, activeClass: 'bg-rose-600 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-600/30', inactiveClass: 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200', activeBadge: 'bg-white/25 text-white', inactiveBadge: 'bg-rose-200 text-rose-900' }
+                { 
+                  id: 'TODAS', 
+                  label: 'Todas', 
+                  count: contagemCiclos.todas,
+                  activeClass: 'bg-slate-900 text-white shadow-md shadow-slate-900/20 ring-2 ring-slate-900/30',
+                  inactiveClass: 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200',
+                  activeBadge: 'bg-white/20 text-white',
+                  inactiveBadge: 'bg-slate-200 text-slate-700'
+                },
+                { 
+                  id: 'N1', 
+                  label: 'N1', 
+                  count: contagemCiclos.n1,
+                  activeClass: 'bg-blue-600 text-white shadow-md shadow-blue-500/30 ring-2 ring-blue-600/30',
+                  inactiveClass: 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200',
+                  activeBadge: 'bg-white/25 text-white',
+                  inactiveBadge: 'bg-blue-200 text-blue-800'
+                },
+                { 
+                  id: 'N2', 
+                  label: 'N2', 
+                  count: contagemCiclos.n2,
+                  activeClass: 'bg-purple-700 text-white shadow-md shadow-purple-600/30 ring-2 ring-purple-700/30',
+                  inactiveClass: 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200',
+                  activeBadge: 'bg-white/25 text-white',
+                  inactiveBadge: 'bg-purple-200 text-purple-800'
+                },
+                { 
+                  id: 'N3', 
+                  label: 'N3', 
+                  count: contagemCiclos.n3,
+                  activeClass: 'bg-amber-600 text-white shadow-md shadow-amber-500/30 ring-2 ring-amber-600/30',
+                  inactiveClass: 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200',
+                  activeBadge: 'bg-white/25 text-white',
+                  inactiveBadge: 'bg-amber-200 text-amber-900'
+                },
+                { 
+                  id: 'N-1', 
+                  label: 'Exame (N-1)', 
+                  count: contagemCiclos.exame,
+                  activeClass: 'bg-rose-600 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-600/30',
+                  inactiveClass: 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200',
+                  activeBadge: 'bg-white/25 text-white',
+                  inactiveBadge: 'bg-rose-200 text-rose-900'
+                }
               ].map(tab => {
                 const isActive = cicloSelecionado === tab.id;
                 return (
@@ -170,10 +279,14 @@ export function MontadorTab({
                     key={tab.id}
                     type="button"
                     onClick={() => setCicloSelecionado(tab.id as any)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 shrink-0 ${isActive ? tab.activeClass : tab.inactiveClass}`}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                      isActive ? tab.activeClass : tab.inactiveClass
+                    }`}
                   >
                     <span>{tab.label}</span>
-                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${isActive ? tab.activeBadge : tab.inactiveBadge}`}>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      isActive ? tab.activeBadge : tab.inactiveBadge
+                    }`}>
                       {tab.count}
                     </span>
                   </button>
@@ -181,10 +294,15 @@ export function MontadorTab({
               })}
             </div>
 
+            {/* Aviso Contextual quando N-1 (Exame Cumulativo) estiver selecionado */}
             {cicloSelecionado === 'N-1' && (
               <div className="flex items-center gap-2 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 animate-fadeIn">
-                <span className="font-bold bg-rose-200 text-rose-900 px-2 py-0.5 rounded text-[10px] uppercase tracking-wide shrink-0">Cumulativo</span>
-                <span className="text-[11px] leading-tight">O <strong>Exame (N-1)</strong> reúne automaticamente todas as questões cadastradas para <strong>N1</strong>, <strong>N2</strong> e <strong>N3</strong> desta turma.</span>
+                <span className="font-bold bg-rose-200 text-rose-900 px-2 py-0.5 rounded text-[10px] uppercase tracking-wide shrink-0">
+                  Cumulativo
+                </span>
+                <span className="text-[11px] leading-tight">
+                  O <strong>Exame (N-1)</strong> reúne automaticamente todas as questões cadastradas para <strong>N1</strong>, <strong>N2</strong> e <strong>N3</strong> desta turma.
+                </span>
               </div>
             )}
 
@@ -194,7 +312,7 @@ export function MontadorTab({
                 <Search className="w-4 h-4 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Filtrar por enunciado ou tag (#N1, #N2, #OMR...)"
+                  placeholder="Filtrar por enunciado ou tag (#N1, #N2...)"
                   value={buscaQuestao}
                   onChange={(e) => setBuscaQuestao(e.target.value)}
                   className="bg-transparent text-xs w-full outline-none"
@@ -257,14 +375,14 @@ export function MontadorTab({
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => onEditQuestao(q)}
-                          className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition"
+                          className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition cursor-pointer"
                           title="Editar Questão"
                         >
                           <Pencil size={14} />
                         </button>
                         <button
                           onClick={() => onDeleteQuestao(q.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
                           title="Excluir Questão"
                         >
                           <Trash2 size={14} />
@@ -272,16 +390,20 @@ export function MontadorTab({
                         <button
                           onClick={() => onAdicionarNaProva(q)}
                           disabled={jaAdicionada}
-                          className={`text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1 transition ml-1 ${
+                          className={`text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1 transition ml-1 cursor-pointer ${
                             jaAdicionada
                               ? 'bg-emerald-100 text-emerald-800 cursor-default'
                               : 'bg-slate-900 text-white hover:bg-catolica-primary'
                           }`}
                         >
                           {jaAdicionada ? (
-                            <><Check className="w-3 h-3" /> No Caderno</>
+                            <>
+                              <Check size={14} /> Na Prova
+                            </>
                           ) : (
-                            <><Plus className="w-3 h-3" /> Adicionar</>
+                            <>
+                              <Plus size={14} /> Adicionar
+                            </>
                           )}
                         </button>
                       </div>
@@ -291,13 +413,29 @@ export function MontadorTab({
                       {q.enunciado}
                     </p>
 
-                    <div className="flex gap-1.5 flex-wrap">
-                      {q.tags.map(t => (
-                        <span key={t} className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                          #{t}
-                        </span>
-                      ))}
-                    </div>
+                    {/* Alternativas se for objetiva */}
+                    {q.tipo === 'objetiva' && q.alternativas && (
+                      <div className="space-y-1.5 border-t pt-3">
+                        {q.alternativas.map(alt => (
+                          <div
+                            key={alt.id}
+                            className={`flex items-start gap-2 text-xs p-1.5 rounded-lg ${
+                              alt.correta
+                                ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200'
+                                : 'text-slate-600'
+                            }`}
+                          >
+                            <span className="font-mono font-bold w-4 shrink-0">{alt.letraOriginal})</span>
+                            <span className="flex-1">{alt.texto}</span>
+                            {alt.correta && (
+                              <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-emerald-200 text-emerald-800 font-black shrink-0">
+                                Correta
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -305,55 +443,50 @@ export function MontadorTab({
           </div>
         </div>
 
-        {/* COLUNA DIREITA: CONFIGURAÇÃO DO CADERNO E RESUMO DA AVALIAÇÃO */}
+        {/* COLUNA DIREITA: ESTRUTURA DO CADERNO DE PROVA */}
         <div className="lg:col-span-6 space-y-4">
-          <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-            <div className="border-b border-slate-100 pb-4 space-y-2">
-              <label className="block text-[11px] font-bold text-slate-700 uppercase">
-                Turma Destino da Prova:
-              </label>
-              <select
-                value={turmaSelecionadaId}
-                onChange={(e) => setTurmaSelecionadaId(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-catolica-primary outline-none"
-              >
-                {turmas.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.nome} — {t.curso} ({t.semestre})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
-              <div>
-                <h3 className="font-bold text-slate-800 text-sm">Resumo da Avaliação</h3>
-                <p className="text-xs text-slate-500">Configuração de caderno e gabarito</p>
-              </div>
-              <div className="text-right">
-                <span className="text-xs font-bold text-slate-400 block uppercase">Pontuação Total:</span>
-                <strong className={`text-lg font-black ${pontuacaoTotal === 10 ? 'text-emerald-600' : 'text-catolica-primary'}`}>
-                  {pontuacaoTotal.toFixed(1)} / 10.0 pts
-                </strong>
-              </div>
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <div>
+              <h3 className="font-bold text-slate-800 text-sm">Estrutura do Caderno de Prova</h3>
+              <p className="text-xs text-slate-500">
+                Configure os parâmetros e visualize as questões selecionadas
+              </p>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                  Matéria / Título da Prova:
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Título da Avaliação:
                 </label>
                 <input
                   type="text"
                   value={tituloProva}
                   onChange={(e) => setTituloProva(e.target.value)}
-                  className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-catolica-primary"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-catolica-primary"
                 />
               </div>
 
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
-                <span className="text-[11px] font-bold text-slate-700 uppercase block mb-1">
-                  Regras de Impressão e Embaralhamento:
+              <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div>
+                  <span className="text-xs font-bold text-slate-700 block">Pontuação Total:</span>
+                  <span className="text-[11px] text-slate-500">Soma rigorosa para gerar o gabarito</span>
+                </div>
+                <div className="text-right">
+                  <span className={`text-base font-black ${
+                    Math.abs(pontuacaoTotal - 10.0) < 0.05 ? 'text-emerald-600' : 'text-amber-600'
+                  }`}>
+                    {pontuacaoTotal.toFixed(1)} / 10.0 pts
+                  </span>
+                  <span className="block text-[9px] font-bold text-slate-400">
+                    {Math.abs(pontuacaoTotal - 10.0) < 0.05 ? '✅ Exatamente 10.0 pts' : '⚠️ Obrigatório 10.0 pts'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Opções de Embaralhamento e Identificação */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <span className="text-xs font-bold text-slate-700 uppercase block mb-1">
+                  Opções Anti-Cola & Impressão:
                 </span>
                 <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer">
                   <input
@@ -362,7 +495,7 @@ export function MontadorTab({
                     onChange={(e) => setShuffleQ(e.target.checked)}
                     className="w-3.5 h-3.5 accent-catolica-primary"
                   />
-                  Embaralhar ordem das questões
+                  Embaralhar ordem das questões por versão de caderno
                 </label>
                 <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer">
                   <input
@@ -385,40 +518,64 @@ export function MontadorTab({
               </div>
 
               <div>
-                <span className="text-xs font-bold text-slate-700 uppercase block mb-2">
-                  Questões no Caderno ({questoesSelecionadas.length} / 20):
-                </span>
-                <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                  {questoesSelecionadas.map((q, idx) => (
-                    <div key={q.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl text-xs">
-                      <div className="flex min-w-0 items-center gap-2.5 overflow-hidden">
-                        <span className="font-bold text-slate-400 w-5 text-center">{idx + 1}.</span>
-                        <span className="max-w-[160px] truncate font-semibold text-slate-800 sm:max-w-[280px]">
-                          {q.enunciado}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {getBadgeCiclo(q.avaliacao)}
-                        <span className="font-bold text-catolica-primary">{q.pontuacao.toFixed(1)} pts</span>
-                        <button
-                          onClick={() => onRemoverDaProva(q.id)}
-                          className="text-slate-400 hover:text-red-600 transition ml-1"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-slate-700 uppercase">
+                    Questões no Caderno ({questoesSelecionadas.length} / 20):
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-semibold">
+                    Mínimo configurável: 1 questão
+                  </span>
+                </div>
+
+                <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                  {questoesSelecionadas.length === 0 ? (
+                    <div className="p-6 text-center bg-slate-50 border border-dashed border-slate-200 rounded-xl text-xs text-slate-400 space-y-1">
+                      <p className="font-semibold text-slate-600">Nenhuma questão no caderno.</p>
+                      <p>Adicione questões do banco ao lado para compor a avaliação.</p>
                     </div>
-                  ))}
+                  ) : (
+                    questoesSelecionadas.map((q, idx) => (
+                      <div key={q.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl text-xs hover:border-slate-300 transition">
+                        <div className="flex min-w-0 items-center gap-2.5 overflow-hidden">
+                          <span className="font-bold text-slate-400 w-5 text-center">{idx + 1}.</span>
+                          <span className="max-w-[160px] truncate font-semibold text-slate-800 sm:max-w-[280px]">
+                            {q.enunciado}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {getBadgeCiclo(q.avaliacao)}
+                          <span className="font-bold text-catolica-primary">{q.pontuacao.toFixed(1)} pts</span>
+                          <button
+                            type="button"
+                            onClick={() => onRemoverDaProva(q.id)}
+                            className="text-slate-400 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 transition ml-1 cursor-pointer"
+                            title="Remover do Caderno (sem bloqueio de quantidade mínima)"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
 
+            {/* Aviso condicional exibido ao tentar gerar sem questões */}
+            {avisoValidacao && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-700 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                <span>{avisoValidacao}</span>
+              </div>
+            )}
+
+            {/* Botão de Geração com Validação Condicional */}
             <button
-              onClick={onIrParaImpressao}
-              disabled={questoesSelecionadas.length === 0}
-              className="w-full bg-catolica-primary text-white py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-catolica-dark transition shadow-lg shadow-catolica-primary/30"
+              type="button"
+              onClick={handleGerarCaderno}
+              className="w-full bg-catolica-primary hover:bg-catolica-dark text-white py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-lg shadow-catolica-primary/30 cursor-pointer"
             >
-              <Printer className="w-4 h-4" /> Gerar Caderno Frente/Verso & Gabarito OMR
+              <Printer className="w-4 h-4" /> Gerar Caderno Frente/Verso & Gabarito
             </button>
           </div>
         </div>

@@ -28,8 +28,8 @@ const navItems: { id: TabType; label: string; icon: React.ElementType; adminOnly
   { id: 'cadastros', label: 'Cadastros (Aluno/Turma)', icon: UserPlus },
   { id: 'professores', label: 'Professores & Disciplinas', icon: GraduationCap, adminOnly: true },
   { id: 'montador', label: 'Montador de Provas', icon: BookOpen },
-  { id: 'impressao', label: 'Caderno & Gabarito OMR', icon: Printer },
-  { id: 'leitura', label: 'Leitura & Correção OMR', icon: Scan },
+  { id: 'impressao', label: 'Caderno & Gabarito', icon: Printer },
+  { id: 'leitura', label: 'Leitura & Correção', icon: Scan },
   { id: 'relatorios', label: 'Relatórios & Histórico', icon: BarChart3 },
 ];
 
@@ -72,7 +72,7 @@ export function Sidebar({
               </div>
               <div>
                 <h2 className="text-base font-bold tracking-tight text-white">SGP Católica</h2>
-                <p className="text-[11px] text-slate-400 font-medium">Gestão & OMR Studio</p>
+                <p className="text-[11px] text-slate-400 font-medium">Gestão Acadêmica</p>
               </div>
             </div>
             <button
@@ -96,7 +96,7 @@ export function Sidebar({
                     onSelectTab(item.id);
                     onCloseSidebar();
                   }}
-                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all ${
+                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all cursor-pointer ${
                     active
                       ? 'translate-x-1 bg-catolica-primary text-white shadow-md shadow-catolica-primary/30'
                       : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'

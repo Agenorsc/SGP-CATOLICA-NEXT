@@ -35,7 +35,7 @@ export const OmrSheet: React.FC<OmrSheetProps> = ({ version }) => {
         <div><strong>VERSÃO:</strong> {version.versionLetter}</div>
       </div>
 
-      {/* Grade Gabarito OMR e QR Code */}
+      {/* Grade Gabarito e QR Code */}
       <div className="border-2 border-black p-4 grid grid-cols-[160px_1fr] gap-6 items-center">
         <div className="flex flex-col items-center justify-center border-r border-slate-300 pr-4">
           <div className="w-32 h-32 border-2 border-black bg-slate-100 flex items-center justify-center text-center p-2 text-xs font-mono font-bold">
@@ -48,12 +48,19 @@ export const OmrSheet: React.FC<OmrSheetProps> = ({ version }) => {
           <span className="text-xs font-bold block mb-3">QUADRO DE RESPOSTAS (Preencha os quadrados a caneta):</span>
           <div className="space-y-2">
             {version.questions.map((q, idx) => {
-              if (q.tipo !== 'objetiva') return null;
+              if (q.tipo !== 'objetiva' && q.type !== 'OBJECTIVE') return null;
+              const totalOpcoes = (q.options && q.options.length > 0)
+                ? q.options.length
+                : (q.alternativas && q.alternativas.length > 0)
+                  ? q.alternativas.length
+                  : 5;
+              const letrasExibidas = letters.slice(0, totalOpcoes);
+
               return (
                 <div key={q.id} className="flex items-center gap-4 text-xs font-bold">
                   <span className="w-10">Q.{idx + 1}:</span>
                   <div className="flex gap-2">
-                    {letters.map((letra) => (
+                    {letrasExibidas.map((letra) => (
                       <div
                         key={letra}
                         className="w-6 h-6 border-2 border-black rounded flex items-center justify-center text-[10px]"
@@ -74,7 +81,7 @@ export const OmrSheet: React.FC<OmrSheetProps> = ({ version }) => {
         {version.questions.map((q, idx) => (
           <div key={q.id} className="text-sm">
             <h4 className="font-bold mb-1">
-              Questão {idx + 1} ({q.pontuacao.toFixed(1)} pts) - {q.tipo.toUpperCase()}:
+              Questão {idx + 1} ({q.pontuacao?.toFixed(1) || '2.5'} pts) - {q.tipo?.toUpperCase()}:
             </h4>
             <p className="mb-2 text-slate-800">{q.enunciado}</p>
             {q.tipo === 'objetiva' && q.alternativas && (

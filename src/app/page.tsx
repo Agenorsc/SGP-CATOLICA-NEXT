@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Menu } from 'lucide-react';
 
 // Camadas de Domínio (Models)
@@ -42,6 +42,8 @@ import { ProfessoresTab } from '@/components/professores/ProfessoresTab';
 import { ModalProfessor } from '@/components/professores/ModalProfessor';
 import { ModalAluno, FormAlunoState } from '@/components/cadastros/ModalAluno';
 import { ModalTurma, FormTurmaState } from '@/components/cadastros/ModalTurma';
+import { AlertaModal } from '@/components/common/AlertaModal';
+import { shuffleArray } from '@/lib/shuffle';
 import { MontadorTab } from '@/components/montador/MontadorTab';
 import { ModalQuestao } from '@/components/montador/ModalQuestao';
 import { ImpressaoTab } from '@/components/impressao/ImpressaoTab';
@@ -104,23 +106,35 @@ export default function Home() {
     professorService.listarProfessores().then(setProfessores);
   }, [turmaService, alunoService, questionService, professorService]);
 
-  // ISOLAMENTO DE DADOS POR PROFESSOR ("onde ambos vai ter seus próprios alunos")
+  // 1. ISOLAMENTO TOTAL POR PROFESSOR (MULTI-TENANCY / ESCOPO DE USUÁRIO)
+  // Turmas do Professor: apenas onde professorId === session.id
   const turmasVisiveis = useMemo(() => {
     if (!session) return turmas;
     if (session.role === 'ADMIN') return turmas;
-    // O professor vê apenas as suas disciplinas/turmas
     return turmas.filter(t => t.professorId === session.id || !t.professorId);
   }, [session, turmas]);
 
+  // Alunos do Professor: apenas matriculados nas turmas do professor
   const alunosVisiveis = useMemo(() => {
     if (!session) return alunos;
     if (session.role === 'ADMIN') return alunos;
-    // O professor vê apenas os alunos matriculados nas suas turmas
     const turmasIds = new Set(turmasVisiveis.map(t => t.id));
     return alunos.filter(a => turmasIds.has(a.turmaId));
   }, [session, alunos, turmasVisiveis]);
 
-  // Ajusta a turma selecionada para uma turma válida do usuário logado
+  // Banco de Questões do Professor: apenas associadas ao professor ou às suas turmas
+  const bancoQuestoesVisiveis = useMemo(() => {
+    if (!session) return bancoQuestoes;
+    if (session.role === 'ADMIN') return bancoQuestoes;
+    const turmasIds = new Set(turmasVisiveis.map(t => t.id));
+    return bancoQuestoes.filter(q => 
+      (q.teacherId && q.teacherId === session.id) ||
+      (q.turmaId && turmasIds.has(q.turmaId)) ||
+      (!q.teacherId && !q.turmaId)
+    );
+  }, [session, bancoQuestoes, turmasVisiveis]);
+
+  // Ajusta a turma selecionada para a primeira turma válida do professor
   useEffect(() => {
     if (turmasVisiveis.length > 0) {
       const existe = turmasVisiveis.some(t => t.id === turmaSelecionadaId);
@@ -130,21 +144,34 @@ export default function Home() {
     }
   }, [turmasVisiveis, turmaSelecionadaId]);
 
-  // Leitura OMR & Histórico
+  // Leitura OMR & Histórico (Isoladas por Professor)
   const [leiturasOMR, setLeiturasOMR] = useState<LeituraOMRRegistro[]>([]);
   const [buscaRelatorio, setBuscaRelatorio] = useState('');
+
+  const leiturasOMRVisiveis = useMemo(() => {
+    if (!session) return [];
+    if (session.role === 'ADMIN') return leiturasOMR;
+    const idsTurmas = new Set(turmasVisiveis.map(t => t.id));
+    return leiturasOMR.filter(l => 
+      (l.turmaId && idsTurmas.has(l.turmaId)) || 
+      (l.professorId && l.professorId === session.id)
+    );
+  }, [session, leiturasOMR, turmasVisiveis]);
 
   // Montador de Provas
   const [questoesSelecionadas, setQuestoesSelecionadas] = useState<Question[]>([]);
   const [tituloProva, setTituloProva] = useState('Avaliação Escrita N2 - Engenharia de Software');
   const [buscaQuestao, setBuscaQuestao] = useState('');
 
-  // Inicializa questões selecionadas quando o banco for carregado
+  // Carrega questões iniciais no caderno apenas uma vez no bootstrap
+  // Não reinjeta quando o professor deliberadamente zera ou remove todas as questões
+  const initialLoadRef = useRef(false);
   useEffect(() => {
-    if (bancoQuestoes.length > 0 && questoesSelecionadas.length === 0) {
-      setQuestoesSelecionadas([bancoQuestoes[0], bancoQuestoes[1], bancoQuestoes[2], bancoQuestoes[3]].filter(Boolean));
+    if (bancoQuestoesVisiveis.length > 0 && !initialLoadRef.current) {
+      initialLoadRef.current = true;
+      setQuestoesSelecionadas([bancoQuestoesVisiveis[0], bancoQuestoesVisiveis[1]].filter(Boolean));
     }
-  }, [bancoQuestoes, questoesSelecionadas.length]);
+  }, [bancoQuestoesVisiveis]);
 
   // Regras de Embaralhamento e Identificação
   const [shuffleQ, setShuffleQ] = useState(true);
@@ -158,7 +185,7 @@ export default function Home() {
   const [novoEnunciado, setNovoEnunciado] = useState('');
   const [novoTipo, setNovoTipo] = useState<'objetiva' | 'discursiva'>('objetiva');
   const [novaPontuacao, setNovaPontuacao] = useState(2.5);
-  const [novasTags, setNovasTags] = useState('N2, PostgreSQL, Arquitetura');
+  const [novasTags, setNovasTags] = useState('N2, Qualidade, Engenharia');
   const [cicloSelecionado, setCicloSelecionado] = useState<AvaliacaoCiclo | 'TODAS'>('TODAS');
   const [filtroApenasTurma, setFiltroApenasTurma] = useState<boolean>(true);
   const [novaTurmaId, setNovaTurmaId] = useState<string>('');
@@ -172,6 +199,16 @@ export default function Home() {
   ]);
 
   const [modalAlunoAberto, setModalAlunoAberto] = useState(false);
+  const [alertaVisual, setAlertaVisual] = useState<{
+    aberto: boolean;
+    tipo: 'erro' | 'sucesso' | 'info';
+    titulo?: string;
+    mensagem: string;
+  }>({
+    aberto: false,
+    tipo: 'erro',
+    mensagem: ''
+  });
   const [alunoEmEdicaoId, setAlunoEmEdicaoId] = useState<string | null>(null);
   const [formAluno, setFormAluno] = useState<FormAlunoState>({
     nome: '',
@@ -214,26 +251,31 @@ export default function Home() {
   const alunoAtual = alunosDaTurmaSelecionada[selectedVersionIdx] || alunosDaTurmaSelecionada[0] || alunosVisiveis[0];
 
   const questoesEmbaralhadas = useMemo(() => {
-    let lista = [...questoesSelecionadas];
+    let lista = JSON.parse(JSON.stringify(questoesSelecionadas)) as Question[];
 
     if (shuffleQ) {
-      const seed = selectedVersionIdx + 1;
-      lista = lista.map((q, i) => ({ q, sortKey: Math.sin(seed * (i + 1)) }))
-                   .sort((a, b) => a.sortKey - b.sortKey)
-                   .map(item => item.q);
+      lista = shuffleArray(lista, selectedVersionIdx + 1);
     }
 
     if (shuffleAlt) {
       lista = lista.map((q, qIdx) => {
-        if (q.tipo === 'objetiva' && q.alternativas) {
-          const altSeed = (selectedVersionIdx + 1) * 10 + (qIdx + 1);
-          const altsShuffled = [...q.alternativas]
-            .map((alt, aIdx) => ({ alt, sortKey: Math.cos(altSeed * (aIdx + 1)) }))
-            .sort((a, b) => a.sortKey - b.sortKey)
-            .map(item => item.alt);
-          return { ...q, alternativas: altsShuffled };
+        const seedAlt = (selectedVersionIdx + 1) * 10 + (qIdx + 1);
+
+        let alts = q.alternativas ? [...q.alternativas] : [];
+        if (alts.length > 0) {
+          alts = shuffleArray(alts, seedAlt);
         }
-        return q;
+
+        let opts = q.options ? [...q.options] : [];
+        if (opts.length > 0) {
+          opts = shuffleArray(opts, seedAlt);
+        }
+
+        return {
+          ...q,
+          alternativas: alts.length > 0 ? alts : undefined,
+          options: opts.length > 0 ? opts : undefined
+        };
       });
     }
 
@@ -245,17 +287,17 @@ export default function Home() {
   }, [questionService, questoesSelecionadas]);
 
   const contagemCiclos = useMemo(() => {
-    return questionService.contarQuestoesPorCiclo(bancoQuestoes, turmaSelecionadaId, filtroApenasTurma);
-  }, [questionService, bancoQuestoes, turmaSelecionadaId, filtroApenasTurma]);
+    return questionService.contarQuestoesPorCiclo(bancoQuestoesVisiveis, turmaSelecionadaId, filtroApenasTurma);
+  }, [questionService, bancoQuestoesVisiveis, turmaSelecionadaId, filtroApenasTurma]);
 
   const questoesFiltradas = useMemo(() => {
-    return questionService.filtrarQuestoesAvancado(bancoQuestoes, {
+    return questionService.filtrarQuestoesAvancado(bancoQuestoesVisiveis, {
       termoBusca: buscaQuestao,
       turmaId: turmaSelecionadaId,
       apenasTurma: filtroApenasTurma,
       ciclo: cicloSelecionado
     });
-  }, [questionService, bancoQuestoes, buscaQuestao, turmaSelecionadaId, filtroApenasTurma, cicloSelecionado]);
+  }, [questionService, bancoQuestoesVisiveis, buscaQuestao, turmaSelecionadaId, filtroApenasTurma, cicloSelecionado]);
 
   const alunosFiltradosRelatorio = useMemo(() => {
     return alunoService.filtrarAlunos(alunosVisiveis, buscaRelatorio);
@@ -266,18 +308,19 @@ export default function Home() {
     ExportService.gerarCsvNotas(alunosVisiveis, turmasVisiveis, tituloProva);
   };
 
-  // Handlers do Montador
+  // Handlers do Montador (Flexibilidade total de quantidade: permite 0, 1, 2, 3... até 20)
   const adicionarNaProva = (q: Question) => {
     if (questoesSelecionadas.some(item => item.id === q.id)) return;
     if (!questionService.validarLimite(questoesSelecionadas)) {
       alert('Limite máximo de 20 questões atingido!');
       return;
     }
-    setQuestoesSelecionadas([...questoesSelecionadas, q]);
+    setQuestoesSelecionadas(prev => [...prev, q]);
   };
 
   const removerDaProva = (id: string) => {
-    setQuestoesSelecionadas(questoesSelecionadas.filter(q => q.id !== id));
+    // Permite remover livremente sem travas de quantidade mínima (pode zerar)
+    setQuestoesSelecionadas(prev => prev.filter(q => q.id !== id));
   };
 
   // Handlers de Questões
@@ -286,9 +329,9 @@ export default function Home() {
     setNovoEnunciado('');
     setNovoTipo('objetiva');
     setNovaPontuacao(2.5);
-    setNovasTags('N2, PostgreSQL, Arquitetura');
-    setNovaTurmaId(turmaSelecionadaId || '');
-    setNovaAvaliacao(cicloSelecionado !== 'TODAS' ? cicloSelecionado : 'N2');
+    setNovasTags('N2, Qualidade, Engenharia');
+    setNovaTurmaId(turmaSelecionadaId || turmasVisiveis[0]?.id || '');
+    setNovaAvaliacao(cicloSelecionado !== 'TODAS' && cicloSelecionado !== 'N-1' ? cicloSelecionado : 'N2');
     setAlternativasCadastro([
       { letra: 'A', texto: '', correta: true },
       { letra: 'B', texto: '', correta: false },
@@ -301,20 +344,21 @@ export default function Home() {
 
   const abrirModalEditarQuestao = (q: Question) => {
     setQuestaoEmEdicaoId(q.id);
-    setNovoEnunciado(q.enunciado);
-    setNovoTipo(q.tipo);
-    setNovaPontuacao(q.pontuacao);
+    setNovoEnunciado(q.enunciado || q.statement || '');
+    setNovoTipo((q.tipo || q.type || 'objetiva').toLowerCase() as any);
+    setNovaPontuacao(q.pontuacao ?? q.points ?? 2.5);
     setNovasTags(q.tags.join(', '));
-    setNovaTurmaId(q.turmaId || '');
-    setNovaAvaliacao(q.avaliacao || 'N2');
-    if (q.tipo === 'objetiva' && q.alternativas) {
+    setNovaTurmaId(q.turmaId || q.classId || '');
+    setNovaAvaliacao(q.avaliacao || (q.stage as any) || 'N2');
+    if ((q.tipo === 'objetiva' || q.type === 'OBJECTIVE') && (q.alternativas || q.options)) {
       setAlternativasCadastro(
         ['A', 'B', 'C', 'D', 'E'].map((letra, i) => {
           const altExistente = q.alternativas?.[i];
+          const optExistente = q.options?.[i];
           return {
             letra,
-            texto: altExistente ? altExistente.texto : '',
-            correta: altExistente ? !!altExistente.correta : i === 0
+            texto: altExistente ? altExistente.texto : (optExistente ? optExistente.text : ''),
+            correta: altExistente ? !!altExistente.correta : (optExistente ? !!optExistente.isCorrect : i === 0)
           };
         })
       );
@@ -325,8 +369,8 @@ export default function Home() {
   const excluirQuestao = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir esta questão do banco?')) {
       await questionService.excluirQuestao(id);
-      setBancoQuestoes(bancoQuestoes.filter(q => q.id !== id));
-      setQuestoesSelecionadas(questoesSelecionadas.filter(q => q.id !== id));
+      setBancoQuestoes(prev => prev.filter(q => q.id !== id));
+      setQuestoesSelecionadas(prev => prev.filter(q => q.id !== id));
     }
   };
 
@@ -334,29 +378,48 @@ export default function Home() {
     e.preventDefault();
     if (!novoEnunciado.trim()) return;
 
+    const turmaDestinoId = novaTurmaId || turmaSelecionadaId;
+
     const questaoFormatada: Question = {
       id: questaoEmEdicaoId || `q_${Date.now()}`,
+      // Propriedades novas da especificação
+      statement: novoEnunciado,
+      type: novoTipo === 'objetiva' ? 'OBJECTIVE' : 'DISCURSIVE',
+      points: Number(novaPontuacao),
+      teacherId: session?.id,
+      classId: turmaDestinoId,
+      stage: novaAvaliacao as any,
+      options: novoTipo === 'objetiva' ? alternativasCadastro
+        .filter((alt, idx) => idx < 4 || alt.texto.trim().length > 0)
+        .map((alt) => ({
+          letter: alt.letra as any,
+          text: alt.texto,
+          isCorrect: alt.correta
+        })) : undefined,
+      // Propriedades legadas mantidas
       tipo: novoTipo,
       enunciado: novoEnunciado,
       pontuacao: Number(novaPontuacao),
       tags: novasTags.split(',').map(t => t.trim()).filter(Boolean),
-      turmaId: novaTurmaId || undefined,
+      turmaId: turmaDestinoId,
       avaliacao: novaAvaliacao,
-      alternativas: novoTipo === 'objetiva' ? alternativasCadastro.map((alt, idx) => ({
-        id: `alt_${Date.now()}_${idx}`,
-        letraOriginal: alt.letra,
-        texto: alt.texto,
-        correta: alt.correta
-      })) : undefined
+      alternativas: novoTipo === 'objetiva' ? alternativasCadastro
+        .filter((alt, idx) => idx < 4 || alt.texto.trim().length > 0)
+        .map((alt, idx) => ({
+          id: `alt_${Date.now()}_${idx}`,
+          letraOriginal: alt.letra,
+          texto: alt.texto,
+          correta: alt.correta
+        })) : undefined
     };
 
     const saved = await questionService.salvarQuestao(questaoFormatada);
 
     if (questaoEmEdicaoId) {
-      setBancoQuestoes(bancoQuestoes.map(q => q.id === questaoEmEdicaoId ? saved : q));
-      setQuestoesSelecionadas(questoesSelecionadas.map(q => q.id === questaoEmEdicaoId ? saved : q));
+      setBancoQuestoes(prev => prev.map(q => q.id === questaoEmEdicaoId ? saved : q));
+      setQuestoesSelecionadas(prev => prev.map(q => q.id === questaoEmEdicaoId ? saved : q));
     } else {
-      setBancoQuestoes([saved, ...bancoQuestoes]);
+      setBancoQuestoes(prev => [saved, ...prev]);
     }
 
     setModalAberto(false);
@@ -364,13 +427,23 @@ export default function Home() {
 
   // Handlers de Alunos
   const abrirModalNovoAluno = () => {
+    if (turmasVisiveis.length === 0) {
+      setAlertaVisual({
+        aberto: true,
+        tipo: 'erro',
+        titulo: 'Validação de Cadastro',
+        mensagem: 'Cadastre a turma antes!'
+      });
+      return;
+    }
+
     setAlunoEmEdicaoId(null);
     setFormAluno({
       nome: '',
       ra: '',
       curso: 'ENGENHARIA DE SOFTWARE',
       turno: 'Noturno',
-      turmaId: turmasVisiveis[0]?.id || 't1',
+      turmaId: turmasVisiveis[0]?.id || '',
       dataNascimento: '',
       naturalidade: 'Jaraguá do Sul',
       estadoNatal: 'SC',
@@ -395,7 +468,7 @@ export default function Home() {
       curso: aluno.curso,
       turno: aluno.turno,
       turmaId: aluno.turmaId,
-      dataNascimento: aluno.dataNascimento ? new Date(aluno.dataNascimento).toISOString().split('T')[0] : '',
+      dataNascimento: aluno.dataNascimento ? String(aluno.dataNascimento) : '',
       naturalidade: aluno.naturalidade || '',
       estadoNatal: aluno.estadoNatal || '',
       mae: aluno.filiacao?.mae || '',
@@ -414,13 +487,40 @@ export default function Home() {
   const excluirAluno = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este aluno?')) {
       await alunoService.excluirAluno(id);
-      setAlunos(alunos.filter(a => a.id !== id));
+      setAlunos(prev => prev.filter(a => a.id !== id));
     }
   };
 
   const handleSaveAlunoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formAluno.nome || !formAluno.ra) return;
+    if (turmasVisiveis.length === 0 || !formAluno.turmaId || formAluno.turmaId.trim() === '') {
+      setAlertaVisual({
+        aberto: true,
+        tipo: 'erro',
+        titulo: 'Validação Obrigatória de Turma',
+        mensagem: 'Cadastre a turma antes!'
+      });
+      return;
+    }
+
+    const raTrim = formAluno.ra.trim();
+    if (!formAluno.nome.trim() || !raTrim) return;
+
+    const raDuplicado = alunosVisiveis.some(aluno => {
+      const raExistente = aluno.ra ? String(aluno.ra).trim() : '';
+      const mesmoId = alunoEmEdicaoId && aluno.id === alunoEmEdicaoId;
+      return !mesmoId && raExistente.toLowerCase() === raTrim.toLowerCase();
+    });
+
+    if (raDuplicado) {
+      setAlertaVisual({
+        aberto: true,
+        tipo: 'erro',
+        titulo: 'Validação de Registro Acadêmico',
+        mensagem: 'RA duplicado!'
+      });
+      return;
+    }
 
     const alunoFormatado = new AlunoModel({
       id: alunoEmEdicaoId || `alu-${Date.now()}`,
@@ -452,9 +552,9 @@ export default function Home() {
     const saved = await alunoService.salvarAluno(alunoFormatado);
 
     if (alunoEmEdicaoId) {
-      setAlunos(alunos.map(a => a.id === alunoEmEdicaoId ? saved : a));
+      setAlunos(prev => prev.map(a => a.id === alunoEmEdicaoId ? saved : a));
     } else {
-      setAlunos([...alunos, saved]);
+      setAlunos(prev => [...prev, saved]);
     }
     setModalAlunoAberto(false);
   };
@@ -485,7 +585,7 @@ export default function Home() {
   const excluirTurma = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir esta turma?')) {
       await turmaService.excluirTurma(id);
-      setTurmas(turmas.filter(t => t.id !== id));
+      setTurmas(prev => prev.filter(t => t.id !== id));
       if (turmaSelecionadaId === id && turmasVisiveis.length > 1) {
         setTurmaSelecionadaId(turmasVisiveis.find(t => t.id !== id)?.id || '');
       }
@@ -505,7 +605,7 @@ export default function Home() {
         professorId: profAtribuido
       });
       const saved = await turmaService.salvarTurma(turmaAtualizada);
-      setTurmas(turmas.map(t => t.id === turmaEmEdicaoId ? saved : t));
+      setTurmas(prev => prev.map(t => t.id === turmaEmEdicaoId ? saved : t));
     } else {
       const novaTurma = new TurmaModel({
         nome: formTurma.nome,
@@ -514,7 +614,7 @@ export default function Home() {
         professorId: profAtribuido
       });
       const saved = await turmaService.salvarTurma(novaTurma);
-      setTurmas([...turmas, saved]);
+      setTurmas(prev => [...prev, saved]);
     }
     setModalTurmaAberto(false);
   };
@@ -543,16 +643,16 @@ export default function Home() {
     const saved = await professorService.salvarProfessor(profFormatado, session?.role || 'ADMIN');
 
     if (professorEmEdicao) {
-      setProfessores(professores.map(p => p.id === professorEmEdicao.id ? saved : p));
+      setProfessores(prev => prev.map(p => p.id === professorEmEdicao.id ? saved : p));
     } else {
-      setProfessores([...professores, saved]);
+      setProfessores(prev => [...prev, saved]);
     }
   };
 
   const excluirProfessor = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este professor?')) {
       await professorService.excluirProfessor(id, session?.role || 'ADMIN');
-      setProfessores(professores.filter(p => p.id !== id));
+      setProfessores(prev => prev.filter(p => p.id !== id));
     }
   };
 
@@ -593,7 +693,7 @@ export default function Home() {
           <Header currentTab={currentTab} />
         </div>
 
-        {/* 1. ABA CADASTROS (ALUNOS E TURMAS) */}
+        {/* 1. ABA CADASTROS (ALUNOS E TURMAS DO PROFESSOR) */}
         {currentTab === 'cadastros' && (
           <CadastrosTab
             alunos={alunosVisiveis}
@@ -618,10 +718,10 @@ export default function Home() {
           />
         )}
 
-        {/* 3. ABA MONTADOR DE PROVAS */}
+        {/* 3. ABA MONTADOR DE PROVAS (COM ABAS DE TURMA E SUB-ABAS N1, N2, N3, N-1) */}
         {currentTab === 'montador' && (
           <MontadorTab
-            bancoQuestoes={bancoQuestoes}
+            bancoQuestoes={bancoQuestoesVisiveis}
             questoesFiltradas={questoesFiltradas}
             questoesSelecionadas={questoesSelecionadas}
             turmas={turmasVisiveis}
@@ -666,7 +766,7 @@ export default function Home() {
           />
         )}
 
-        {/* 5. ABA LEITURA & CORREÇÃO OMR / QR CODE */}
+        {/* 5. ABA LEITURA & CORREÇÃO OMR / QR CODE (ISOLADA POR PROFESSOR) */}
         {currentTab === 'leitura' && (
           <LeituraTab
             alunos={alunosVisiveis}
@@ -676,20 +776,24 @@ export default function Home() {
             tituloProva={tituloProva}
             shuffleQ={shuffleQ}
             shuffleAlt={shuffleAlt}
-            leiturasOMR={leiturasOMR}
+            leiturasOMR={leiturasOMRVisiveis}
             onSalvarLeitura={(registro, alunoAtualizado) => {
+              const registroComProfessor = {
+                ...registro,
+                professorId: session?.id
+              };
               setAlunos(prevAlunos => prevAlunos.map(a => a.id === alunoAtualizado.id ? alunoAtualizado : a));
-              setLeiturasOMR(prev => [registro, ...prev]);
-              omrService.registrarLeitura(registro);
+              setLeiturasOMR(prev => [registroComProfessor, ...prev]);
+              omrService.registrarLeitura(registroComProfessor);
             }}
           />
         )}
 
-        {/* 6. ABA RELATÓRIOS & HISTÓRICO */}
+        {/* 6. ABA RELATÓRIOS & HISTÓRICO (MÉTRICAS EXCLUSIVAS DO PROFESSOR LOGADO) */}
         {currentTab === 'relatorios' && (
           <RelatoriosTab
             alunos={alunosVisiveis}
-            leiturasOMR={leiturasOMR}
+            leiturasOMR={leiturasOMRVisiveis}
             turmas={turmasVisiveis}
             buscaRelatorio={buscaRelatorio}
             setBuscaRelatorio={setBuscaRelatorio}
@@ -740,6 +844,25 @@ export default function Home() {
           setFormAluno={setFormAluno}
           onSubmit={handleSaveAlunoSubmit}
           turmas={turmasVisiveis}
+          alunosExistentes={alunosVisiveis}
+          alunoEmEdicaoId={alunoEmEdicaoId}
+          onAlertaErro={(msg) => {
+            setAlertaVisual({
+              aberto: true,
+              tipo: 'erro',
+              titulo: 'Atenção no Cadastro',
+              mensagem: msg
+            });
+          }}
+        />
+
+        {/* MODAL DE ALERTA VISUAL GLOBAL (POPUPS E TOASTS) */}
+        <AlertaModal
+          isOpen={alertaVisual.aberto}
+          onClose={() => setAlertaVisual(prev => ({ ...prev, aberto: false }))}
+          titulo={alertaVisual.titulo}
+          mensagem={alertaVisual.mensagem}
+          tipo={alertaVisual.tipo}
         />
 
         {/* MODAL DE CADASTRO/EDIÇÃO DE TURMA */}

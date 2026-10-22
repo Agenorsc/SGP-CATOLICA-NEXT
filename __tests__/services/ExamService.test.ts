@@ -49,29 +49,7 @@ describe('ExamService - Regras de Negócio e Embaralhamento', () => {
     expect(examService).toBeDefined();
   });
 
-  it('deve lançar erro quando o número de questões na prova exceder o limite de 20', async () => {
-    const twentyOneQuestions: Question[] = Array.from({ length: 21 }, (_, i) => ({
-      id: `q${i + 1}`,
-      tipo: 'discursiva',
-      enunciado: `Enunciado da questão ${i + 1}`,
-      pontuacao: 1.0,
-      tags: ['Limite']
-    }));
-
-    jest.spyOn(mockRepository, 'getQuestions').mockResolvedValue(twentyOneQuestions);
-
-    const config: GenerateExamConfig = {
-      shuffleQuestions: true,
-      shuffleAlternatives: true,
-      withStudentIdentification: true
-    };
-
-    await expect(examService.generateVersions(config)).rejects.toThrow(
-      'O limite máximo permitido por prova é de 20 questões.'
-    );
-  });
-
-  it('deve gerar uma versão para cada estudante matriculado', async () => {
+  it('deve gerar versões de exame para todos os alunos', async () => {
     const config: GenerateExamConfig = {
       shuffleQuestions: false,
       shuffleAlternatives: false,
@@ -80,14 +58,16 @@ describe('ExamService - Regras de Negócio e Embaralhamento', () => {
 
     const versions = await examService.generateVersions(config);
 
-    expect(versions).toHaveLength(mockStudentsList.length);
-    expect(versions[0].versionNumber).toBe(1);
+    expect(versions).toHaveLength(2);
+    expect(versions[0].student?.nome).toBe('Gabriel Menezes');
     expect(versions[0].versionLetter).toBe('A');
-    expect(versions[1].versionNumber).toBe(2);
+    expect(versions[0].versionNumber).toBe(1);
+    expect(versions[1].student?.nome).toBe('Beatriz Ramos');
     expect(versions[1].versionLetter).toBe('B');
+    expect(versions[1].versionNumber).toBe(2);
   });
 
-  it('deve gerar QR Code com matrícula e dados do aluno quando withStudentIdentification for verdadeiro', async () => {
+  it('deve gerar payload nominal no QR Code quando identificação estiver ativa', async () => {
     const config: GenerateExamConfig = {
       shuffleQuestions: false,
       shuffleAlternatives: false,
@@ -96,16 +76,11 @@ describe('ExamService - Regras de Negócio e Embaralhamento', () => {
 
     const versions = await examService.generateVersions(config);
 
-    expect(versions[0].student).not.toBeNull();
-    expect(versions[0].student?.matricula).toBe('20241001');
     expect(versions[0].qrPayload).toBe('APP-CAT-EXAM-V1-20241001');
-
-    expect(versions[1].student).not.toBeNull();
-    expect(versions[1].student?.matricula).toBe('20241002');
     expect(versions[1].qrPayload).toBe('APP-CAT-EXAM-V2-20241002');
   });
 
-  it('deve gerar QR Code anônimo e student nulo quando withStudentIdentification for falso', async () => {
+  it('deve gerar payload anônimo no QR Code quando identificação estiver desativada', async () => {
     const config: GenerateExamConfig = {
       shuffleQuestions: false,
       shuffleAlternatives: false,
@@ -150,5 +125,70 @@ describe('ExamService - Regras de Negócio e Embaralhamento', () => {
     expect(embaralhado1).toEqual(embaralhado2);
     expect(embaralhado1).toHaveLength(listaOriginal.length);
     expect(embaralhado1.sort()).toEqual(listaOriginal.sort());
+  });
+
+  it('deve permitir gerar caderno com flexibilidade total contendo apenas 1 questão', async () => {
+    jest.spyOn(mockRepository, 'getQuestions').mockResolvedValue([mockQuestionsList[0]]);
+
+    const versions = await examService.generateVersions({
+      shuffleQuestions: false,
+      shuffleAlternatives: false,
+      withStudentIdentification: true
+    });
+
+    expect(versions).toHaveLength(2);
+    expect(versions[0].questions).toHaveLength(1);
+    expect(versions[0].questions[0].id).toBe('q1');
+  });
+
+  it('deve bloquear a geração do caderno quando a lista de questões estiver zerada (0 questões)', async () => {
+    jest.spyOn(mockRepository, 'getQuestions').mockResolvedValue([]);
+
+    await expect(examService.generateVersions({
+      shuffleQuestions: false,
+      shuffleAlternatives: false,
+      withStudentIdentification: true
+    })).rejects.toThrow('Adicione ao menos 1 questão ao caderno para gerar a avaliação.');
+  });
+
+  describe('Trava Rígida de Pontuação Total (Exatamente 10.0 pts)', () => {
+    it('deve reprovar quando a soma for menor que 10.0 pts e retornar mensagem explicativa', () => {
+      const questoesMenor: Question[] = [
+        { id: 'q1', tipo: 'objetiva', enunciado: 'Q1', pontuacao: 4.0, tags: [] },
+        { id: 'q2', tipo: 'objetiva', enunciado: 'Q2', pontuacao: 4.5, tags: [] }
+      ]; // Soma: 8.5 pts
+
+      const res = examService.validarPontuacaoExame(questoesMenor);
+      expect(res.valida).toBe(false);
+      expect(res.total).toBe(8.5);
+      expect(res.mensagem).toContain('A soma das questões deve ser exatamente 10.0 pontos');
+      expect(res.mensagem).toContain('8.5 pts');
+    });
+
+    it('deve reprovar quando a soma for maior que 10.0 pts e retornar mensagem explicativa', () => {
+      const questoesMaior: Question[] = [
+        { id: 'q1', tipo: 'objetiva', enunciado: 'Q1', pontuacao: 6.0, tags: [] },
+        { id: 'q2', tipo: 'objetiva', enunciado: 'Q2', pontuacao: 5.0, tags: [] }
+      ]; // Soma: 11.0 pts
+
+      const res = examService.validarPontuacaoExame(questoesMaior);
+      expect(res.valida).toBe(false);
+      expect(res.total).toBe(11.0);
+      expect(res.mensagem).toContain('A soma das questões deve ser exatamente 10.0 pontos');
+      expect(res.mensagem).toContain('11.0 pts');
+    });
+
+    it('deve aprovar quando a soma for rigorosamente igual a 10.0 pts', () => {
+      const questoesExatas: Question[] = [
+        { id: 'q1', tipo: 'objetiva', enunciado: 'Q1', pontuacao: 2.5, tags: [] },
+        { id: 'q2', tipo: 'objetiva', enunciado: 'Q2', pontuacao: 2.5, tags: [] },
+        { id: 'q3', tipo: 'objetiva', enunciado: 'Q3', pontuacao: 5.0, tags: [] }
+      ]; // Soma: 10.0 pts
+
+      const res = examService.validarPontuacaoExame(questoesExatas);
+      expect(res.valida).toBe(true);
+      expect(res.total).toBe(10.0);
+      expect(res.mensagem).toBeUndefined();
+    });
   });
 });

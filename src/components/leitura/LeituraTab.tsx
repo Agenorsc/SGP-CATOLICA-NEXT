@@ -73,6 +73,11 @@ export function LeituraTab({
 
   // Resultado da Avaliação Corrigida
   const [resultadoAtual, setResultadoAtual] = useState<LeituraOMRRegistro | null>(null);
+  const [leituraValidada, setLeituraValidada] = useState<boolean>(false);
+  const [resultadoPendente, setResultadoPendente] = useState<{
+    registro: LeituraOMRRegistro;
+    alunoAtualizado: AlunoModel;
+  } | null>(null);
 
   // Aluno Selecionado para Teste Rápido / Simulação
   const [alunoSimulacaoId, setAlunoSimulacaoId] = useState<string>('');
@@ -186,6 +191,8 @@ export function LeituraTab({
     setIsStartingCamera(true);
     setCameraErro(null);
     setResultadoAtual(null);
+    setResultadoPendente(null);
+    setLeituraValidada(false);
     setAlunoAutenticado(null);
     setPayloadAutenticado(null);
 
@@ -617,10 +624,11 @@ export function LeituraTab({
         if (restante > 0) await esperar(restante);
 
         desenharGrade(resOMR.coordenadasDetectadas, registro);
-        onSalvarLeitura(registro, alunoAtualizado);
+        setResultadoPendente({ registro, alunoAtualizado });
         setResultadoAtual(registro);
+        setLeituraValidada(false);
         setAutoProgresso(100);
-        setEtapaAnalise('✅ Correção concluída.');
+        setEtapaAnalise('✅ Leitura concluída. Valide o resultado abaixo.');
 
         // Desliga o hardware da webcam e mostra o espelho de resultados
         if (streamRef.current) {
@@ -832,9 +840,10 @@ export function LeituraTab({
           n2: registro.notaCalculada
         });
 
-        // 4. Persistência e Finalização Automática
-        onSalvarLeitura(registro, alunoAtualizado);
+        // 4. Armazena para Validação do Professor
+        setResultadoPendente({ registro, alunoAtualizado });
         setResultadoAtual(registro);
+        setLeituraValidada(false);
 
         // Congela o frame da captura no canvas desenhando retângulos indicadores sobre os quadrados
         if (videoRef.current && resultCanvasRef.current) {
@@ -956,8 +965,38 @@ export function LeituraTab({
       n2: registroAtualizado.notaCalculada
     });
 
-    onSalvarLeitura(registroAtualizado, alunoAtualizado);
     setResultadoAtual(registroAtualizado);
+    setResultadoPendente({ registro: registroAtualizado, alunoAtualizado });
+    if (leituraValidada) {
+      onSalvarLeitura(registroAtualizado, alunoAtualizado);
+    }
+  };
+
+  /**
+   * Professor valida o resultado da leitura óptica e persiste a nota
+   */
+  const handleValidarLeitura = () => {
+    if (!resultadoPendente) return;
+    onSalvarLeitura(resultadoPendente.registro, resultadoPendente.alunoAtualizado);
+    setLeituraValidada(true);
+  };
+
+  /**
+   * Descarta o resultado atual e repete a leitura do mesmo cartão-resposta
+   */
+  const handleCorrigirNovamente = () => {
+    setResultadoAtual(null);
+    setResultadoPendente(null);
+    setLeituraValidada(false);
+    setCameraErro(null);
+    setAutoProgresso(0);
+    setEtapaAnalise('');
+    if (resultCanvasRef.current) {
+      const ctx = resultCanvasRef.current.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, resultCanvasRef.current.width, resultCanvasRef.current.height);
+    }
+    setStage('READING_OMR');
+    void handleIniciarCorrecao();
   };
 
   /**
@@ -966,6 +1005,8 @@ export function LeituraTab({
   const handleCorrigirProximoAluno = () => {
     setStage('IDLE');
     setResultadoAtual(null);
+    setResultadoPendente(null);
+    setLeituraValidada(false);
     setAlunoAutenticado(null);
     setPayloadAutenticado(null);
     alunoIdentificadoRef.current = null;
@@ -1018,8 +1059,9 @@ export function LeituraTab({
       n2: registro.notaCalculada
     });
 
-    onSalvarLeitura(registro, alunoAtualizado);
+    setResultadoPendente({ registro, alunoAtualizado });
     setResultadoAtual(registro);
+    setLeituraValidada(false);
     setStage('RESULT_MIRROR');
   };
 
@@ -1055,10 +1097,10 @@ export function LeituraTab({
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Scan className="w-5 h-5 text-catolica-primary" />
-            <h2 className="text-base font-bold text-slate-900">Leitor e Correção Automatizada OMR (100% Automático)</h2>
+            <h2 className="text-base font-bold text-slate-900">Leitor e Correção Automatizada (100% Automático)</h2>
           </div>
           <p className="text-xs text-slate-500">
-            Aponte a folha na câmera: reconhecimento instantâneo do QR Code e correção automática dos quadrados OMR.
+            Aponte a folha na câmera: reconhecimento instantâneo do QR Code e correção automática dos quadrados de respostas.
           </p>
         </div>
 
@@ -1404,7 +1446,7 @@ export function LeituraTab({
               <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                 <div className="space-y-0.5">
                   <h3 className="font-black text-slate-900 text-sm flex items-center gap-1.5">
-                    <FileCheck2 className="w-4 h-4 text-emerald-600" /> Espelho da Avaliação OMR
+                    <FileCheck2 className="w-4 h-4 text-emerald-600" /> Espelho da Avaliação
                   </h3>
                   <p className="text-[11px] text-slate-500">
                     {resultadoAtual.alunoNome} (RA: {resultadoAtual.ra})
@@ -1494,45 +1536,83 @@ export function LeituraTab({
                         </div>
                       </div>
 
-                      {/* Auditoria / Ajuste Manual do Docente (PR #06) */}
-                      <div className="flex items-center justify-end gap-1 pt-1 border-t border-slate-200/60">
-                        <span className="text-[10px] text-slate-500 font-semibold mr-1">Auditoria Docente:</span>
-                        {['A', 'B', 'C', 'D', 'E'].map(letra => (
-                          <button
-                            key={letra}
-                            onClick={() => handleAuditarRespostaProfessor(detalhe.numero, letra)}
-                            className={`w-5 h-5 rounded text-[10px] font-bold transition cursor-pointer ${
-                              detalhe.respostaMarcada === letra
-                                ? 'bg-catolica-primary text-white shadow-sm'
-                                : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200'
-                            }`}
-                          >
-                            {letra}
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => handleAuditarRespostaProfessor(detalhe.numero, null)}
-                          className={`px-1.5 h-5 rounded text-[9px] font-bold transition cursor-pointer ${
-                            detalhe.status === 'ANULADA'
-                              ? 'bg-amber-600 text-white shadow-sm'
-                              : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200'
-                          }`}
-                        >
-                          Anular
-                        </button>
-                      </div>
+                      {/* Auditoria / Ajuste Manual do Docente com Alternativas Dinâmicas */}
+                      {(() => {
+                        const q = questoesSelecionadas[detalhe.numero - 1];
+                        const numAlts = (q?.options && q.options.length > 0)
+                          ? q.options.length
+                          : (q?.alternativas && q.alternativas.length > 0)
+                            ? q.alternativas.length
+                            : 5;
+                        const letrasAudit = ['A', 'B', 'C', 'D', 'E'].slice(0, numAlts);
+
+                        return (
+                          <div className="flex items-center justify-end gap-1 pt-1 border-t border-slate-200/60">
+                            <span className="text-[10px] text-slate-500 font-semibold mr-1">Auditoria Docente:</span>
+                            {letrasAudit.map(letra => (
+                              <button
+                                key={letra}
+                                onClick={() => handleAuditarRespostaProfessor(detalhe.numero, letra)}
+                                className={`w-5 h-5 rounded text-[10px] font-bold transition cursor-pointer ${
+                                  detalhe.respostaMarcada === letra
+                                    ? 'bg-catolica-primary text-white shadow-sm'
+                                    : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200'
+                                }`}
+                              >
+                                {letra}
+                              </button>
+                            ))}
+                            <button
+                              onClick={() => handleAuditarRespostaProfessor(detalhe.numero, null)}
+                              className={`px-1.5 h-5 rounded text-[9px] font-bold transition cursor-pointer ${
+                                detalhe.status === 'ANULADA'
+                                  ? 'bg-amber-600 text-white shadow-sm'
+                                  : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200'
+                              }`}
+                            >
+                              Anular
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* BOTÃO CORRIGIR PRÓXIMO ALUNO (REINICIA O FLUXO) */}
-              <button
-                onClick={handleCorrigirProximoAluno}
-                className="w-full bg-catolica-primary hover:bg-catolica-dark text-white py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition cursor-pointer"
-              >
-                <RotateCcw className="w-4 h-4" /> Corrigir Próximo Aluno
-              </button>
+              {/* FLUXO DE AÇÕES PÓS-LEITURA (VALIDAÇÃO PELO PROFESSOR) */}
+              {!leituraValidada ? (
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleCorrigirNovamente}
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 px-4 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 border border-slate-300 transition cursor-pointer shadow-sm"
+                  >
+                    <RotateCcw className="w-4 h-4 text-slate-600" /> Corrigir Novamente
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleValidarLeitura}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 px-4 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" /> Validar
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3 pt-2">
+                  <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center gap-2.5 text-xs font-bold text-emerald-800">
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Avaliação validada com sucesso! Nota persistida no histórico do aluno.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCorrigirProximoAluno}
+                    className="w-full bg-catolica-primary hover:bg-catolica-dark text-white py-3.5 px-4 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition cursor-pointer"
+                  >
+                    <RotateCcw className="w-4 h-4" /> Corrigir Próximo Aluno
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             /* HISTÓRICO DE LEITURAS DA SESSÃO */
@@ -1557,7 +1637,12 @@ export function LeituraTab({
                   {leiturasOMR.map(l => (
                     <div 
                       key={l.id} 
-                      onClick={() => { setResultadoAtual(l); setStage('RESULT_MIRROR'); }}
+                      onClick={() => {
+                        setResultadoAtual(l);
+                        setLeituraValidada(true);
+                        setResultadoPendente(null);
+                        setStage('RESULT_MIRROR');
+                      }}
                       className="p-3 bg-slate-50 hover:bg-slate-100 cursor-pointer border border-slate-200 rounded-xl flex items-center justify-between text-xs transition"
                     >
                       <div className="space-y-0.5">
