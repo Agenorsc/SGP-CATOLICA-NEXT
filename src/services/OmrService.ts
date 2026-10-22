@@ -1,15 +1,28 @@
 import { OmrRepository } from '@/repositories/OmrRepository';
 import { AlunoModel } from '@/models/AlunoModel';
 import { TurmaModel } from '@/models/TurmaModel';
-import { LeituraOMRRegistro, Question, SecureQrPayload, OMRQuestionResult } from '@/types';
+import { 
+  LeituraOMRRegistro, 
+  Question, 
+  SecureQrPayload, 
+  OMRQuestionResult,
+  CardPayload,
+  EvaluationStage,
+  QuestionResult,
+  ScanResult
+} from '@/types';
 import { lerGradeOmrPorAjuste } from '@/services/omr/GridOmrEngine';
 import { shuffleArray } from '@/lib/shuffle';
 
 export interface ValidacaoQrResult {
   sucesso: boolean;
   payload?: SecureQrPayload;
+  cardPayload?: CardPayload;
   aluno?: AlunoModel;
   erro?: string;
+  inconsistenciaTurma?: boolean;
+  turmaDetectadaNome?: string;
+  turmaAtivaNome?: string;
 }
 
 export interface QrCodeAnchor {
@@ -39,12 +52,15 @@ export class OmrService {
 
   /**
    * Validação Estrita Anti-Fantasma (JSON Seguro)
+   * Suporta CardPayload e formato legado SecureQrPayload
    * Rejeita payloads inválidos e confirma pertencimento à turma
    */
   validarPayloadQrCode(
     rawText: string,
     alunosTurma: AlunoModel[],
-    turmaIdEsperado?: string
+    turmaIdEsperado?: string,
+    turmasDisponiveis?: TurmaModel[],
+    todosAlunos?: AlunoModel[]
   ): ValidacaoQrResult {
     let parsed: any;
     try {
@@ -57,17 +73,34 @@ export class OmrService {
         const versaoLetra = String.fromCharCode(64 + parseInt(versaoMatch, 10));
         const aluno = alunosTurma.find(a => a.ra.trim() === raMatch.trim()) || alunosTurma[0];
         if (aluno) {
+          const legacyPayload: SecureQrPayload = {
+            system: 'SGP-CATOLICA',
+            examId: `EXAM-${turmaIdEsperado || 't1'}`,
+            studentId: aluno.id,
+            ra: aluno.ra,
+            name: aluno.nome,
+            turmaId: turmaIdEsperado || aluno.turmaId,
+            examVersion: versaoLetra
+          };
+          const cardPayload: CardPayload = {
+            examId: `EXAM-${turmaIdEsperado || 't1'}`,
+            classId: turmaIdEsperado || aluno.turmaId,
+            className: turmasDisponiveis?.find(t => t.id === aluno.turmaId)?.nome || 'Turma Padrão',
+            teacherId: aluno.turmaId,
+            studentId: aluno.id,
+            studentName: aluno.nome,
+            studentRa: aluno.ra,
+            stage: 'N1',
+            system: 'SGP-CATOLICA',
+            turmaId: turmaIdEsperado || aluno.turmaId,
+            name: aluno.nome,
+            ra: aluno.ra,
+            examVersion: versaoLetra
+          };
           return {
             sucesso: true,
-            payload: {
-              system: 'SGP-CATOLICA',
-              examId: `EXAM-${turmaIdEsperado || 't1'}`,
-              studentId: aluno.id,
-              ra: aluno.ra,
-              name: aluno.nome,
-              turmaId: turmaIdEsperado || aluno.turmaId,
-              examVersion: versaoLetra
-            },
+            payload: legacyPayload,
+            cardPayload,
             aluno
           };
         }
@@ -87,21 +120,24 @@ export class OmrService {
       };
     }
 
-    // 2. Normalização de campos com suporte a legado
-    const ra = parsed.ra;
-    const name = parsed.name || parsed.aluno;
-    const studentId = parsed.studentId || (alunosTurma.find(a => a.ra.trim() === String(ra).trim())?.id);
-    const turmaId = parsed.turmaId || turmaIdEsperado;
-    const examVersion = parsed.examVersion || parsed.versao;
-    const examId = parsed.examId || `EXAM-${turmaId}`;
+    // 2. Extração e normalização de campos com suporte a CardPayload e formato legado
+    const classId = parsed.classId || parsed.turmaId || turmaIdEsperado || '';
+    const rawClassName = parsed.className || turmasDisponiveis?.find(t => t.id === classId)?.nome || (classId ? `Turma ${classId}` : 'Turma');
+    const studentRa = String(parsed.studentRa || parsed.ra || '').trim();
+    const studentName = parsed.studentName || parsed.name || parsed.aluno || '';
+    const studentId = parsed.studentId || '';
+    const teacherId = parsed.teacherId || '';
+    const stage: EvaluationStage = (parsed.stage === 'N1' || parsed.stage === 'N2' || parsed.stage === 'N3' || parsed.stage === 'N-1') ? parsed.stage : 'N1';
+    const examVersion = parsed.examVersion || parsed.versao || 'A';
+    const examId = parsed.examId || (classId ? `EXAM-${classId}` : 'EXAM-1');
 
     if (parsed.system === 'SGP-CATOLICA') {
       const requiredFields = [
         { key: 'examId', val: examId },
-        { key: 'studentId', val: studentId },
-        { key: 'ra', val: ra },
-        { key: 'name', val: name },
-        { key: 'turmaId', val: turmaId },
+        { key: 'studentId', val: studentId || studentRa },
+        { key: 'ra', val: studentRa },
+        { key: 'name', val: studentName },
+        { key: 'turmaId', val: classId },
         { key: 'examVersion', val: examVersion }
       ];
       for (const field of requiredFields) {
@@ -112,40 +148,92 @@ export class OmrService {
           };
         }
       }
-    } else if (!ra) {
+    } else if (!studentRa && !studentId) {
       return {
         sucesso: false,
-        erro: 'Filtro Anti-Fantasma: QR Code rejeitado! O identificador do sistema deve ser estritamente "SGP-CATOLICA".'
+        erro: 'Filtro Anti-Fantasma: QR Code rejeitado! Identificação do aluno ausente.'
       };
     }
 
-    // 3. Validação de Turma e Aluno
-    if (turmaIdEsperado && turmaId && turmaId !== turmaIdEsperado) {
+    // 3. Validação Cruzada de Turma (Aba ativa específica vs Cartão Lido)
+    if (turmaIdEsperado && turmaIdEsperado !== 'TODAS' && classId && classId !== turmaIdEsperado) {
+      const turmaAtivaObj = turmasDisponiveis?.find(t => t.id === turmaIdEsperado);
+      const nomeTurmaAtiva = turmaAtivaObj ? turmaAtivaObj.nome : turmaIdEsperado;
       return {
         sucesso: false,
-        erro: `Inconsistência de Turma: Prova emitida para a turma "${turmaId}", mas a turma ativa é "${turmaIdEsperado}".`
+        inconsistenciaTurma: true,
+        turmaDetectadaNome: rawClassName,
+        turmaAtivaNome: nomeTurmaAtiva,
+        erro: `Inconsistência de Turma: Atenção: Cartão lido pertence à ${rawClassName}, mas a aba ativa é ${nomeTurmaAtiva}. Troque de aba ou selecione 'Todas as Turmas (Automático)'`
       };
     }
 
-    const alunoEncontrado = alunosTurma.find(
-      a => a.ra.trim() === String(ra).trim() || a.id === studentId
+    // 4. Localização do Aluno
+    const poolAlunos = (todosAlunos && todosAlunos.length > 0) ? todosAlunos : alunosTurma;
+    let alunoEncontrado = poolAlunos.find(
+      a => (studentRa && a.ra.trim() === studentRa) || (studentId && a.id === studentId)
     );
+
+    if (!alunoEncontrado && studentRa) {
+      alunoEncontrado = poolAlunos.find(
+        a => a.ra.trim().replace(/^0+/, '') === studentRa.replace(/^0+/, '')
+      );
+    }
+
+    // Se aluno não está cadastrado na lista local mas temos os dados no QR nominal:
+    if (!alunoEncontrado && studentRa && studentName) {
+      alunoEncontrado = new AlunoModel({
+        id: studentId || `alu_${studentRa}`,
+        ra: studentRa,
+        nome: studentName,
+        turmaId: classId || 't1'
+      });
+    }
 
     if (!alunoEncontrado) {
       return {
         sucesso: false,
-        erro: `Aluno não encontrado na turma ativa: RA ${ra} (${name || 'Aluno'}). Verifique a folha ou a turma selecionada.`
+        erro: `Aluno não encontrado na turma ativa: RA ${studentRa} (${studentName || 'Aluno'}). Verifique a folha ou a turma selecionada.`
       };
     }
 
     const payloadNormalizado: SecureQrPayload = {
       system: 'SGP-CATOLICA',
-      examId: examId || `EXAM-${turmaId}`,
+      examId: examId || `EXAM-${classId}`,
       studentId: alunoEncontrado.id,
       ra: alunoEncontrado.ra,
       name: alunoEncontrado.nome,
-      turmaId: turmaId || turmaIdEsperado || alunoEncontrado.turmaId,
+      turmaId: classId || turmaIdEsperado || alunoEncontrado.turmaId,
+      examVersion: examVersion || 'A',
+      classId: classId || alunoEncontrado.turmaId,
+      className: rawClassName,
+      teacherId,
+      studentName: alunoEncontrado.nome,
+      studentRa: alunoEncontrado.ra,
+      stage
+    };
+
+    const cardPayload: CardPayload = {
+      examId: examId || `EXAM-${classId}`,
+      classId: classId || alunoEncontrado.turmaId,
+      className: rawClassName,
+      teacherId,
+      studentId: alunoEncontrado.id,
+      studentName: alunoEncontrado.nome,
+      studentRa: alunoEncontrado.ra,
+      stage,
+      system: 'SGP-CATOLICA',
+      turmaId: classId || alunoEncontrado.turmaId,
+      name: alunoEncontrado.nome,
+      ra: alunoEncontrado.ra,
       examVersion: examVersion || 'A'
+    };
+
+    return {
+      sucesso: true,
+      payload: payloadNormalizado,
+      cardPayload,
+      aluno: alunoEncontrado
     };
 
     return {
@@ -667,7 +755,8 @@ export class OmrService {
     statusCustom,
     fillRatesCustom,
     fiduciaisValidados = true,
-    simular = false
+    simular = false,
+    stage = 'N1'
   }: {
     aluno: AlunoModel;
     turma: TurmaModel;
@@ -681,6 +770,7 @@ export class OmrService {
     fillRatesCustom?: Record<number, number>;
     fiduciaisValidados?: boolean;
     simular?: boolean;
+    stage?: EvaluationStage;
   }): LeituraOMRRegistro {
     if (!fiduciaisValidados) {
       throw new Error('Falha no alinhamento óptico: 4 marcadores de canto não foram validados.');
@@ -771,7 +861,9 @@ export class OmrService {
         respostaCorreta: gabarito,
         correta: status === 'CORRETA',
         status,
-        fillRate
+        fillRate,
+        score: status === 'CORRETA' ? Number(pontosQuestao.toFixed(2)) : 0,
+        maxScore: Number(pontosQuestao.toFixed(2))
       });
     }
 
@@ -786,7 +878,12 @@ export class OmrService {
       alunoNome: aluno.nome,
       ra: aluno.ra,
       turmaId: turma.id,
+      classId: turma.id,
+      professorId: turma.professorId || undefined,
+      teacherId: turma.professorId || undefined,
       turmaNome: turma.nome,
+      className: turma.nome,
+      stage,
       materia,
       versao: `Versão ${versaoLetra.toUpperCase()}`,
       acertos,
@@ -821,6 +918,31 @@ export class OmrService {
       shuffleAlt: false,
       simular: true
     });
+  }
+
+  converterParaScanResult(
+    registro: LeituraOMRRegistro,
+    cardPayload: CardPayload,
+    capturedImageBase64?: string
+  ): ScanResult {
+    const questions: QuestionResult[] = (registro.detalhesQuestoes || []).map((det, idx) => ({
+      questionNumber: det.numero || (idx + 1),
+      questionId: `q-${det.numero || (idx + 1)}`,
+      markedOption: det.respostaMarcada,
+      correctOption: det.respostaCorreta,
+      isCorrect: det.correta,
+      score: det.score ?? (det.correta ? (10 / (registro.totalQuestoes || 1)) : 0),
+      maxScore: det.maxScore ?? (10 / (registro.totalQuestoes || 1))
+    }));
+
+    return {
+      payload: cardPayload,
+      questions,
+      totalScore: registro.notaCalculada,
+      maxExamScore: 10.0,
+      capturedImageBase64,
+      scannedAt: registro.dataLeitura
+    };
   }
 
   extrairRaDoQrCode(qrCodeString: string): string {

@@ -752,7 +752,7 @@ export default function Home() {
           />
         )}
 
-        {/* 4. ABA IMPRESSÃO (CADERNO & GABARITO OMR) */}
+        {/* 4. ABA IMPRESSÃO (CADERNO & GABARITO) */}
         {currentTab === 'impressao' && (
           <ImpressaoTab
             alunosDaTurmaSelecionada={alunosDaTurmaSelecionada}
@@ -763,24 +763,34 @@ export default function Home() {
             turmaSelecionadaId={turmaSelecionadaId}
             withId={withId}
             questoesEmbaralhadas={questoesEmbaralhadas}
+            turmas={turmasVisiveis}
+            teacherId={session?.id}
+            stage={cicloSelecionado === 'TODAS' ? 'N1' : cicloSelecionado}
           />
         )}
 
-        {/* 5. ABA LEITURA & CORREÇÃO OMR / QR CODE (ISOLADA POR PROFESSOR) */}
+        {/* 5. ABA LEITURA & CORREÇÃO (ISOLADA POR PROFESSOR) */}
         {currentTab === 'leitura' && (
           <LeituraTab
             alunos={alunosVisiveis}
             turmas={turmasVisiveis}
             turmaSelecionadaId={turmaSelecionadaId}
             questoesSelecionadas={questoesSelecionadas}
+            bancoQuestoes={bancoQuestoesVisiveis}
             tituloProva={tituloProva}
             shuffleQ={shuffleQ}
             shuffleAlt={shuffleAlt}
             leiturasOMR={leiturasOMRVisiveis}
+            onSelecionarTurma={(tId) => {
+              if (tId !== 'TODAS') {
+                setTurmaSelecionadaId(tId);
+              }
+            }}
             onSalvarLeitura={(registro, alunoAtualizado) => {
               const registroComProfessor = {
                 ...registro,
-                professorId: session?.id
+                professorId: session?.id,
+                teacherId: session?.id
               };
               setAlunos(prevAlunos => prevAlunos.map(a => a.id === alunoAtualizado.id ? alunoAtualizado : a));
               setLeiturasOMR(prev => [registroComProfessor, ...prev]);

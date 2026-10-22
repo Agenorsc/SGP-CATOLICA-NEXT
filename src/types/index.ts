@@ -143,6 +143,42 @@ export interface AlternativaCadastro {
   correta: boolean;
 }
 
+export interface CardPayload {
+  examId: string;
+  classId: string;
+  className: string;
+  teacherId: string;
+  studentId: string;
+  studentName: string;
+  studentRa: string;
+  stage: EvaluationStage;
+  // Compatibilidade legada
+  system?: string;
+  turmaId?: string;
+  name?: string;
+  ra?: string;
+  examVersion?: string;
+}
+
+export interface QuestionResult {
+  questionNumber: number;
+  questionId: string;
+  markedOption: string | null;
+  correctOption: string;
+  isCorrect: boolean;
+  score: number;
+  maxScore: number;
+}
+
+export interface ScanResult {
+  payload: CardPayload;
+  questions: QuestionResult[];
+  totalScore: number;
+  maxExamScore: number;
+  capturedImageBase64?: string;
+  scannedAt: string;
+}
+
 export interface SecureQrPayload {
   system: 'SGP-CATOLICA';
   examId: string;
@@ -151,6 +187,13 @@ export interface SecureQrPayload {
   name: string;
   turmaId: string;
   examVersion: string;
+  // Campos estendidos para novo CardPayload
+  classId?: string;
+  className?: string;
+  teacherId?: string;
+  studentName?: string;
+  studentRa?: string;
+  stage?: EvaluationStage;
 }
 
 export interface OMRQuestionResult {
@@ -160,6 +203,8 @@ export interface OMRQuestionResult {
   correta: boolean;
   status: 'CORRETA' | 'INCORRETA' | 'ANULADA' | 'EM_BRANCO';
   fillRate?: number;
+  score?: number;
+  maxScore?: number;
 }
 
 export interface LeituraOMRRegistro {
@@ -168,8 +213,12 @@ export interface LeituraOMRRegistro {
   alunoNome: string;
   ra: string;
   turmaId?: string;
+  classId?: string;
   professorId?: string;
+  teacherId?: string;
   turmaNome: string;
+  className?: string;
+  stage?: EvaluationStage;
   materia: string;
   versao: string;
   acertos: number;

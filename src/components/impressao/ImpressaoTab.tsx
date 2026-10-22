@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { Printer, CheckSquare } from 'lucide-react';
 import { AlunoModel } from '@/models/AlunoModel';
-import { Question } from '@/types';
+import { TurmaModel } from '@/models/TurmaModel';
+import { Question, CardPayload, EvaluationStage, AvaliacaoCiclo } from '@/types';
 import { QRCodeWrapper } from '@/components/common/QRCodeWrapper';
 
 interface ImpressaoTabProps {
@@ -15,6 +16,9 @@ interface ImpressaoTabProps {
   turmaSelecionadaId: string;
   withId: boolean;
   questoesEmbaralhadas: Question[];
+  turmas?: TurmaModel[];
+  teacherId?: string;
+  stage?: EvaluationStage | AvaliacaoCiclo;
 }
 
 export function ImpressaoTab({
@@ -25,10 +29,35 @@ export function ImpressaoTab({
   tituloProva,
   turmaSelecionadaId,
   withId,
-  questoesEmbaralhadas
+  questoesEmbaralhadas,
+  turmas,
+  teacherId,
+  stage
 }: ImpressaoTabProps) {
   // Controle de Frente e Verso (Gera página de verso em branco para destacar o gabarito sem perder questões)
   const [modoFrenteVerso, setModoFrenteVerso] = useState(true);
+
+  const turmaAtual = turmas?.find(t => t.id === turmaSelecionadaId);
+  const nomeTurma = turmaAtual?.nome || 'Turma Padrão';
+  const resolvedStage: EvaluationStage = (stage === 'N1' || stage === 'N2' || stage === 'N3' || stage === 'N-1') ? stage : 'N1';
+  const versaoLetra = String.fromCharCode(65 + (selectedVersionIdx % 4));
+  const examId = `EXAM-${turmaSelecionadaId || 'T1'}-${resolvedStage}`;
+
+  const qrPayload: CardPayload = {
+    examId,
+    classId: turmaSelecionadaId || 't1',
+    className: nomeTurma,
+    teacherId: teacherId || turmaAtual?.professorId || 'prof-01',
+    studentId: alunoAtual?.id || 'alu-01',
+    studentName: withId ? (alunoAtual?.nome || 'AGENOR ALVISE') : 'ANONIMO',
+    studentRa: withId ? (alunoAtual?.ra || '1328834') : 'ANONIMO',
+    stage: resolvedStage,
+    system: 'SGP-CATOLICA',
+    turmaId: turmaSelecionadaId || 't1',
+    name: withId ? (alunoAtual?.nome || 'AGENOR ALVISE') : 'ANONIMO',
+    ra: withId ? (alunoAtual?.ra || '1328834') : 'ANONIMO',
+    examVersion: versaoLetra
+  };
 
   return (
     <div className="space-y-6">
@@ -115,23 +144,15 @@ export function ImpressaoTab({
               <div className="border-2 border-slate-900 p-3 text-center font-mono text-xs flex flex-col items-center justify-center bg-white rounded-xl print:border-2 print:border-black">
                 <div className="p-2 bg-white rounded border border-slate-200 print:border-none flex justify-center items-center">
                   <QRCodeWrapper
-                    value={JSON.stringify({
-                      system: 'SGP-CATOLICA',
-                      examId: `EXAM-${turmaSelecionadaId || 'T1'}`,
-                      studentId: alunoAtual?.id || 'alu-01',
-                      ra: withId ? (alunoAtual?.ra || '1328834') : 'ANONIMO',
-                      name: withId ? (alunoAtual?.nome || 'AGENOR ALVISE') : 'ANONIMO',
-                      turmaId: turmaSelecionadaId || 't1',
-                      examVersion: String.fromCharCode(65 + (selectedVersionIdx % 4))
-                    })}
+                    value={JSON.stringify(qrPayload)}
                     size={135}
                   />
                 </div>
                 <span className="text-[11px] font-black text-slate-900 mt-2 block print:text-black">
-                  {withId ? `RA: ${alunoAtual?.ra}` : 'PROVA ANÔNIMA'} • VERSÃO {String.fromCharCode(65 + (selectedVersionIdx % 4))}
+                  {withId ? `RA: ${alunoAtual?.ra}` : 'PROVA ANÔNIMA'} • VERSÃO {versaoLetra} • [PROVA {resolvedStage}]
                 </span>
                 <span className="text-[9px] text-slate-500 block print:text-black">
-                  Identificação Óptica Automática
+                  Identificação Óptica Automática ({nomeTurma})
                 </span>
               </div>
 
