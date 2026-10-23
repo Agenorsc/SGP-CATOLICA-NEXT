@@ -204,15 +204,15 @@ describe('QuestionService - Organização por Turma e Ciclo Avaliativo (N1, N2, 
       expect(total).toBe(10.0);
     });
 
-    it('deve validar limite de 20 questões por prova', () => {
-      const vinteQuestoes = Array.from({ length: 20 }, (_, i) => ({
+    it('deve validar limite de 30 questões por prova', () => {
+      const trintaQuestoes = Array.from({ length: 30 }, (_, i) => ({
         ...mockQuestions[0],
         id: `q_test_${i}`
       }));
 
-      expect(service.validarLimite(vinteQuestoes)).toBe(false); // 20 atinge o limite
-      expect(service.validarLimite(vinteQuestoes.slice(0, 19))).toBe(true);
-      expect(LIMITE_MAXIMO_QUESTOES).toBe(20);
+      expect(service.validarLimite(trintaQuestoes)).toBe(false); // 30 atinge o limite
+      expect(service.validarLimite(trintaQuestoes.slice(0, 29))).toBe(true);
+      expect(LIMITE_MAXIMO_QUESTOES).toBe(30);
     });
   });
 });

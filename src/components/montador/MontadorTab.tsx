@@ -520,10 +520,10 @@ export function MontadorTab({
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-slate-700 uppercase">
-                    Questões no Caderno ({questoesSelecionadas.length} / 20):
+                    Questões no Caderno ({questoesSelecionadas.length} / 30):
                   </span>
                   <span className="text-[11px] text-slate-500 font-semibold">
-                    Mínimo configurável: 1 questão
+                    Máximo: 30 questões • Mínimo: 1
                   </span>
                 </div>
 

@@ -16,7 +16,6 @@ import {
   X, 
   FileCheck2, 
   ShieldCheck,
-  Zap,
   Upload,
   ArrowRight,
   BookOpen,
@@ -103,9 +102,6 @@ export function CorrectionScanner({
   const [alunoAtualizadoPendente, setAlunoAtualizadoPendente] = useState<AlunoModel | null>(null);
   const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
 
-  // Simulação Desktop / Bancada
-  const [alunoSimulacaoId, setAlunoSimulacaoId] = useState<string>('');
-
   // Refs de Hardware e Canvas
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -132,13 +128,6 @@ export function CorrectionScanner({
     if (abaTurmaAtiva === 'TODAS') return alunos;
     return alunos.filter(a => a.turmaId === abaTurmaAtiva);
   }, [alunos, abaTurmaAtiva]);
-
-  // Inicializa aluno para simulação
-  useEffect(() => {
-    if (alunosFiltradosAba.length > 0 && (!alunoSimulacaoId || !alunosFiltradosAba.some(a => a.id === alunoSimulacaoId))) {
-      setAlunoSimulacaoId(alunosFiltradosAba[0].id);
-    }
-  }, [alunosFiltradosAba, alunoSimulacaoId]);
 
   // Som de Beep
   const playBeep = () => {
@@ -693,74 +682,6 @@ export function CorrectionScanner({
   };
 
   /**
-   * Simulação de Bancada com Aluno Selecionado
-   */
-  const handleSimularBancada = () => {
-    const aluno = alunosFiltradosAba.find(a => a.id === alunoSimulacaoId) || alunosFiltradosAba[0] || alunos[0];
-    if (!aluno) return;
-
-    const turmaAluno = turmas.find(t => t.id === aluno.turmaId) || turmas[0] || new TurmaModel({
-      id: 't1',
-      nome: 'Turma de Simulação'
-    });
-
-    const stageSimulado: EvaluationStage = cicloContingencia !== 'AUTO' ? cicloContingencia : 'N1';
-
-    const dummyPayload: CardPayload = {
-      examId: `EXAM-${turmaAluno.id}-${stageSimulado}`,
-      classId: turmaAluno.id,
-      className: turmaAluno.nome,
-      teacherId: turmaAluno.professorId || 'prof-01',
-      studentId: aluno.id,
-      studentName: aluno.nome,
-      studentRa: aluno.ra,
-      stage: stageSimulado,
-      system: 'SGP-CATOLICA',
-      turmaId: turmaAluno.id,
-      name: aluno.nome,
-      ra: aluno.ra,
-      examVersion: 'A'
-    };
-
-    setCardPayloadDetectado(dummyPayload);
-    setAlunoAutenticado(aluno);
-
-    const questoesBase = obterQuestoesParaProva(turmaAluno.id, stageSimulado);
-
-    const registro = omrService.processarCorrecaoAutomatica({
-      aluno,
-      turma: turmaAluno,
-      materia: tituloProva,
-      versaoLetra: 'A',
-      questoesBase,
-      shuffleQ: false,
-      shuffleAlt: false,
-      fiduciaisValidados: true,
-      simular: true,
-      stage: stageSimulado
-    });
-
-    const notaFinal = registro.notaCalculada;
-    let alunoAtualizado = new AlunoModel({ ...aluno });
-    if (stageSimulado === 'N1') alunoAtualizado = new AlunoModel({ ...aluno, n1: notaFinal });
-    else if (stageSimulado === 'N2') alunoAtualizado = new AlunoModel({ ...aluno, n2: notaFinal });
-    else if (stageSimulado === 'N3') alunoAtualizado = new AlunoModel({ ...aluno, n3: notaFinal });
-    else {
-      const menor = Math.min(aluno.n1, aluno.n2, aluno.n3);
-      if (menor === aluno.n1) alunoAtualizado = new AlunoModel({ ...aluno, n1: notaFinal });
-      else if (menor === aluno.n3) alunoAtualizado = new AlunoModel({ ...aluno, n3: notaFinal });
-      else alunoAtualizado = new AlunoModel({ ...aluno, n2: notaFinal });
-    }
-
-    const scanRes = omrService.converterParaScanResult(registro, dummyPayload);
-
-    setScanResult(scanRes);
-    setResultadoRegistro(registro);
-    setAlunoAtualizadoPendente(alunoAtualizado);
-    setScannerState('ANALYZED');
-  };
-
-  /**
    * Resolução da Cor do Badge de Ciclo Avaliativo
    */
   const renderBadgeCiclo = (stg: EvaluationStage) => {
@@ -1025,7 +946,7 @@ export function CorrectionScanner({
                 <div className="space-y-1">
                   <p className="text-sm font-bold text-slate-300">Sensor Óptico Pronto</p>
                   <p className="text-xs text-slate-500 max-w-xs">
-                    Ative a câmera para reconhecimento automático instantâneo ou realize uma simulação rápida de bancada abaixo.
+                    Ative a câmera para reconhecimento automático instantâneo do cartão-resposta.
                   </p>
                 </div>
                 <button
@@ -1092,35 +1013,6 @@ export function CorrectionScanner({
               </button>
             </div>
           )}
-
-          {/* SIMULAÇÃO DE TESTES RÁPIDOS / BANCADA */}
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <Zap className="w-4 h-4 text-amber-500" /> Teste Rápido de Bancada (Sem Câmera):
-              </span>
-              <span className="text-[10px] text-slate-400 font-medium">Ambiente de Desenvolvimento</span>
-            </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <select
-                value={alunoSimulacaoId}
-                onChange={(e) => setAlunoSimulacaoId(e.target.value)}
-                className="flex-1 p-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold outline-none"
-              >
-                {alunosFiltradosAba.map(al => (
-                  <option key={al.id} value={al.id}>
-                    {al.nome} (RA: {al.ra})
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={handleSimularBancada}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer whitespace-nowrap"
-              >
-                Simular Leitura
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* 6. PAINEL HUD DE FEEDBACK VISUAL EM TEMPO REAL */}

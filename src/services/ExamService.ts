@@ -34,8 +34,8 @@ export class ExamService {
       throw new Error('Adicione ao menos 1 questão ao caderno para gerar a avaliação.');
     }
 
-    if (baseQuestions.length > 20) {
-      throw new Error('O limite máximo permitido por prova é de 20 questões.');
+    if (baseQuestions.length > 30) {
+      throw new Error('O limite máximo permitido por prova é de 30 questões.');
     }
 
     return students.map((student, index) => {

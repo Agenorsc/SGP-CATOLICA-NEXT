@@ -308,11 +308,11 @@ export default function Home() {
     ExportService.gerarCsvNotas(alunosVisiveis, turmasVisiveis, tituloProva);
   };
 
-  // Handlers do Montador (Flexibilidade total de quantidade: permite 0, 1, 2, 3... até 20)
+  // Handlers do Montador (Flexibilidade total de quantidade: permite 0, 1, 2, 3... até 30)
   const adicionarNaProva = (q: Question) => {
     if (questoesSelecionadas.some(item => item.id === q.id)) return;
     if (!questionService.validarLimite(questoesSelecionadas)) {
-      alert('Limite máximo de 20 questões atingido!');
+      alert('Limite máximo de 30 questões atingido!');
       return;
     }
     setQuestoesSelecionadas(prev => [...prev, q]);
