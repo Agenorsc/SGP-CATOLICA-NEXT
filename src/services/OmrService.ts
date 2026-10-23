@@ -777,7 +777,7 @@ export class OmrService {
     }
 
     const objetivas = questoesBase.filter(q => q.tipo === 'objetiva' || q.type === 'OBJECTIVE');
-    const totalQuestoes = Math.min(20, Math.max(1, objetivas.length));
+    const totalQuestoes = Math.min(30, Math.max(1, objetivas.length));
     const versaoIndex = Math.max(0, versaoLetra.toUpperCase().charCodeAt(0) - 65);
 
     let versionQuestions = JSON.parse(JSON.stringify(objetivas)) as Question[];

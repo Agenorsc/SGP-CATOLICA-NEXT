@@ -1,7 +1,7 @@
 import { QuestionRepository } from '@/repositories/QuestionRepository';
 import { Question, AvaliacaoCiclo } from '@/types';
 
-export const LIMITE_MAXIMO_QUESTOES = 20;
+export const LIMITE_MAXIMO_QUESTOES = 30;
 
 export interface ContagemCiclos {
   todas: number;

@@ -72,7 +72,7 @@ export function lerGradeOmrPorAjuste(
   totalQuestoes: number,
   ancora: AncoraQrGrade
 ): ResultadoGradeOmr | null {
-  const N = Math.max(1, Math.min(20, Math.round(totalQuestoes)));
+  const N = Math.max(1, Math.min(30, Math.round(totalQuestoes)));
   const W = img.width;
   const H = img.height;
   const data = img.data;
