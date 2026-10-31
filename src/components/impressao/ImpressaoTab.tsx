@@ -921,7 +921,7 @@ export function ImpressaoTab({
                     {idx + 1}) {q.enunciado || q.statement}
                   </span>
                   <span className="text-[11px] font-mono shrink-0 ml-2">
-                    ({q.pontuacao?.toFixed(1) || pontosPorQuestao} pts)
+                    ({q.pontuacao != null ? (Number.isInteger(q.pontuacao) ? q.pontuacao.toFixed(1) : q.pontuacao.toString()) : pontosPorQuestao} pts)
                   </span>
                 </div>
 

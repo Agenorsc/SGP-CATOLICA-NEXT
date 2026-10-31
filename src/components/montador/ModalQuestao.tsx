@@ -170,8 +170,8 @@ export function ModalQuestao({
               </label>
               <input
                 type="number"
-                step="0.5"
-                min="0.5"
+                step="any"
+                min="0.05"
                 max="10"
                 value={novaPontuacao}
                 onChange={e => setNovaPontuacao(parseFloat(e.target.value) || 0)}

@@ -96,10 +96,9 @@ export function MontadorTab({
       return;
     }
 
-    const somaPontos = Number(pontuacaoTotal.toFixed(1));
-    if (somaPontos !== 10.0) {
+    if (Math.abs(pontuacaoTotal - 10.0) >= 0.05) {
       setAvisoValidacao(
-        `A soma das questões deve ser exatamente 10.0 pontos para gerar o gabarito. Pontuação atual: ${somaPontos.toFixed(1)} pts`
+        `A soma das questões deve ser exatamente 10.0 pontos para gerar o gabarito. Pontuação atual: ${pontuacaoTotal.toFixed(1)} pts`
       );
       return;
     }

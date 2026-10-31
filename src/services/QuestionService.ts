@@ -123,7 +123,7 @@ export class QuestionService {
   }
 
   calcularPontuacaoTotal(questoes: Question[]): number {
-    return Number(questoes.reduce((acc, q) => acc + (q.pontuacao || 0), 0).toFixed(1));
+    return Number(questoes.reduce((acc, q) => acc + (q.pontuacao ?? q.points ?? 0), 0).toFixed(2));
   }
 
   validarLimite(questoesSelecionadas: Question[]): boolean {

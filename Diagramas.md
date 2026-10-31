@@ -17,12 +17,13 @@
 [![TypeScript 5](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS 3.4](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Jest 29](https://img.shields.io/badge/Jest-29.x-C21325?style=for-the-badge&logo=jest&logoColor=white)](https://jestjs.io/)
-[![Node.js 22 LTS](https://img.shields.io/badge/Node.js-22_LTS-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16_DDL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Prisma ORM](https://img.shields.io/badge/Prisma-5.22-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io/)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 
-[![CI/CD Status](https://img.shields.io/badge/CI%2FCD-30%20Pipelines%20Executados-success?style=flat-square&logo=githubactions&logoColor=white)](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/actions)
+[![CI/CD Status](https://img.shields.io/badge/CI%2FCD-61%20Pipelines%20Executados-success?style=flat-square&logo=githubactions&logoColor=white)](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/actions)
 [![Avaliação](https://img.shields.io/badge/Cliente%20Docente-Prof.%20Me.%20Samuel-blue?style=flat-square)](https://catolicasc.org.br/)
 [![Arquitetura](https://img.shields.io/badge/Padr%C3%A3o-5%20Camadas%20Desacopladas-007ACC?style=flat-square)](https://catolicasc.org.br/)
+[![Testes Unitários](https://img.shields.io/badge/Testes-55%2F55%20Aprovados%20(100%25)-brightgreen?style=flat-square)](https://jestjs.io/)
 
 **Jaraguá do Sul – SC | 2026**
 
@@ -644,6 +645,24 @@ CREATE TABLE respostas_leitura (
 );
 ```
 
+### 6.3 Modelo em Produção no Supabase (Schema Visualizer & Prisma ORM)
+
+A camada de persistência em produção foi implementada no **Supabase (PostgreSQL 16)** gerenciada de forma declarativa pelo **Prisma ORM (v5.22.0)**, estruturada em 6 tabelas relacionais com chaves primárias UUID e integridade referencial estrita:
+
+<div align="center">
+
+#### Figura 5 – Schema Visualizer Oficial do Banco no Supabase (`schema public`)
+<img src="docs/telas/supabase-schema-visualizer.png" alt="Supabase Schema Visualizer" width="850" />
+<p><em>Relações de Chaves Primárias e Estrangeiras entre usuarios, turmas, alunos, questoes, alternativas e leituras_omr</em></p>
+
+---
+
+#### Figura 6 – Catálogo de Tabelas Relacionais em Produção no Supabase
+<img src="docs/telas/supabase-database-tables.png" alt="Supabase Database Tables" width="850" />
+<p><em>Visão do Database Tables com contagem de registros, colunas e armazenamento alocado</em></p>
+
+</div>
+
 ---
 
 ## 7. Governança Git, Diário de Bordo e Registro de PRs
@@ -652,26 +671,50 @@ CREATE TABLE respostas_leitura (
 
 O repositório do projeto adota esteira contínua de Integração e Entrega Contínua (CI/CD) gerenciada pelo **GitHub Actions** (`SGP Católica CI/CD Pipeline`). Todo *commit* ou *Pull Request* enviado à *branch* principal (`main`) dispara compilação do Next.js 16, linting estrito e a suíte completa de testes automatizados com Jest.
 
-* **Status:** 30 Pipelines executados com sucesso (100% *green build*);
-* **Tempo médio de execução do job:** 42 segundos;
-* **Deploy contínuo:** Produção sincronizada na Vercel a cada merge aprovado.
+* **Status:** 61 Pipelines executados com sucesso (100% *green build* nas entregas homologadas);
+* **Tempo médio de execução do job:** 35 a 55 segundos;
+* **Deploy contínuo:** Produção sincronizada na Vercel e banco Supabase a cada entrega aprovada;
+* **Testes unitários:** 55 testes aprovados em 7 suítes Jest (`GridOmrEngine`, `OmrService`, `QuestionService`, `ExamService`, `ProfessorService`, `AuthService`, `AlunoService`).
 
 ### 7.2 Matriz de Rastreabilidade por Integrante e Pull Requests (Diário de Bordo)
 
-Para atender compulsoriamente à diretriz docente (*"Não esqueçam de definir as tarefas para cada integrante. Recomendo utilizarem PRs para irem registrando as atividades e interações, facilitando a evidenciação das tarefas individuais para o diário"*), estruturou-se a divisão do trabalho através de *Pull Requests* rastreáveis:
+Para atender compulsoriamente à diretriz docente (*"Não esqueçam de definir as tarefas para cada integrante. Recomendo utilizarem PRs para irem registrando as atividades e interações, facilitando a evidenciação das tarefas individuais para o diário"*), estruturou-se a divisão do trabalho através de entregas e *Pull Requests* rastreáveis sem falhas:
 
-| PR # | Branch de Trabalho | Integrante Responsável | Escopo Técnico da Entrega | Evidência de Validação para o Diário de Bordo |
-|:---:|---|---|---|---|
-| **PR #01** | `feature/ci-cd-and-omr-print` | **Agenor Alvise** | Configuração do pipeline CI/CD no GitHub Actions, layout frente/verso e folha OMR A4 via CSS `@media print`. | Pipeline verde no Actions e impressão de gabarito sem quebras indevidas de página. |
-| **PR #02** | `feature/turmas-e-questoes` | **Johnatan Vargas da Fonseca** | Gestão de turmas com código de convite, banco de questões com filtros dinâmicos e montador em split-screen. | Split-screen funcional com trava de 20 questões e cadastro dinâmico de turmas. |
-| **PR #03** | `feature/domain-models-viacep` | **Eric Ricardo Lange** | Modelagem orientada a objetos (`PessoaModel` $\rightarrow$ `AlunoModel`), cálculo de médias semestrais e consumo da API ViaCEP. | Preenchimento automático por CEP e cálculo correto da situação (`Aprovado`/`Exame`). |
-| **PR #04** | `feature/omr-scanner-camera` | **Erick Andreas Pontecelli** | Algoritmo determinístico de shuffle com seed e módulo de leitura óptica via câmera (`html5-qrcode`). | Reconhecimento óptico ao vivo com decodificação QR Code e cálculo instantâneo de N2. |
-| **PR #05** | `feature/abnt-docs-and-sql-schema` | **Edinei Junio Machado** | Relatório técnico acadêmico ABNT, modelagem formal UML (Casos de Uso, Atividades, Classes e Sequência) e DDL SQL (`schema-n2.sql`). | Documentação completa no padrão FastBurger e integridade das 11 tabelas relacionais. |
-| **PR #06** | `feature/inspecao-espelho-omr` | **Johnatan Vargas da Fonseca** | Módulo de inspeção do espelho OMR e visualização das marcações digitalizadas para auditoria do professor. | Acesso do docente ao espelho detalhado com sobreposição visual das respostas do aluno. |
+| CI/CD Job # | Commit / PR | Contribuidor Principal | Branch de Origem | Data de Entrega | Escopo Técnico e Evidência de Entrega |
+|:---:|:---:|:---:|:---:|:---:|:---|
+| **#61** | [`914cd09`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/914cd09e6243179c321a8cc4083c93bd3216f5a9) | **Agenor Alvise** | `main` | 23/10/2026 | **Melhorias no gabarito oficial e remoção da simulação sem câmera:** Ajustes de alta fidelidade visual no gabarito e foco exclusivo no sensor óptico via câmera. |
+| **#60** | [PR #14](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/14) | **Edinei Junio Machado** | `feat/remocao-simulacao-omr` | 22/10/2026 | **Remoção da simulação de bancada:** Limpeza de código e foco exclusivo no reconhecimento automático OMR em tempo real via câmera. |
+| **#59** | [`a37e49c`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/a37e49c237c1d1973bf352f3710de118eb74b6d5) | **Edinei Junio Machado** | `main` | 22/10/2026 | **Suporte a 30 questões e editor de orientações/cabeçalho:** Expansão de capacidade de questões e painel para personalização dos descritivos da avaliação. |
+| **#58** | [`e3e477b`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/e3e477b6f4f58ad899bb374f55acd688c1dcb289) | **Agenor Alvise** | `main` | 22/10/2026 | **Correção de duplicação de questões no Prisma:** Remoção atômica preventiva de alternativas antes de atualizar questões no Supabase. |
+| **#57** | [`ef050f7`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/ef050f79f2ea7b54d3a5c96a104d640c839bc8e5) | **Agenor Alvise** | `main` | 22/10/2026 | **Reconhecimento 100% automático com Validação Cruzada:** Identificação automática de Turma, Ciclo (N1/N2/N3/N-1) e Aluno via QR Code com painel HUD e trava de segurança. |
+| **#56** | [`16b319f`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/16b319f1e192ef7bd978641036806cd28a13f457) | **Agenor Alvise** | `main` | 22/10/2026 | **Trava estrita de 10.0 pts e validações de turma/RA:** Validação matemática no montador e gabarito dinâmico balanceado. |
+| **#55** | [`e6ba2d7`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/e6ba2d7ae639104483043df7651828c1a2188df8) | **Erick Andreas Pontecelli** | `main` | 21/10/2026 | **Autenticação real com isolamento de professores:** Acesso exclusivo com `admin@admin.com` e segregação de turmas/alunos por docente. |
+| **#54** | [`f782ce2`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/f782ce2f39f4281a85aa36fc4f2dc0aee0f26516) | **Erick Andreas Pontecelli** | `main` | 21/10/2026 | **Controle de acesso por papel (RBAC):** Proteção de rotas e segurança nas APIs de professores e administradores. |
+| **#53** | [PR #13](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/13) ([`8bd16b1`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/8bd16b1de4ebb7fcadbc025b406b8b08df728480)) | **Johnatan Vargas da Fonseca** | `feat/banco-questoes-por-turma-ciclos` | 21/10/2026 | **Banco de questões por turma e ciclos N1, N2, N3 e N-1:** Segmentação das questões por disciplina e agrupamento automático no exame N-1. |
+| **#51** | [PR #12](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/12) ([`fe500f6`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/fe500f6d6ca5bd5c1db68f17caee8ec4aaf127dd)) | **Eric Ricardo Lange** | `feat/montador-turma-ciclos` | 20/10/2026 | **Organização do montador por turma e ciclos:** Interface visual adaptada com contadores em tempo real para N1, N2, N3 e Exame. |
+| **#47** | [PR #10](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/10) ([`a5d6c51`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/a5d6c5129a2629bc1bcc9f2fcc5e5b72eefe6a08)) | **Eric Ricardo Lange** | `lange047-patch-1` | 19/10/2026 | **Correção de quebra de página frente e verso duplex:** Inserção exata de página em branco no verso do gabarito para destaque físico seguro. |
+| **#44** | [`3c234e7`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/3c234e7b1c81a0f53e3470eec198f8d0c1a5c9de) | **Agenor Alvise** | `main` | 16/10/2026 | **Documentação formal UML 2.5 (`Diagramas.md`):** Especificação completa com 4 diagramas, passos dedutivos e metodologia ABNT. |
+| **#43** | [PR #9](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/9) ([`b865904`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/b865904c553c7bf18736e77de079eb5634d9fffd)) | **Johnatan Vargas da Fonseca** | `docs/readme1-atualizacao` | 16/10/2026 | **Atualização documental do README institucional:** Revisão de requisitos, links oficiais e instruções de instalação. |
+| **#41** | [PR #8](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/8) ([`aab09a3`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/aab09a3d38b8ccc810ed1684260fe64e2a7571f9)) | **Johnatan Vargas da Fonseca** | `docs/complementa-prs-readme` | 14/10/2026 | **Complementação de rastreabilidade de PRs no README:** Registro do diário de bordo com as entregas de cada membro da equipe. |
+| **#39** | [`27466b1`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/27466b16dfb349c1fa7f85d6d21a1200dd8220ee) | **Agenor Alvise** | `main` | 13/10/2026 | **Sincronização em tempo real no Supabase sem cache:** Persistência atômica e desativação de cache estático em rotas dinâmicas. |
+| **#38** | [`b38eeb4`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/b38eeb45dbfda1a57d8b981b3b7096d72f21fb78) | **Agenor Alvise** | `main` | 13/10/2026 | **Configuração de build do Prisma no deploy Vercel:** Automatização do comando `prisma generate` durante o pipeline de deploy em produção. |
+| **#37** | [`96e1955`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/96e1955fbc39b7a30977baaed9e6699ccff522bb) | **Agenor Alvise** | `main` | 13/10/2026 | **Integração completa com banco PostgreSQL no Supabase:** Criação dos modelos relacionais e migração definitiva dos dados para a nuvem. |
+| **#35** | [`7439a6d`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/7439a6d9db50d7b006a9efae8ee54195aab4d56b) | **Agenor Alvise** | `main` | 12/10/2026 | **Leitura de QR Code nominal e correção automatizada:** Identificação instantânea do gabarito oficial e cálculo das notas. |
+| **#30** | [`c91ce9d`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/c91ce9d80aebe5ea4410c45e771362b02f608b77) | **Agenor Alvise** | `main` | 12/10/2026 | **Reestruturação completa da arquitetura em 5 camadas:** Desacoplamento de rotas, controllers, services, repositories e models. |
+| **#28** | [`1008513`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/10085133b101dd3840b74d36450db28c807ecf10) | **Agenor Alvise** | `main` | 12/10/2026 | **Atualização de pacotes para suporte ao React 19:** Atualização de bibliotecas de ícones e compatibilidade de UI. |
+| **#25** | [PR #7](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/7) ([`dcb4ccb`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/dcb4ccb8a1fc8b49c54a6b75300e93b37d278855)) | **Johnatan Vargas da Fonseca** | `feat/portal-aluno` | 09/10/2026 | **Foco exclusivo no painel do professor:** Remoção do acesso por e-mail de alunos e centralização da operação no corpo docente. |
+| **#23** | [PR #5](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/5) ([`fa815ee`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/fa815eeebdc97dd56d6f4ff013b0b2218cb94f57)) | **Johnatan Vargas da Fonseca** | `feat/portal-aluno` | 02/10/2026 | **Documentação visual das interfaces:** Capturas comprobatórias e mapeamento de componentes. |
+| **#21** | [PR #4](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/4) ([`f2ee69c`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/f2ee69c3a45f6bf17fbf7aaf8524aa7c7ae013fc)) | **Johnatan Vargas da Fonseca** | `feat/portal-aluno` | 02/10/2026 | **Implementação de consultas e relatórios:** Estruturação da consulta de notas e status avaliativo. |
+| **#18** | [`0deb293`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/0deb293083ae971c0414e6120f7c3b58f620803a) | **Agenor Alvise** | `main` | 30/09/2026 | **Motor OMR com leitura via câmera:** Implementação de processamento de imagem com 4 marcadores de calibração fiducial. |
+| **#14** | [`e537ff3`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/e537ff358df154bd1938dbc0bcb501c14235bdc9) | **Agenor Alvise** | `main` | 21/09/2026 | **Criação de novas questões desvinculadas da prova:** Desacoplamento entre o cadastro no banco e a montagem ativa de cadernos. |
 
-#### Histórico de Branches e PRs de Refatoração de Escopo
-- **PR #4 e #5:** Implementação e teste inicial de consulta discente.
-- **PR #7 (`feat/remover-portal-aluno`):** Remoção estrita do acesso discente e consolidação do fluxo focado exclusivamente na operação do corpo docente.
+#### Quadro de Evidências por Integrante da Equipe
+
+- **Agenor Alvise (`@Agenorsc`):** Migração para Supabase PostgreSQL via Prisma ORM (`96e1955`, `27466b1`, `b38eeb4`), motor de visão computacional e leitura automática 100% com validação cruzada (`ef050f7`, `0deb293`, `7439a6d`), gabarito oficial Católica SC, duplex duplex e pontuação fracionada de 0,05 pts para até 30 questões (`914cd09`, `16b319f`).
+- **Johnatan Vargas da Fonseca (`@FonsecaJohnatan`):** Banco de questões individualizado por turma e ciclos N1/N2/N3/N-1 no PR #13 (`8bd16b1`), inspeção de espelhos OMR (PR #06), documentação técnica do README (PR #8 e PR #9).
+- **Eric Ricardo Lange (`@lange047`):** Montador de provas por ciclos no PR #12 (`fe500f6`), diagramação duplex com quebra de página física frente/verso e folha em branco no PR #10 (`a5d6c51`, `04e2848`), classes de domínio OO com ViaCEP.
+- **Erick Andreas Pontecelli (`@Erick-Andreas-Ponticelli`):** Sistema de autenticação real com credenciais criptografadas e isolamento por professor (`e6ba2d7`, `f782ce2`), algoritmo de shuffle Fisher-Yates com sementes de 64 bits (PR #04).
+- **Edinei Junio Machado (`@edineiJM`):** Suporte a até 30 questões no gabarito, editor de cabeçalho e orientações com tags dinâmicas (`a37e49c`), remoção da caixa de simulação de bancada para foco na câmera real no PR #14 (`2c81636`), modelagem formal UML.
 
 ### 7.3 Rubrica de Apresentação e Avaliação N2
 1. **Domínio Arquitetural:** Demonstração do desacoplamento da arquitetura em 5 camadas;
