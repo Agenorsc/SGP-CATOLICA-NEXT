@@ -158,6 +158,11 @@ export interface CardPayload {
   name?: string;
   ra?: string;
   examVersion?: string;
+  // Layout e gabarito embutidos da folha impressa (ver src/lib/answerKey.ts)
+  nq?: number;
+  op?: string;
+  k?: string;
+  pt?: string;
 }
 
 export interface QuestionResult {

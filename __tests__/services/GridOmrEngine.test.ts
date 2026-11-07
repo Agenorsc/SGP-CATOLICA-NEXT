@@ -195,4 +195,36 @@ describe('GridOmrEngine - Leitura por ajuste de grade em foto estática', () => 
     expect(res.metodo).toBe('grid-fit');
     expect(res.respostas).toEqual({ 1: 'B', 2: 'B', 3: 'A', 4: 'E' });
   });
+
+  it('lê com sucesso a folha oficial Católica SC com grade à direita do QR Code', () => {
+    const { img, anchor } = gerarFoto({
+      W: 1280,
+      H: 720,
+      qrX: 200,
+      qrY: 100,
+      qrSize: 115,
+      anguloGraus: 0,
+      aA: 4.4,
+      b1: 0.18,
+      pc: 0.20,
+      pr: 0.11,
+      half: 0.07,
+      borda: 0.012,
+      totalQuestoes: 5,
+      marcas: {
+        1: { A: 0.95 },
+        2: { D: 0.90 },
+        3: { C: 0.92 },
+        5: { B: 0.88 }
+      }
+    });
+
+    const res = lerGradeOmrPorAjuste(img, 5, anchor);
+    expect(res).not.toBeNull();
+    expect(res!.respostas[1]).toBe('A');
+    expect(res!.respostas[2]).toBe('D');
+    expect(res!.respostas[3]).toBe('C');
+    expect(res!.statusQuestoes[4]).toBe('EM_BRANCO');
+    expect(res!.respostas[5]).toBe('B');
+  });
 });

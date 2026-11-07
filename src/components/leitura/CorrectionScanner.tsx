@@ -35,6 +35,7 @@ import {
   ScanResult
 } from '@/types';
 import { OmrService } from '@/services/OmrService';
+import { GabaritoDecodificado } from '@/lib/answerKey';
 
 export type ScannerState = 'IDLE' | 'SCANNING' | 'ANALYZED' | 'VALIDATED';
 
@@ -72,6 +73,9 @@ export function CorrectionScanner({
 
   // 2. Seletor de Ciclo Avaliativo de Contingência: 'AUTO' | 'N1' | 'N2' | 'N3' | 'N-1'
   const [cicloContingencia, setCicloContingencia] = useState<'AUTO' | EvaluationStage>('AUTO');
+
+  // 2.1 Seletor de Quantidade de Questões da Prova: 'AUTO' | 5 | 8 | 10 | 15 | 20 | 25 | 30
+  const [qtdQuestoesOverride, setQtdQuestoesOverride] = useState<'AUTO' | number>('AUTO');
 
   // 3. Máquina de Estados: IDLE -> SCANNING -> ANALYZED -> VALIDATED
   const [scannerState, setScannerState] = useState<ScannerState>('IDLE');
@@ -190,7 +194,12 @@ export function CorrectionScanner({
    * Resolução das Questões da Prova para a Turma e Ciclo
    */
   const obterQuestoesParaProva = useCallback((classId: string, stage: EvaluationStage): Question[] => {
-    // 1. Tenta encontrar no banco de questões do professor para a turma e ciclo exatos
+    // 1. Se há questões ativas selecionadas no montador, elas representam a prova real impressa!
+    if (questoesSelecionadas && questoesSelecionadas.length > 0) {
+      return questoesSelecionadas;
+    }
+
+    // 2. Tenta encontrar no banco de questões do professor para a turma e ciclo exatos
     if (bancoQuestoes && bancoQuestoes.length > 0) {
       const questoesTurmaCiclo = bancoQuestoes.filter(
         q => (q.turmaId === classId || q.classId === classId) && (q.avaliacao === stage || q.stage === stage)
@@ -208,8 +217,7 @@ export function CorrectionScanner({
       }
     }
 
-    // 2. Fallback para as questões atualmente selecionadas no montador
-    return questoesSelecionadas;
+    return questoesSelecionadas || [];
   }, [bancoQuestoes, questoesSelecionadas]);
 
   /**
@@ -460,7 +468,7 @@ export function CorrectionScanner({
     setAlunoAutenticado(validacao.aluno);
 
     // Dispara a captura estática e análise de notas
-    executarCapturaEAnalise(video, payloadFinal, validacao.aluno);
+    executarCapturaEAnalise(video, payloadFinal, validacao.aluno, validacao.gabaritoEmbutido ?? null);
   };
 
   /**
@@ -469,7 +477,8 @@ export function CorrectionScanner({
   const executarCapturaEAnalise = async (
     video: HTMLVideoElement,
     payload: CardPayload,
-    aluno: AlunoModel
+    aluno: AlunoModel,
+    gabaritoEmbutido: GabaritoDecodificado | null = null
   ) => {
     if (scanLoopRef.current) {
       cancelAnimationFrame(scanLoopRef.current);
@@ -509,13 +518,39 @@ export function CorrectionScanner({
 
       // Localiza questões e gabarito oficial para a turma e ciclo
       const questoesBase = obterQuestoesParaProva(payload.classId, payload.stage);
-      const totalObjetivas = Math.max(1, questoesBase.filter(q => q.tipo === 'objetiva' || q.type === 'OBJECTIVE').length);
+
+      // Quantidade exata de questões da folha:
+      let totalObjetivas = 8;
+      if (qtdQuestoesOverride !== 'AUTO') {
+        totalObjetivas = Number(qtdQuestoesOverride);
+      } else if (gabaritoEmbutido) {
+        totalObjetivas = gabaritoEmbutido.totalQuestoes;
+      } else if ((payload as any).nq) {
+        totalObjetivas = Number((payload as any).nq);
+      } else if (questoesSelecionadas && questoesSelecionadas.length > 0) {
+        const selObj = questoesSelecionadas.filter(q => q.tipo === 'objetiva' || q.type === 'OBJECTIVE');
+        if (selObj.length > 0) totalObjetivas = selObj.length;
+      } else {
+        totalObjetivas = Math.max(1, questoesBase.filter(q => q.tipo === 'objetiva' || q.type === 'OBJECTIVE').length);
+      }
+      totalObjetivas = Math.min(30, Math.max(1, totalObjetivas));
+
+      const questoesEfetivas = questoesBase.slice(0, totalObjetivas);
+      const opcoesPorQuestao = gabaritoEmbutido?.opcoesPorQuestao ||
+        questoesEfetivas.map(q => {
+          const totalAlts = (q.options && q.options.length > 0)
+            ? q.options.length
+            : (q.alternativas && q.alternativas.length > 0)
+              ? q.alternativas.length
+              : 4;
+          return Math.min(5, Math.max(2, totalAlts));
+        });
 
       setAutoProgresso(45);
-      setEtapaAnalise('📐 Mapeando quadro de respostas óptico...');
+      setEtapaAnalise(`📐 Mapeando quadro para ${totalObjetivas} questões...`);
 
       const anchor = qrAnchorRef.current;
-      const resOMR = omrService.processarGradeOMRFromImageData(imgData, totalObjetivas, anchor || undefined);
+      const resOMR = omrService.processarGradeOMRFromImageData(imgData, totalObjetivas, anchor || undefined, opcoesPorQuestao);
 
       setAutoProgresso(80);
       setEtapaAnalise('✏️ Computando alternativas assinaladas...');
@@ -532,7 +567,7 @@ export function CorrectionScanner({
         turma: turmaCardObj,
         materia: tituloProva,
         versaoLetra,
-        questoesBase,
+        questoesBase: questoesEfetivas,
         shuffleQ,
         shuffleAlt,
         respostasDetectadas: resOMR.respostas,
@@ -540,7 +575,8 @@ export function CorrectionScanner({
         fillRatesCustom: resOMR.fillRates,
         fiduciaisValidados: true,
         simular: false,
-        stage: payload.stage
+        stage: payload.stage,
+        gabaritoEmbutido
       });
 
       // Desenha grid de sobreposição no canvas de resultado
@@ -789,6 +825,34 @@ export function CorrectionScanner({
             {cicloContingencia === 'AUTO' 
               ? '🎯 Ciclo detectado dinamicamente no QR Code da prova.' 
               : `⚠️ Contingência ativa: Forçando registro das notas em ${cicloContingencia}.`}
+          </div>
+        </div>
+
+        {/* 2.1 SELETOR DE QUANTIDADE DE QUESTÕES DA PROVA */}
+        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-600">Questões na Prova:</span>
+            <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+              {(['AUTO', 5, 8, 10, 15, 20, 25, 30] as const).map(opcao => (
+                <button
+                  key={String(opcao)}
+                  onClick={() => setQtdQuestoesOverride(opcao)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    qtdQuestoesOverride === opcao
+                      ? 'bg-catolica-primary text-white shadow-sm font-black'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {opcao === 'AUTO' ? 'Auto' : `${opcao} Q`}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="text-[11px] text-slate-500 font-medium">
+            {qtdQuestoesOverride === 'AUTO' 
+              ? '🎯 Quantidade detectada do QR / Prova montada.' 
+              : `📌 Limitando leitura a exatamente ${qtdQuestoesOverride} questões.`}
           </div>
         </div>
       </div>

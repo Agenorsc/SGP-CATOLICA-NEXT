@@ -17,6 +17,7 @@ import { AlunoModel } from '@/models/AlunoModel';
 import { TurmaModel } from '@/models/TurmaModel';
 import { Question, CardPayload, EvaluationStage, AvaliacaoCiclo } from '@/types';
 import { QRCodeWrapper } from '@/components/common/QRCodeWrapper';
+import { codificarGabaritoQr, sementeGabarito } from '@/lib/answerKey';
 
 // Textos e Orientações Padrão (Modelo Oficial Católica SC)
 const DEFAULT_ORIENTACOES_PROVA = [
@@ -134,6 +135,40 @@ export function ImpressaoTab({
 
   const codigoProvaFormatado = `${alunoAtual?.ra ? alunoAtual.ra.padStart(7, '0') : '2839932'}.${selectedVersionIdx % 4}`;
 
+  const questoesObjetivas = questoesEmbaralhadas.filter(
+    q => q.tipo === 'objetiva' || q.type === 'OBJECTIVE'
+  ).slice(0, 30);
+  const totalQuestoesObjetivas = Math.max(1, questoesObjetivas.length);
+  const pontosPorQuestao = (10 / totalQuestoesObjetivas).toFixed(1);
+
+  // Gabarito da folha exatamente como impressa (ordem + embaralhamento desta versão)
+  const LETRAS_GAB = ['A', 'B', 'C', 'D', 'E'];
+  const opcoesImpressas = questoesObjetivas.map(q =>
+    Math.min(5, (q.options && q.options.length > 0)
+      ? q.options.length
+      : (q.alternativas && q.alternativas.length > 0) ? q.alternativas.length : 5)
+  );
+  const respostasImpressas = questoesObjetivas.map(q => {
+    const idx = (q.options && q.options.length > 0)
+      ? q.options.findIndex(o => !!o.isCorrect)
+      : (q.alternativas || []).findIndex(a => !!a.correta);
+    return LETRAS_GAB[Math.max(0, Math.min(4, idx))];
+  });
+  const pontosImpressos = questoesObjetivas.map(q =>
+    Number(q.pontuacao ?? q.points ?? 10 / totalQuestoesObjetivas)
+  );
+  const raQr = withId ? (alunoAtual?.ra || '1328834') : 'ANONIMO';
+  const maxOpcoesCol1 = Math.max(4, ...opcoesImpressas.slice(0, 15));
+  const letrasCol1 = ['a', 'b', 'c', 'd', 'e'].slice(0, maxOpcoesCol1);
+  const maxOpcoesCol2 = Math.max(4, ...opcoesImpressas.slice(15, 30));
+  const letrasCol2 = ['a', 'b', 'c', 'd', 'e'].slice(0, maxOpcoesCol2);
+  const layoutGabarito = codificarGabaritoQr(
+    respostasImpressas,
+    opcoesImpressas,
+    pontosImpressos,
+    sementeGabarito(examId, raQr, versaoLetra)
+  );
+
   const qrPayload: CardPayload = {
     examId,
     classId: turmaSelecionadaId || 't1',
@@ -141,20 +176,15 @@ export function ImpressaoTab({
     teacherId: teacherId || turmaAtual?.professorId || 'prof-01',
     studentId: alunoAtual?.id || 'alu-01',
     studentName: withId ? (alunoAtual?.nome || 'AGENOR ALVISE') : 'ANONIMO',
-    studentRa: withId ? (alunoAtual?.ra || '1328834') : 'ANONIMO',
+    studentRa: raQr,
     stage: resolvedStage,
     system: 'SGP-CATOLICA',
     turmaId: turmaSelecionadaId || 't1',
     name: withId ? (alunoAtual?.nome || 'AGENOR ALVISE') : 'ANONIMO',
-    ra: withId ? (alunoAtual?.ra || '1328834') : 'ANONIMO',
-    examVersion: versaoLetra
+    ra: raQr,
+    examVersion: versaoLetra,
+    ...layoutGabarito
   };
-
-  const questoesObjetivas = questoesEmbaralhadas.filter(
-    q => q.tipo === 'objetiva' || q.type === 'OBJECTIVE'
-  );
-  const totalQuestoesObjetivas = Math.max(1, questoesObjetivas.length);
-  const pontosPorQuestao = (10 / totalQuestoesObjetivas).toFixed(1);
 
   // Manipuladores de Orientações da Prova
   const handleUpdateOrientacao = (index: number, value: string) => {
@@ -731,91 +761,43 @@ export function ImpressaoTab({
                       </span>
                     </div>
 
-                    {/* Grade de Respostas: 1 ou 2 subcolunas para até 30 questões */}
-                    <div className="flex items-start gap-4 font-mono">
-                      
-                      {/* Sub-coluna 1: Questões 1 até 15 (ou todas se <= 15) */}
-                      <div className="flex flex-col items-center">
-                        <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-800 print:text-black pb-0.5">
-                          <span className="w-7 inline-block text-right">Q:</span>
-                          <span className="w-4 text-center">a</span>
-                          <span className="w-4 text-center">b</span>
-                          <span className="w-4 text-center">c</span>
-                          <span className="w-4 text-center">d</span>
-                          <span className="w-4 text-center">e</span>
-                        </div>
+                    {/* Grade de Respostas: 1 ou 2 subcolunas para até 30 questões com Marcadores Fiduciais Dedicados */}
+                    <div className="relative border border-slate-300 print:border-black p-2.5 pt-3 pb-2.5 bg-white rounded-sm font-mono">
+                      {/* 4 Marcadores Fiduciais de Alta Precisão nos cantos da Grade */}
+                      <div className="absolute top-1 left-1 w-2.5 h-2.5 bg-black print:bg-black" />
+                      <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-black print:bg-black" />
+                      <div className="absolute bottom-1 left-1 w-2.5 h-2.5 bg-black print:bg-black" />
+                      <div className="absolute bottom-1 right-1 w-2.5 h-2.5 bg-black print:bg-black" />
 
-                        <div className="space-y-1">
-                          {questoesObjetivas.slice(0, questoesObjetivas.length > 15 ? 15 : questoesObjetivas.length).map((q, idx) => {
-                            const totalOpcoes = (q.options && q.options.length > 0)
-                              ? q.options.length
-                              : (q.alternativas && q.alternativas.length > 0)
-                                ? q.alternativas.length
-                                : 5;
-                            const letras = ['a', 'b', 'c', 'd', 'e'];
-
-                            return (
-                              <div key={q.id || idx} className="flex items-center gap-1.5 text-[9px]">
-                                <span className="w-7 text-right font-black text-slate-900 print:text-black">
-                                  Q.{idx + 1 < 10 ? `0${idx + 1}` : idx + 1}:
-                                </span>
-                                <div className="flex items-center gap-1.5">
-                                  {letras.slice(0, totalOpcoes).map(l => (
-                                    <div
-                                      key={l}
-                                      className="w-4 h-3.5 border border-dashed border-slate-900 print:border-black rounded-xs flex items-center justify-center text-[8px] font-bold text-slate-600 print:text-black bg-white"
-                                    >
-                                      {l}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-800 print:text-black pt-0.5">
-                          <span className="w-7 inline-block text-right">Q:</span>
-                          <span className="w-4 text-center">a</span>
-                          <span className="w-4 text-center">b</span>
-                          <span className="w-4 text-center">c</span>
-                          <span className="w-4 text-center">d</span>
-                          <span className="w-4 text-center">e</span>
-                        </div>
-                      </div>
-
-                      {/* Sub-coluna 2: Questões 16 até 30 (renderizada quando há mais de 15 questões) */}
-                      {questoesObjetivas.length > 15 && (
-                        <div className="flex flex-col items-center">
-                          <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-800 print:text-black pb-0.5">
-                            <span className="w-7 inline-block text-right">Q:</span>
-                            <span className="w-4 text-center">a</span>
-                            <span className="w-4 text-center">b</span>
-                            <span className="w-4 text-center">c</span>
-                            <span className="w-4 text-center">d</span>
-                            <span className="w-4 text-center">e</span>
+                      <div className="flex items-start gap-6 px-1">
+                        {/* Sub-coluna 1: Questões 1 até 15 (ou todas se <= 15) */}
+                        <div className="flex flex-col items-start">
+                          <div className="flex items-center gap-2 text-[10px] font-black text-slate-800 print:text-black pb-1">
+                            <span className="w-8 inline-block text-right pr-2">Q:</span>
+                            {letrasCol1.map(l => (
+                              <span key={l} className="w-5 text-center">{l}</span>
+                            ))}
                           </div>
 
-                          <div className="space-y-1">
-                            {questoesObjetivas.slice(15, 30).map((q, idxRel) => {
-                              const qNum = 16 + idxRel;
+                          <div className="space-y-1.5">
+                            {questoesObjetivas.slice(0, questoesObjetivas.length > 15 ? 15 : questoesObjetivas.length).map((q, idx) => {
                               const totalOpcoes = (q.options && q.options.length > 0)
                                 ? q.options.length
                                 : (q.alternativas && q.alternativas.length > 0)
-                                ? q.alternativas.length
-                                : 5;
+                                  ? q.alternativas.length
+                                  : 5;
                               const letras = ['a', 'b', 'c', 'd', 'e'];
 
                               return (
-                                <div key={q.id || qNum} className="flex items-center gap-1.5 text-[9px]">
-                                  <span className="w-7 text-right font-black text-slate-900 print:text-black">
-                                    Q.{qNum}:
+                                <div key={q.id || idx} className="flex items-center gap-2 text-[9px]">
+                                  <span className="w-8 text-right font-black text-slate-900 print:text-black pr-2 select-none">
+                                    Q.{idx + 1 < 10 ? `0${idx + 1}` : idx + 1}:
                                   </span>
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-2">
                                     {letras.slice(0, totalOpcoes).map(l => (
                                       <div
                                         key={l}
-                                        className="w-4 h-3.5 border border-dashed border-slate-900 print:border-black rounded-xs flex items-center justify-center text-[8px] font-bold text-slate-600 print:text-black bg-white"
+                                        className="w-5 h-4.5 border-[1.5px] border-slate-800 print:border-black rounded-xs flex items-center justify-center text-[7.5px] font-medium text-slate-400 print:text-slate-500 bg-white"
                                       >
                                         {l}
                                       </div>
@@ -826,17 +808,64 @@ export function ImpressaoTab({
                             })}
                           </div>
 
-                          <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-800 print:text-black pt-0.5">
-                            <span className="w-7 inline-block text-right">Q:</span>
-                            <span className="w-4 text-center">a</span>
-                            <span className="w-4 text-center">b</span>
-                            <span className="w-4 text-center">c</span>
-                            <span className="w-4 text-center">d</span>
-                            <span className="w-4 text-center">e</span>
+                          <div className="flex items-center gap-2 text-[10px] font-black text-slate-800 print:text-black pt-1">
+                            <span className="w-8 inline-block text-right pr-2">Q:</span>
+                            {letrasCol1.map(l => (
+                              <span key={l} className="w-5 text-center">{l}</span>
+                            ))}
                           </div>
                         </div>
-                      )}
 
+                        {/* Sub-coluna 2: Questões 16 até 30 (renderizada quando há mais de 15 questões) */}
+                        {questoesObjetivas.length > 15 && (
+                          <div className="flex flex-col items-start">
+                            <div className="flex items-center gap-2 text-[10px] font-black text-slate-800 print:text-black pb-1">
+                              <span className="w-8 inline-block text-right pr-2">Q:</span>
+                              {letrasCol2.map(l => (
+                                <span key={l} className="w-5 text-center">{l}</span>
+                              ))}
+                            </div>
+
+                            <div className="space-y-1.5">
+                              {questoesObjetivas.slice(15, 30).map((q, idxRel) => {
+                                const qNum = 16 + idxRel;
+                                const totalOpcoes = (q.options && q.options.length > 0)
+                                  ? q.options.length
+                                  : (q.alternativas && q.alternativas.length > 0)
+                                  ? q.alternativas.length
+                                  : 5;
+                                const letras = ['a', 'b', 'c', 'd', 'e'];
+
+                                return (
+                                  <div key={q.id || qNum} className="flex items-center gap-2 text-[9px]">
+                                    <span className="w-8 text-right font-black text-slate-900 print:text-black pr-2 select-none">
+                                      Q.{qNum}:
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      {letras.slice(0, totalOpcoes).map(l => (
+                                        <div
+                                          key={l}
+                                          className="w-5 h-4.5 border-[1.5px] border-slate-800 print:border-black rounded-xs flex items-center justify-center text-[7.5px] font-medium text-slate-400 print:text-slate-500 bg-white"
+                                        >
+                                          {l}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            <div className="flex items-center gap-2 text-[10px] font-black text-slate-800 print:text-black pt-1">
+                              <span className="w-8 inline-block text-right pr-2">Q:</span>
+                              {letrasCol2.map(l => (
+                                <span key={l} className="w-5 text-center">{l}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                      </div>
                     </div>
                   </div>
 

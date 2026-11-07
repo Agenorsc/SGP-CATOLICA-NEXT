@@ -70,9 +70,16 @@ const MIN_CONFIANCA = 0.50;
 export function lerGradeOmrPorAjuste(
   img: ImagemRGBA,
   totalQuestoes: number,
-  ancora: AncoraQrGrade
+  ancora: AncoraQrGrade,
+  opcoesPorQuestao?: number[]
 ): ResultadoGradeOmr | null {
   const N = Math.max(1, Math.min(30, Math.round(totalQuestoes)));
+  // Quantidade de alternativas impressas em cada linha (2..5; padrão 5)
+  const ops: number[] = Array.from({ length: N }, (_, i) => {
+    const o = Math.round(Number(opcoesPorQuestao?.[i] ?? 5));
+    return o >= 2 && o <= 5 ? o : 5;
+  });
+  const maxOps = Math.max(4, ...ops);
   const W = img.width;
   const H = img.height;
   const data = img.data;
@@ -98,7 +105,7 @@ export function lerGradeOmrPorAjuste(
   if (qrW < 24 || qrH < 24) return null;
 
   // ---------------------------------------------------------------------------
-  // 1. Escala de cinza + binarização adaptativa (limiar local)
+  // 1. Escala de cinza + redução de ruído + binarização adaptativa
   // ---------------------------------------------------------------------------
   const W1 = W + 1;
   const total = W * H;
@@ -128,8 +135,14 @@ export function lerGradeOmrPorAjuste(
   };
 
   const gray = new Uint8Array(total);
+  const isBluePen = new Uint8Array(total);
   for (let i = 0, p = 0; i < total; i++, p += 4) {
-    gray[i] = (data[p] * 77 + data[p + 1] * 150 + data[p + 2] * 29) >> 8;
+    const r = data[p], g = data[p + 1], b = data[p + 2];
+    gray[i] = (r * 77 + g * 150 + b * 29) >> 8;
+    // Caneta azul esferográfica (BIC / similar): canal Azul bem mais forte que Vermelho e Verde
+    if (b > r + 24 && b > g + 10) {
+      isBluePen[i] = 1;
+    }
   }
   const iiGray = integral(gray);
 
@@ -144,8 +157,8 @@ export function lerGradeOmrPorAjuste(
       const area = (x1 - x0) * (y1 - y0);
       const soma = somaImg(iiGray, x0, y0, x1, y1);
       const i = y * W + x;
-      // Pixel é "tinta" quando está 22% mais escuro que o papel ao redor
-      if (gray[i] * area < soma * 0.78) escuro[i] = 1;
+      // Pixel é tinta se estiver mais escuro que o papel ao redor OU se for traço nítido de caneta azul
+      if (gray[i] * area < soma * 0.82 || isBluePen[i] === 1) escuro[i] = 1;
     }
   }
   const iiEscuro = integral(escuro);
@@ -240,261 +253,529 @@ export function lerGradeOmrPorAjuste(
   };
 
   // ---------------------------------------------------------------------------
-  // 4. Busca global (grossa) da grade 5 × N
+  // Medição do preenchimento interno de cada quadrado (comum aos dois motores)
+  // Alternativas não impressas na linha (ex.: questão com 4 opções) recebem 0.
   // ---------------------------------------------------------------------------
-  const Sc = 48;
-  const aMinC = -3.9;
-  const aMaxC = 2.9;
-  const bMinC = 0.95;
-  const b1MaxU = 4.8;
-  const bMaxC = Math.min(b1MaxU + (N - 1) * 0.6 * 1.3 + 0.6, bMinC + 1400 / Sc);
-  const rc = retificar(Sc, aMinC, aMaxC, bMinC, bMaxC);
-  const anelC = criarCacheAnel(rc);
+  const medirPreenchimento = (
+    rf: Retificada,
+    Sf: number,
+    aMinF: number,
+    bMinF: number,
+    hPx: number,
+    centros: Pt[][],
+    confianca: number
+  ): ResultadoGradeOmr => {
+    const raioInterno = Math.max(1, Math.round(hPx * 0.6));
+    const areaInterna = (2 * raioInterno + 1) ** 2;
+    const fills: number[][] = centros.map((linha, q) =>
+      linha.map((p, c) =>
+        c < ops[q] ? Math.round((somaQuadrado(rf, p.x, p.y, raioInterno) / areaInterna) * 100) : 0
+      )
+    );
 
-  const pcMin = Math.ceil(0.2 * Sc);
-  const pcMax = Math.floor(0.6 * Sc);
-  const xMin = Math.max(0, Math.round((-3.6 - aMinC) * Sc));
-  const xEMax = Math.min(rc.w - 1, Math.round((2.5 - aMinC) * Sc));
-  const yMin = Math.max(0, Math.round((1.1 - bMinC) * Sc));
-  const yMaxB1 = Math.round((b1MaxU - bMinC) * Sc);
-  const proporcoes = [0.28, 0.35, 0.42];
+    const todos = fills.flatMap((linha, q) => linha.slice(0, ops[q])).sort((a, b) => a - b);
+    const fundoGlobal = todos[Math.floor(todos.length * 0.5)] || 0;
+    const maxGlobal = todos[todos.length - 1] || 0;
+    const amplitudeGlobal = maxGlobal - fundoGlobal;
 
-  let melhor = { score: -Infinity, x0: 0, y0: 0, pc: 0, pr: 0, prop: 0.35 };
-  const somaLinha = new Float32Array(rc.w * rc.h);
+    // Classificador OMR Padrão de Mercado (baseado em separação dinâmica de tinta vs texto impresso):
+    // As letras impressas 'a,b,c,d,e' têm preenchimento de ~10% a 20%.
+    // Uma marcação real de caneta (azul ou preta) preenche de 40% a 95%.
+    // O limiar de corte é posicionado dinamicamente entre o fundo impresso e a marca mais escura da folha.
+    const temMarcacaoRealNaFolha = amplitudeGlobal >= 16 && maxGlobal >= 32;
+    const limiarCorte = temMarcacaoRealNaFolha
+      ? Math.max(28, fundoGlobal + amplitudeGlobal * 0.30)
+      : 999;
 
-  for (let pc = pcMin; pc <= pcMax; pc++) {
-    for (const prop of proporcoes) {
-      const hPx = Math.max(2, Math.round(prop * pc));
-      const R = anelC(hPx);
-      const xLim = rc.w - 1 - 4 * pc;
-      for (let y = 0; y < rc.h; y++) {
-        const off = y * rc.w;
-        for (let x = 0; x <= xLim; x++) {
-          let s = 0;
-          for (let c = 0; c < 5; c++) {
-            const v = R[off + x + c * pc];
-            s += v > CAP_RESPOSTA ? CAP_RESPOSTA : v;
-          }
-          somaLinha[off + x] = s;
-        }
+    const respostas: Record<number, string | null> = {};
+    const statusQuestoes: Record<number, StatusQ> = {};
+    const fillRates: Record<number, number> = {};
+    const detalhesLetras: Record<number, Record<string, number>> = {};
+    const coordenadasDetectadas: ResultadoGradeOmr['coordenadasDetectadas'] = {};
+
+    const boxSizeImg = Math.max(6, Math.round(((2 * hPx) / Sf) * Math.max(qrW, qrH)));
+    const paraImagem = (p: Pt): Pt => {
+      const a = aMinF + (p.x + 0.5) / Sf;
+      const b = bMinF + (p.y + 0.5) / Sf;
+      return {
+        x: Math.round(tl.x + a * qrW * ux + b * qrH * vx),
+        y: Math.round(tl.y + a * qrW * uy + b * qrH * vy)
+      };
+    };
+
+    for (let q = 0; q < N; q++) {
+      const numero = q + 1;
+      const letrasLinha = LETRAS.slice(0, ops[q]);
+      const porLetra: Record<string, number> = {};
+      const coords: Record<string, { x: number; y: number; fill: number; boxSize?: number }> = {};
+      letrasLinha.forEach((letra, c) => {
+        porLetra[letra] = fills[q][c];
+        const pImg = paraImagem(centros[q][c]);
+        coords[letra] = { x: pImg.x, y: pImg.y, fill: fills[q][c], boxSize: boxSizeImg };
+      });
+      detalhesLetras[numero] = porLetra;
+      coordenadasDetectadas[numero] = coords;
+
+      const ordenadas = letrasLinha.map(l => ({ letra: l, fill: porLetra[l] })).sort((a, b) => b.fill - a.fill);
+      const f1 = ordenadas[0];
+      const f2 = ordenadas[1] ?? { letra: '', fill: 0 };
+
+      // Linha de base local da própria questão (média das outras opções em branco)
+      const opcoesEmBranco = ordenadas.slice(1).map(x => x.fill);
+      const linhaBase = opcoesEmBranco.length > 0
+        ? opcoesEmBranco[Math.floor(opcoesEmBranco.length / 2)]
+        : fundoGlobal;
+
+      // Para ser considerada marcada:
+      // 1. Deve ultrapassar o limiar de corte global (separando tinta de caneta das letras impressas 'a,b,c,d,e')
+      // 2. Deve ter destaque claro sobre as outras alternativas da mesma questão
+      const marcadaPrincipal = temMarcacaoRealNaFolha &&
+        f1.fill >= limiarCorte &&
+        f1.fill - linhaBase >= 14;
+
+      // Dupla marcação (anulada): duas alternativas preenchidas com tinta real
+      const marcadaSecundaria = marcadaPrincipal &&
+        f2.fill >= limiarCorte * 0.85 &&
+        f2.fill - linhaBase >= 12;
+
+      if (marcadaSecundaria) {
+        respostas[numero] = null;
+        statusQuestoes[numero] = 'ANULADA';
+      } else if (marcadaPrincipal) {
+        respostas[numero] = f1.letra;
+        statusQuestoes[numero] = 'CORRETA';
+      } else {
+        respostas[numero] = null;
+        statusQuestoes[numero] = 'EM_BRANCO';
       }
-      const prIni = Math.max(2, Math.round(pc * 0.88));
-      const prFim = Math.round(pc * 1.3);
-      for (let pr = prIni; pr <= prFim; pr++) {
-        for (let y0 = yMin; y0 <= yMaxB1 && y0 + (N - 1) * pr < rc.h; y0 += 2) {
-          for (let x0 = xMin; x0 + 4 * pc <= xEMax && x0 <= xLim; x0 += 2) {
-            let s = 0;
-            for (let q = 0; q < N; q++) {
-              s += somaLinha[(y0 + q * pr) * rc.w + x0];
-            }
-            if (s > melhor.score) {
-              melhor = { score: s, x0, y0, pc, pr, prop };
-            }
-          }
-        }
-      }
-    }
-  }
-
-  if (!isFinite(melhor.score) || melhor.pc === 0) return null;
-
-  // Refino ±2 px (passo 1) na escala grossa
-  {
-    const hPx = Math.max(2, Math.round(melhor.prop * melhor.pc));
-    const R = anelC(hPx);
-    const base = { ...melhor };
-    for (let dy = -2; dy <= 2; dy++) {
-      for (let dx = -2; dx <= 2; dx++) {
-        const x0 = base.x0 + dx;
-        const y0 = base.y0 + dy;
-        if (x0 < 0 || y0 < 0 || x0 + 4 * base.pc >= rc.w || y0 + (N - 1) * base.pr >= rc.h) continue;
-        let s = 0;
-        for (let q = 0; q < N; q++) {
-          const off = (y0 + q * base.pr) * rc.w;
-          for (let c = 0; c < 5; c++) {
-            const v = R[off + x0 + c * base.pc];
-            s += v > CAP_RESPOSTA ? CAP_RESPOSTA : v;
-          }
-        }
-        if (s > melhor.score) melhor = { ...base, score: s, x0, y0 };
-      }
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // 5. Refinamento fino em resolução próxima da nativa
-  // ---------------------------------------------------------------------------
-  const pcU = melhor.pc / Sc;
-  const prU = melhor.pr / Sc;
-  const aA = aMinC + (melhor.x0 + 0.5) / Sc;
-  const b1 = bMinC + (melhor.y0 + 0.5) / Sc;
-
-  const Sf = Math.max(64, Math.min(160, Math.round(Math.max(qrW, qrH))));
-  const aMinF = aA - pcU * 1.3;
-  const aMaxF = aA + 4 * pcU + pcU * 1.3;
-  const bMinF = b1 - prU * 1.3;
-  const bMaxF = b1 + (N - 1) * prU + prU * 1.3;
-  const rf = retificar(Sf, aMinF, aMaxF, bMinF, bMaxF);
-  const anelF = criarCacheAnel(rf);
-
-  const x0c = (aA - aMinF) * Sf - 0.5;
-  const y0c = (b1 - bMinF) * Sf - 0.5;
-  const pcC = pcU * Sf;
-  const prC = prU * Sf;
-  const escala = Sf / Sc;
-  const raio = Math.max(2, Math.ceil(escala * 1.5));
-
-  const lerR = (R: Float32Array, x: number, y: number): number => {
-    if (x < 0 || y < 0 || x >= rf.w || y >= rf.h) return -0.2;
-    return R[y * rf.w + x];
-  };
-
-  let fino = { score: -Infinity, x0: x0c, y0: y0c, pc: pcC, pr: prC, hPx: Math.max(2, Math.round(melhor.prop * pcC)) };
-  const propsFinas = [melhor.prop - 0.05, melhor.prop, melhor.prop + 0.05];
-  for (const prop of propsFinas) {
-    const hPx = Math.max(2, Math.round(prop * pcC));
-    const R = anelF(hPx);
-    for (let k = -4; k <= 4; k++) {
-      const pcF = pcC * (1 + k * 0.01);
-      for (let m = -4; m <= 4; m++) {
-        const prF = prC * (1 + m * 0.01);
-        for (let dy = -raio; dy <= raio; dy++) {
-          for (let dx = -raio; dx <= raio; dx++) {
-            const bx = x0c + dx;
-            const by = y0c + dy;
-            let s = 0;
-            for (let q = 0; q < N; q++) {
-              const yy = Math.round(by + q * prF);
-              for (let c = 0; c < 5; c++) {
-                const v = lerR(R, Math.round(bx + c * pcF), yy);
-                s += v > CAP_RESPOSTA ? CAP_RESPOSTA : v;
-              }
-            }
-            if (s > fino.score) fino = { score: s, x0: bx, y0: by, pc: pcF, pr: prF, hPx };
-          }
-        }
-      }
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // 6. Ajuste por linha e micro-centralização por quadrado
-  // ---------------------------------------------------------------------------
-  const Rf = anelF(fino.hPx);
-  const raioLinha = Math.max(1, Math.round(fino.pc * 0.08));
-  const raioCel = Math.max(1, Math.round(fino.pc * 0.05));
-  const centros: Pt[][] = [];
-  let celulasOk = 0;
-
-  for (let q = 0; q < N; q++) {
-    const yBase = fino.y0 + q * fino.pr;
-    let melhorLinha = { s: -Infinity, dx: 0, dy: 0 };
-    for (let dy = -raioLinha; dy <= raioLinha; dy++) {
-      for (let dx = -raioLinha; dx <= raioLinha; dx++) {
-        let s = 0;
-        const yy = Math.round(yBase + dy);
-        for (let c = 0; c < 5; c++) {
-          const v = lerR(Rf, Math.round(fino.x0 + c * fino.pc + dx), yy);
-          s += v > CAP_RESPOSTA ? CAP_RESPOSTA : v;
-        }
-        // Leve preferência pela posição prevista (evita saltos)
-        s -= (Math.abs(dx) + Math.abs(dy)) * 0.002;
-        if (s > melhorLinha.s) melhorLinha = { s, dx, dy };
-      }
+      fillRates[numero] = f1.fill;
     }
 
-    const linha: Pt[] = [];
-    for (let c = 0; c < 5; c++) {
-      const cx0 = Math.round(fino.x0 + c * fino.pc + melhorLinha.dx);
-      const cy0 = Math.round(yBase + melhorLinha.dy);
-      let bx = cx0, by = cy0, bv = lerR(Rf, cx0, cy0);
-      for (let dy = -raioCel; dy <= raioCel; dy++) {
-        for (let dx = -raioCel; dx <= raioCel; dx++) {
-          const v = lerR(Rf, cx0 + dx, cy0 + dy) - (Math.abs(dx) + Math.abs(dy)) * 0.002;
-          if (v > bv) { bv = v; bx = cx0 + dx; by = cy0 + dy; }
-        }
-      }
-      if (lerR(Rf, bx, by) >= MIN_RESPOSTA_CELULA) celulasOk++;
-      linha.push({ x: bx, y: by });
-    }
-    centros.push(linha);
-  }
-
-  const confianca = celulasOk / (5 * N);
-  if (confianca < MIN_CONFIANCA) return null;
-
-  // ---------------------------------------------------------------------------
-  // 7. Medição do preenchimento interno de cada quadrado
-  // ---------------------------------------------------------------------------
-  const raioInterno = Math.max(1, Math.round(fino.hPx * 0.6));
-  const areaInterna = (2 * raioInterno + 1) ** 2;
-  const fills: number[][] = centros.map(linha =>
-    linha.map(p => Math.round((somaQuadrado(rf, p.x, p.y, raioInterno) / areaInterna) * 100))
-  );
-
-  const todos = fills.flat().sort((a, b) => a - b);
-  const fundo = todos[Math.floor(todos.length / 2)]; // mediana ≈ quadrado em branco (letra impressa)
-  const maxFill = todos[todos.length - 1];
-  const amplitude = Math.max(0, maxFill - fundo);
-  const limiarPrincipal = Math.max(18, amplitude * 0.4);
-  const limiarSecundario = Math.max(14, amplitude * 0.3);
-
-  const respostas: Record<number, string | null> = {};
-  const statusQuestoes: Record<number, StatusQ> = {};
-  const fillRates: Record<number, number> = {};
-  const detalhesLetras: Record<number, Record<string, number>> = {};
-  const coordenadasDetectadas: ResultadoGradeOmr['coordenadasDetectadas'] = {};
-
-  const boxSizeImg = Math.max(6, Math.round(((2 * fino.hPx) / Sf) * Math.max(qrW, qrH)));
-  const paraImagem = (p: Pt): Pt => {
-    const a = aMinF + (p.x + 0.5) / Sf;
-    const b = bMinF + (p.y + 0.5) / Sf;
     return {
-      x: Math.round(tl.x + a * qrW * ux + b * qrH * vx),
-      y: Math.round(tl.y + a * qrW * uy + b * qrH * vy)
+      respostas,
+      statusQuestoes,
+      fillRates,
+      detalhesLetras,
+      coordenadasDetectadas,
+      confianca: Math.round(confianca * 100) / 100,
+      metodo: 'grid-fit'
     };
   };
 
-  for (let q = 0; q < N; q++) {
-    const numero = q + 1;
-    const porLetra: Record<string, number> = {};
-    const coords: Record<string, { x: number; y: number; fill: number; boxSize?: number }> = {};
-    LETRAS.forEach((letra, c) => {
-      porLetra[letra] = fills[q][c];
-      const pImg = paraImagem(centros[q][c]);
-      coords[letra] = { x: pImg.x, y: pImg.y, fill: fills[q][c], boxSize: boxSizeImg };
-    });
-    detalhesLetras[numero] = porLetra;
-    coordenadasDetectadas[numero] = coords;
+  // ---------------------------------------------------------------------------
+  // 4A. Motor Primário: Layout Oficial Católica SC (Grade à Direita do QR Code)
+  //
+  // Geometria do DOM impresso (ImpressaoTab.tsx), em unidades do QR (115 px):
+  //   passo entre colunas  = 16 px + 6 px  = 22 px ≈ 0.19
+  //   passo entre linhas   = 14 px + 4 px  = 18 px ≈ 0.157  (≈ 0.82 × passo col.)
+  //   subcoluna 2 (Q16-30) = 138 px + 16 px = 154 px = 7 passos de coluna
+  // A posição horizontal varia (justify-between depende da largura da página),
+  // por isso a origem é buscada numa faixa larga à direita do QR.
+  // Somente as alternativas realmente impressas em cada linha são pontuadas.
+  // ---------------------------------------------------------------------------
+  const ajustarGradeCatolica = (): ResultadoGradeOmr | null => {
+    const N1 = Math.min(15, N);
+    const N2 = N > 15 ? N - 15 : 0;
+    const opsLinha = (q: number) => ops[q];
 
-    const ordenadas = LETRAS.map(l => ({ letra: l, fill: porLetra[l] })).sort((a, b) => b.fill - a.fill);
-    const f1 = ordenadas[0];
-    const f2 = ordenadas[1];
-    const marcadaPrincipal = f1.fill - fundo >= limiarPrincipal && f1.fill >= 30;
-    const marcadaSecundaria = marcadaPrincipal && f2.fill - fundo >= limiarSecundario && f2.fill >= 25;
+    const Sc = 48;
+    const aMinC = 0.9;
+    const aMaxC = 7.8;
+    // O início da questão 1 (Q.01) na folha oficial Católica SC fica em torno de b1 = +0.18 a +0.22 do QR Code.
+    // Restringir b1Min a 0.10 e bMinC a 0.04 impede que o algoritmo suba e trave
+    // nas bordas do quadro ou no cabeçalho de letras "Q: a b c d e", garantindo alinhamento exato de Q.01.
+    const bMinC = 0.04;
+    const b1Min = 0.10;
+    const b1Max = 0.28;
+    const prMaxU = 0.25;
+    const bMaxC = b1Max + (N1 - 1) * prMaxU + 0.35;
+    const rc = retificar(Sc, aMinC, aMaxC, bMinC, bMaxC);
+    const anelC = criarCacheAnel(rc);
 
-    if (marcadaSecundaria) {
-      respostas[numero] = null;
-      statusQuestoes[numero] = 'ANULADA';
-      fillRates[numero] = f1.fill;
-    } else if (marcadaPrincipal) {
-      respostas[numero] = f1.letra;
-      statusQuestoes[numero] = 'CORRETA';
-      fillRates[numero] = f1.fill;
-    } else {
-      respostas[numero] = null;
-      statusQuestoes[numero] = 'EM_BRANCO';
-      fillRates[numero] = f1.fill;
+    const pcMin = Math.max(8, Math.ceil(0.17 * Sc));
+    const pcMax = Math.floor(0.26 * Sc);
+    const aSearchMin = N > 15 ? 1.55 : 4.25;
+    const aSearchMax = N > 15 ? 2.15 : 4.65;
+    const xMin = Math.max(0, Math.round((aSearchMin - aMinC) * Sc));
+    const xMax = Math.min(rc.w - 1, Math.round((aSearchMax - aMinC) * Sc));
+    const yMin = Math.max(0, Math.round((b1Min - bMinC) * Sc));
+    const yMax = Math.round((b1Max - bMinC) * Sc);
+    const proporcoes = [0.3, 0.37, 0.44];
+    const multCol2 = N2 > 0 ? [6.6, 7.0, 7.4] : [0];
+
+    let melhor = { score: -Infinity, x0: 0, y0: 0, pc: 0, pr: 0, prop: 0.37, off2: 0 };
+    // somaLinha[k][y*w+x] = soma das k primeiras colunas (k = 2..5) a partir de x
+    const somaK: Float32Array[] = [2, 3, 4, 5].map(() => new Float32Array(rc.w * rc.h));
+
+    for (let pc = pcMin; pc <= pcMax; pc++) {
+      for (const prop of proporcoes) {
+        const hPx = Math.max(2, Math.round(prop * pc));
+        const R = anelC(hPx);
+        for (let y = 0; y < rc.h; y++) {
+          const off = y * rc.w;
+          for (let x = 0; x < rc.w; x++) {
+            let s = 0;
+            for (let c = 0; c < 5; c++) {
+              const xx = x + c * pc;
+              const v = xx < rc.w ? R[off + xx] : -0.2;
+              s += v > CAP_RESPOSTA ? CAP_RESPOSTA : v;
+              if (c >= 1) somaK[c - 1][off + x] = s;
+            }
+          }
+        }
+        const lerSoma = (k: number, x: number, y: number) =>
+          x < 0 || y < 0 || x >= rc.w || y >= rc.h ? -0.2 * k : somaK[k - 2][y * rc.w + x];
+
+        const prIni = Math.max(2, Math.round(pc * 0.45));
+        const prFim = Math.round(pc * 1.08);
+        for (const m2 of multCol2) {
+          const off2 = Math.round(m2 * pc);
+          const colSpan = (maxOps - 1) * pc;
+          const largura = (N2 > 0 ? off2 : 0) + colSpan;
+          for (let pr = prIni; pr <= prFim; pr++) {
+            for (let y0 = yMin; y0 <= yMax && y0 + (N1 - 1) * pr < rc.h; y0 += 2) {
+              for (let x0 = xMin; x0 <= xMax && x0 + largura < rc.w; x0 += 2) {
+                let s = 0;
+                for (let q = 0; q < N1; q++) s += lerSoma(opsLinha(q), x0, y0 + q * pr);
+                for (let q = 0; q < N2; q++) s += lerSoma(opsLinha(15 + q), x0 + off2, y0 + q * pr);
+                if (s > melhor.score) melhor = { score: s, x0, y0, pc, pr, prop, off2 };
+              }
+            }
+          }
+        }
+      }
     }
+
+    if (!isFinite(melhor.score) || melhor.pc === 0) return null;
+
+    // Refinamento fino em resolução próxima da nativa
+    const pcU = melhor.pc / Sc;
+    const prU = melhor.pr / Sc;
+    const aA1 = aMinC + (melhor.x0 + 0.5) / Sc;
+    const aA2 = aA1 + melhor.off2 / Sc;
+    const b1 = bMinC + (melhor.y0 + 0.5) / Sc;
+
+    const Sf = Math.max(64, Math.min(160, Math.round(Math.max(qrW, qrH))));
+    const aMinF = aA1 - pcU * 1.5;
+    const aMaxF = (N2 > 0 ? aA2 : aA1) + (maxOps - 1) * pcU + pcU * 1.5;
+    const bMinF = b1 - prU * 1.5;
+    const bMaxF = b1 + (N1 - 1) * prU + prU * 1.5;
+    const rf = retificar(Sf, aMinF, aMaxF, bMinF, bMaxF);
+    const anelF = criarCacheAnel(rf);
+
+    const lerR = (R: Float32Array, x: number, y: number): number => {
+      if (x < 0 || y < 0 || x >= rf.w || y >= rf.h) return -0.2;
+      return R[y * rf.w + x];
+    };
+
+    const x0c = (aA1 - aMinF) * Sf - 0.5;
+    const x0c2 = (aA2 - aMinF) * Sf - 0.5;
+    const y0c = (b1 - bMinF) * Sf - 0.5;
+    const pcC = pcU * Sf;
+    const prC = prU * Sf;
+    const raio = Math.max(2, Math.ceil((Sf / Sc) * 1.5));
+
+    const pontuar = (R: Float32Array, bx: number, bx2: number, by: number, pcF: number, prF: number) => {
+      let s = 0;
+      for (let q = 0; q < N; q++) {
+        const col2 = q >= 15;
+        const yy = Math.round(by + (col2 ? q - 15 : q) * prF);
+        const xb = col2 ? bx2 : bx;
+        for (let c = 0; c < opsLinha(q); c++) {
+          const v = lerR(R, Math.round(xb + c * pcF), yy);
+          s += v > CAP_RESPOSTA ? CAP_RESPOSTA : v;
+        }
+      }
+      return s;
+    };
+
+    let fino = { score: -Infinity, x0: x0c, x02: x0c2, y0: y0c, pc: pcC, pr: prC, hPx: Math.max(2, Math.round(melhor.prop * pcC)) };
+    for (const prop of [melhor.prop - 0.05, melhor.prop, melhor.prop + 0.05]) {
+      const hPx = Math.max(2, Math.round(prop * pcC));
+      const R = anelF(hPx);
+      for (let k = -4; k <= 4; k++) {
+        const pcF = pcC * (1 + k * 0.012);
+        for (let m = -6; m <= 6; m++) {
+          const prF = prC * (1 + m * 0.015);
+          for (let dy = -raio; dy <= raio; dy++) {
+            for (let dx = -raio; dx <= raio; dx++) {
+              const s = pontuar(R, x0c + dx, x0c2 + dx, y0c + dy, pcF, prF);
+              if (s > fino.score) fino = { score: s, x0: x0c + dx, x02: x0c2 + dx, y0: y0c + dy, pc: pcF, pr: prF, hPx };
+            }
+          }
+        }
+      }
+    }
+
+    // Ajuste independente da subcoluna 2
+    let deslocY2 = 0;
+    if (N2 > 0) {
+      const R = anelF(fino.hPx);
+      const r2 = Math.max(2, Math.round(fino.pc * 0.4));
+      let best2 = { s: -Infinity, dx: 0, dy: 0 };
+      for (let dy = -r2; dy <= r2; dy++) {
+        for (let dx = -r2; dx <= r2; dx++) {
+          let s = 0;
+          for (let q = 15; q < N; q++) {
+            const yy = Math.round(fino.y0 + dy + (q - 15) * fino.pr);
+            for (let c = 0; c < opsLinha(q); c++) {
+              const v = lerR(R, Math.round(fino.x02 + dx + c * fino.pc), yy);
+              s += v > CAP_RESPOSTA ? CAP_RESPOSTA : v;
+            }
+          }
+          s -= (Math.abs(dx) + Math.abs(dy)) * 0.002;
+          if (s > best2.s) best2 = { s, dx, dy };
+        }
+      }
+      fino = { ...fino, x02: fino.x02 + best2.dx };
+      deslocY2 = best2.dy;
+    }
+
+    const Rf = anelF(fino.hPx);
+    // Ajuste de linha com janela suficiente para compensar curvatura do papel e inclinação
+    const raioLinhaY = Math.max(3, Math.round(fino.pr * 0.28));
+    const raioLinhaX = Math.max(2, Math.round(fino.pc * 0.15));
+    const centros: Pt[][] = [];
+    let celulasOk = 0;
+    let celulasTotal = 0;
+
+    for (let q = 0; q < N; q++) {
+      const col2 = q >= 15;
+      const colX0 = col2 ? fino.x02 : fino.x0;
+      const yBase = fino.y0 + (col2 ? q - 15 : q) * fino.pr + (col2 ? deslocY2 : 0);
+      const nOps = opsLinha(q);
+
+      let melhorLinha = { s: -Infinity, dx: 0, dy: 0 };
+      for (let dy = -raioLinhaY; dy <= raioLinhaY; dy++) {
+        for (let dx = -raioLinhaX; dx <= raioLinhaX; dx++) {
+          let s = 0;
+          const yy = Math.round(yBase + dy);
+          for (let c = 0; c < nOps; c++) {
+            const v = lerR(Rf, Math.round(colX0 + c * fino.pc + dx), yy);
+            s += v > CAP_RESPOSTA ? CAP_RESPOSTA : v;
+          }
+          s -= (Math.abs(dx) + Math.abs(dy)) * 0.002;
+          if (s > melhorLinha.s) melhorLinha = { s, dx, dy };
+        }
+      }
+
+      // Mantém as alternativas rigidamente alinhadas na linha da questão (sem pular para bordas externas)
+      const linha: Pt[] = [];
+      const cy = Math.round(yBase + melhorLinha.dy);
+      for (let c = 0; c < maxOps; c++) {
+        const cx = Math.round(colX0 + c * fino.pc + melhorLinha.dx);
+        if (c < nOps) {
+          celulasTotal++;
+          if (lerR(Rf, cx, cy) >= MIN_RESPOSTA_CELULA) celulasOk++;
+        }
+        linha.push({ x: cx, y: cy });
+      }
+      centros.push(linha);
+    }
+
+    const confianca = celulasTotal > 0 ? celulasOk / celulasTotal : 0;
+    if (confianca < MIN_CONFIANCA) return null;
+
+    return medirPreenchimento(rf, Sf, aMinF, bMinF, fino.hPx, centros, confianca);
+  };
+
+  // ---------------------------------------------------------------------------
+  // 4B. Motor Secundário: Layout Legado Vertical (Grade Abaixo do QR Code)
+  // Mantido para compatibilidade retroativa com folhas legadas e testes unitários
+  // ---------------------------------------------------------------------------
+  const ajustarGradeLegada = (): ResultadoGradeOmr | null => {
+    const Sc = 48;
+    const aMinC = -3.9;
+    const aMaxC = 2.9;
+    const bMinC = 0.95;
+    const b1MaxU = 4.8;
+    const bMaxC = Math.min(b1MaxU + (N - 1) * 0.6 * 1.3 + 0.6, bMinC + 1400 / Sc);
+    const rc = retificar(Sc, aMinC, aMaxC, bMinC, bMaxC);
+    const anelC = criarCacheAnel(rc);
+
+    const pcMin = Math.ceil(0.2 * Sc);
+    const pcMax = Math.floor(0.6 * Sc);
+    const xMin = Math.max(0, Math.round((-3.6 - aMinC) * Sc));
+    const xEMax = Math.min(rc.w - 1, Math.round((2.5 - aMinC) * Sc));
+    const yMin = Math.max(0, Math.round((1.1 - bMinC) * Sc));
+    const yMaxB1 = Math.round((b1MaxU - bMinC) * Sc);
+    const proporcoes = [0.28, 0.35, 0.42];
+
+    let melhor = { score: -Infinity, x0: 0, y0: 0, pc: 0, pr: 0, prop: 0.35 };
+    const somaLinha = new Float32Array(rc.w * rc.h);
+
+    for (let pc = pcMin; pc <= pcMax; pc++) {
+      for (const prop of proporcoes) {
+        const hPx = Math.max(2, Math.round(prop * pc));
+        const R = anelC(hPx);
+        const xLim = rc.w - 1 - 4 * pc;
+        for (let y = 0; y < rc.h; y++) {
+          const off = y * rc.w;
+          for (let x = 0; x <= xLim; x++) {
+            let s = 0;
+            for (let c = 0; c < 5; c++) {
+              const v = R[off + x + c * pc];
+              s += v > CAP_RESPOSTA ? CAP_RESPOSTA : v;
+            }
+            somaLinha[off + x] = s;
+          }
+        }
+        const prIni = Math.max(2, Math.round(pc * 0.88));
+        const prFim = Math.round(pc * 1.3);
+        for (let pr = prIni; pr <= prFim; pr++) {
+          for (let y0 = yMin; y0 <= yMaxB1 && y0 + (N - 1) * pr < rc.h; y0 += 2) {
+            for (let x0 = xMin; x0 + 4 * pc <= xEMax && x0 <= xLim; x0 += 2) {
+              let s = 0;
+              for (let q = 0; q < N; q++) {
+                s += somaLinha[(y0 + q * pr) * rc.w + x0];
+              }
+              if (s > melhor.score) {
+                melhor = { score: s, x0, y0, pc, pr, prop };
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (!isFinite(melhor.score) || melhor.pc === 0) return null;
+
+    // Refino ±2 px (passo 1) na escala grossa
+    {
+      const hPx = Math.max(2, Math.round(melhor.prop * melhor.pc));
+      const R = anelC(hPx);
+      const base = { ...melhor };
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const x0 = base.x0 + dx;
+          const y0 = base.y0 + dy;
+          if (x0 < 0 || y0 < 0 || x0 + 4 * base.pc >= rc.w || y0 + (N - 1) * base.pr >= rc.h) continue;
+          let s = 0;
+          for (let q = 0; q < N; q++) {
+            const off = (y0 + q * base.pr) * rc.w;
+            for (let c = 0; c < 5; c++) {
+              const v = R[off + x0 + c * base.pc];
+              s += v > CAP_RESPOSTA ? CAP_RESPOSTA : v;
+            }
+          }
+          if (s > melhor.score) melhor = { ...base, score: s, x0, y0 };
+        }
+      }
+    }
+
+    // Refinamento fino em resolução próxima da nativa
+    const pcU = melhor.pc / Sc;
+    const prU = melhor.pr / Sc;
+    const aA = aMinC + (melhor.x0 + 0.5) / Sc;
+    const b1 = bMinC + (melhor.y0 + 0.5) / Sc;
+
+    const Sf = Math.max(64, Math.min(160, Math.round(Math.max(qrW, qrH))));
+    const aMinF = aA - pcU * 1.3;
+    const aMaxF = aA + 4 * pcU + pcU * 1.3;
+    const bMinF = b1 - prU * 1.3;
+    const bMaxF = b1 + (N - 1) * prU + prU * 1.3;
+    const rf = retificar(Sf, aMinF, aMaxF, bMinF, bMaxF);
+    const anelF = criarCacheAnel(rf);
+
+    const x0c = (aA - aMinF) * Sf - 0.5;
+    const y0c = (b1 - bMinF) * Sf - 0.5;
+    const pcC = pcU * Sf;
+    const prC = prU * Sf;
+    const escala = Sf / Sc;
+    const raio = Math.max(2, Math.ceil(escala * 1.5));
+
+    const lerR = (R: Float32Array, x: number, y: number): number => {
+      if (x < 0 || y < 0 || x >= rf.w || y >= rf.h) return -0.2;
+      return R[y * rf.w + x];
+    };
+
+    let fino = { score: -Infinity, x0: x0c, y0: y0c, pc: pcC, pr: prC, hPx: Math.max(2, Math.round(melhor.prop * pcC)) };
+    const propsFinas = [melhor.prop - 0.05, melhor.prop, melhor.prop + 0.05];
+    for (const prop of propsFinas) {
+      const hPx = Math.max(2, Math.round(prop * pcC));
+      const R = anelF(hPx);
+      for (let k = -4; k <= 4; k++) {
+        const pcF = pcC * (1 + k * 0.01);
+        for (let m = -4; m <= 4; m++) {
+          const prF = prC * (1 + m * 0.01);
+          for (let dy = -raio; dy <= raio; dy++) {
+            for (let dx = -raio; dx <= raio; dx++) {
+              const bx = x0c + dx;
+              const by = y0c + dy;
+              let s = 0;
+              for (let q = 0; q < N; q++) {
+                const yy = Math.round(by + q * prF);
+                for (let c = 0; c < 5; c++) {
+                  const v = lerR(R, Math.round(bx + c * pcF), yy);
+                  s += v > CAP_RESPOSTA ? CAP_RESPOSTA : v;
+                }
+              }
+              if (s > fino.score) fino = { score: s, x0: bx, y0: by, pc: pcF, pr: prF, hPx };
+            }
+          }
+        }
+      }
+    }
+
+    const Rf = anelF(fino.hPx);
+    const raioLinha = Math.max(1, Math.round(fino.pc * 0.08));
+    const raioCel = Math.max(1, Math.round(fino.pc * 0.05));
+    const centros: Pt[][] = [];
+    let celulasOk = 0;
+
+    for (let q = 0; q < N; q++) {
+      const yBase = fino.y0 + q * fino.pr;
+      let melhorLinha = { s: -Infinity, dx: 0, dy: 0 };
+      for (let dy = -raioLinha; dy <= raioLinha; dy++) {
+        for (let dx = -raioLinha; dx <= raioLinha; dx++) {
+          let s = 0;
+          const yy = Math.round(yBase + dy);
+          for (let c = 0; c < 5; c++) {
+            const v = lerR(Rf, Math.round(fino.x0 + c * fino.pc + dx), yy);
+            s += v > CAP_RESPOSTA ? CAP_RESPOSTA : v;
+          }
+          s -= (Math.abs(dx) + Math.abs(dy)) * 0.002;
+          if (s > melhorLinha.s) melhorLinha = { s, dx, dy };
+        }
+      }
+
+      const linha: Pt[] = [];
+      for (let c = 0; c < 5; c++) {
+        const cx0 = Math.round(fino.x0 + c * fino.pc + melhorLinha.dx);
+        const cy0 = Math.round(yBase + melhorLinha.dy);
+        let bx = cx0, by = cy0, bv = lerR(Rf, cx0, cy0);
+        for (let dy = -raioCel; dy <= raioCel; dy++) {
+          for (let dx = -raioCel; dx <= raioCel; dx++) {
+            const v = lerR(Rf, cx0 + dx, cy0 + dy) - (Math.abs(dx) + Math.abs(dy)) * 0.002;
+            if (v > bv) { bv = v; bx = cx0 + dx; by = cy0 + dy; }
+          }
+        }
+        if (lerR(Rf, bx, by) >= MIN_RESPOSTA_CELULA) celulasOk++;
+        linha.push({ x: bx, y: by });
+      }
+      centros.push(linha);
+    }
+
+    const confianca = celulasOk / (5 * N);
+    if (confianca < MIN_CONFIANCA) return null;
+
+    return medirPreenchimento(rf, Sf, aMinF, bMinF, fino.hPx, centros, confianca);
+  };
+
+  // Executa primeiramente o motor oficial Católica SC (grade à direita).
+  // Se não encontrar com confiança suficiente, aciona o motor secundário legado.
+  const resCatolica = ajustarGradeCatolica();
+  if (resCatolica && resCatolica.confianca >= MIN_CONFIANCA) {
+    return resCatolica;
+  }
+  if (resCatolica && resCatolica.confianca >= 0.35) {
+    return resCatolica;
   }
 
-  return {
-    respostas,
-    statusQuestoes,
-    fillRates,
-    detalhesLetras,
-    coordenadasDetectadas,
-    confianca: Math.round(confianca * 100) / 100,
-    metodo: 'grid-fit'
-  };
+  const resLegada = ajustarGradeLegada();
+  if (resLegada && resLegada.confianca >= MIN_CONFIANCA) {
+    return resLegada;
+  }
+
+  return resCatolica ?? resLegada ?? null;
 }

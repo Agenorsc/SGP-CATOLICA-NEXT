@@ -13,6 +13,7 @@ import {
 } from '@/types';
 import { lerGradeOmrPorAjuste } from '@/services/omr/GridOmrEngine';
 import { shuffleArray } from '@/lib/shuffle';
+import { decodificarGabaritoQr, sementeGabarito, GabaritoDecodificado } from '@/lib/answerKey';
 
 export interface ValidacaoQrResult {
   sucesso: boolean;
@@ -23,6 +24,7 @@ export interface ValidacaoQrResult {
   inconsistenciaTurma?: boolean;
   turmaDetectadaNome?: string;
   turmaAtivaNome?: string;
+  gabaritoEmbutido?: GabaritoDecodificado | null;
 }
 
 export interface QrCodeAnchor {
@@ -226,14 +228,21 @@ export class OmrService {
       turmaId: classId || alunoEncontrado.turmaId,
       name: alunoEncontrado.nome,
       ra: alunoEncontrado.ra,
-      examVersion: examVersion || 'A'
+      examVersion: examVersion || 'A',
+      ...(parsed.k && parsed.nq
+        ? { nq: Number(parsed.nq), op: String(parsed.op || ''), k: String(parsed.k), pt: parsed.pt ? String(parsed.pt) : undefined }
+        : {})
     };
 
     return {
       sucesso: true,
       payload: payloadNormalizado,
       cardPayload,
-      aluno: alunoEncontrado
+      aluno: alunoEncontrado,
+      gabaritoEmbutido: decodificarGabaritoQr(
+        parsed,
+        sementeGabarito(String(parsed.examId || ''), String(parsed.studentRa || parsed.ra || ''), String(parsed.examVersion || 'A'))
+      )
     };
 
     return {
@@ -303,7 +312,8 @@ export class OmrService {
   processarGradeOMRFromImageData(
     imgData: { width: number; height: number; data: Uint8ClampedArray | Buffer | Uint8Array },
     totalQuestoes: number = 3,
-    qrAnchor?: QrCodeAnchor
+    qrAnchor?: QrCodeAnchor,
+    opcoesPorQuestao?: number[]
   ): {
     respostas: Record<number, string | null>;
     statusQuestoes: Record<number, 'CORRETA' | 'INCORRETA' | 'ANULADA' | 'EM_BRANCO'>;
@@ -316,7 +326,7 @@ export class OmrService {
     // Motor principal: localiza a grade de quadrados real na foto (robusto a escala de impressão)
     if (qrAnchor) {
       try {
-        const resultadoGrade = lerGradeOmrPorAjuste(imgData, totalQuestoes, qrAnchor);
+        const resultadoGrade = lerGradeOmrPorAjuste(imgData, totalQuestoes, qrAnchor, opcoesPorQuestao);
         if (resultadoGrade) return resultadoGrade;
       } catch (e) {
         console.warn('Falha no motor de ajuste de grade, usando método legado:', e);
@@ -339,6 +349,7 @@ export class OmrService {
           vx: number;
           vy: number;
           relColsX: number[];
+          relColsX2?: number[];
           relRowsY0: number;
           rowStep: number;
           boxHalf: number;
@@ -375,6 +386,197 @@ export class OmrService {
         vx = dxv / distV;
         vy = dyv / distV;
         qrH = distV;
+      }
+
+      // --- CANDIDATOS OFICIAIS CATÓLICA SC (GRADE À DIREITA DO QR CODE) ---
+      // Calibrados com precisão subpixel pelo gabarito real da Católica SC
+      // Espaçamento entre colunas: 0.160 a 0.162 (36px a 41px)
+      // Passo vertical entre linhas: 0.152 a 0.155 (34px a 36px)
+      // Início vertical (linha 1): 0.196
+      if (totalQuestoes <= 15) {
+        // Candidato 1A: Layout Oficial Católica SC 15Q (Largura Padrão / justify-between)
+        candidates.push({
+          name: 'catolica-right-wide-15',
+          type: 'affine',
+          qrX,
+          qrY,
+          qrW,
+          qrH,
+          ux,
+          uy,
+          vx,
+          vy,
+          relColsX: [4.47, 4.63, 4.79, 4.95, 5.11],
+          relRowsY0: 0.196,
+          rowStep: 0.152,
+          boxHalf: Math.max(3, Math.round(qrW * 0.038))
+        });
+
+        // Candidato 1B: Ajuste leve para a esquerda
+        candidates.push({
+          name: 'catolica-right-wide-15-left',
+          type: 'affine',
+          qrX,
+          qrY,
+          qrW,
+          qrH,
+          ux,
+          uy,
+          vx,
+          vy,
+          relColsX: [4.38, 4.54, 4.70, 4.86, 5.02],
+          relRowsY0: 0.196,
+          rowStep: 0.152,
+          boxHalf: Math.max(3, Math.round(qrW * 0.038))
+        });
+
+        // Candidato 1C: Ajuste leve para a direita
+        candidates.push({
+          name: 'catolica-right-wide-15-right',
+          type: 'affine',
+          qrX,
+          qrY,
+          qrW,
+          qrH,
+          ux,
+          uy,
+          vx,
+          vy,
+          relColsX: [4.56, 4.72, 4.88, 5.04, 5.20],
+          relRowsY0: 0.196,
+          rowStep: 0.152,
+          boxHalf: Math.max(3, Math.round(qrW * 0.038))
+        });
+
+        // Candidato 1D: Ajuste leve vertical acima
+        candidates.push({
+          name: 'catolica-right-wide-15-up',
+          type: 'affine',
+          qrX,
+          qrY,
+          qrW,
+          qrH,
+          ux,
+          uy,
+          vx,
+          vy,
+          relColsX: [4.47, 4.63, 4.79, 4.95, 5.11],
+          relRowsY0: 0.160,
+          rowStep: 0.152,
+          boxHalf: Math.max(3, Math.round(qrW * 0.038))
+        });
+
+        // Candidato 1E: Ajuste leve vertical abaixo
+        candidates.push({
+          name: 'catolica-right-wide-15-down',
+          type: 'affine',
+          qrX,
+          qrY,
+          qrW,
+          qrH,
+          ux,
+          uy,
+          vx,
+          vy,
+          relColsX: [4.47, 4.63, 4.79, 4.95, 5.11],
+          relRowsY0: 0.230,
+          rowStep: 0.152,
+          boxHalf: Math.max(3, Math.round(qrW * 0.038))
+        });
+
+        // Candidato 1F: Layout Compacto / Centralizado à direita do QR
+        candidates.push({
+          name: 'catolica-compact-15',
+          type: 'affine',
+          qrX,
+          qrY,
+          qrW,
+          qrH,
+          ux,
+          uy,
+          vx,
+          vy,
+          relColsX: [2.20, 2.36, 2.52, 2.68, 2.84],
+          relRowsY0: 0.196,
+          rowStep: 0.152,
+          boxHalf: Math.max(3, Math.round(qrW * 0.038))
+        });
+
+        // Candidato 1G: Layout Médio à direita do QR
+        candidates.push({
+          name: 'catolica-mid-15',
+          type: 'affine',
+          qrX,
+          qrY,
+          qrW,
+          qrH,
+          ux,
+          uy,
+          vx,
+          vy,
+          relColsX: [3.30, 3.46, 3.62, 3.78, 3.94],
+          relRowsY0: 0.196,
+          rowStep: 0.152,
+          boxHalf: Math.max(3, Math.round(qrW * 0.038))
+        });
+      } else {
+        // Candidato 2A: Layout Oficial Católica SC Duas Colunas (> 15 até 30 questões)
+        // Coluna 1 (Q1 a Q15) + Coluna 2 (Q16 a Q30)
+        candidates.push({
+          name: 'catolica-two-cols',
+          type: 'affine',
+          qrX,
+          qrY,
+          qrW,
+          qrH,
+          ux,
+          uy,
+          vx,
+          vy,
+          relColsX: [1.65, 1.81, 1.97, 2.13, 2.29],
+          relColsX2: [2.95, 3.11, 3.27, 3.43, 3.59],
+          relRowsY0: 0.196,
+          rowStep: 0.152,
+          boxHalf: Math.max(3, Math.round(qrW * 0.038))
+        });
+
+        // Candidato 2B: Duas colunas com leve deslocamento à direita
+        candidates.push({
+          name: 'catolica-two-cols-right',
+          type: 'affine',
+          qrX,
+          qrY,
+          qrW,
+          qrH,
+          ux,
+          uy,
+          vx,
+          vy,
+          relColsX: [1.80, 1.96, 2.12, 2.28, 2.44],
+          relColsX2: [3.10, 3.26, 3.42, 3.58, 3.74],
+          relRowsY0: 0.196,
+          rowStep: 0.152,
+          boxHalf: Math.max(3, Math.round(qrW * 0.038))
+        });
+
+        // Candidato 2C: Duas colunas mais compactas
+        candidates.push({
+          name: 'catolica-two-cols-compact',
+          type: 'affine',
+          qrX,
+          qrY,
+          qrW,
+          qrH,
+          ux,
+          uy,
+          vx,
+          vy,
+          relColsX: [1.45, 1.61, 1.77, 1.93, 2.09],
+          relColsX2: [2.75, 2.91, 3.07, 3.23, 3.39],
+          relRowsY0: 0.196,
+          rowStep: 0.152,
+          boxHalf: Math.max(3, Math.round(qrW * 0.038))
+        });
       }
 
       // Candidato 0: Formato Real de Bancada Impresso A4 (relRowsY0 ~ 2.22, relColsX ~ [-1.42..-0.30])
@@ -617,14 +819,19 @@ export class OmrService {
         const fillPorLetra: Record<string, number> = {};
         const coordsPorLetra: Record<string, { x: number; y: number; fill: number; boxSize?: number }> = {};
         const marcadas: string[] = [];
+        const nOps = Math.min(5, Math.max(2, Math.round(Number(opcoesPorQuestao?.[q - 1] ?? 5))));
+        const letrasQ = letras.slice(0, nOps);
 
-        letras.forEach((letra, cIdx) => {
+        letrasQ.forEach((letra, cIdx) => {
           let nominalX = 0;
           let nominalY = 0;
 
           if (cand.type === 'affine') {
-            const rx = cand.relColsX[cIdx];
-            const ry = cand.relRowsY0 + (q - 1) * cand.rowStep;
+            const isCol2 = q > 15 && cand.relColsX2 !== undefined;
+            const rowInCol = isCol2 ? q - 16 : q - 1;
+            const cols = isCol2 ? cand.relColsX2! : cand.relColsX;
+            const rx = cols[cIdx];
+            const ry = cand.relRowsY0 + rowInCol * cand.rowStep;
             nominalX = Math.round(cand.qrX + rx * cand.qrW * cand.ux + ry * cand.qrH * cand.vx);
             nominalY = Math.round(cand.qrY + rx * cand.qrW * cand.uy + ry * cand.qrH * cand.vy);
           } else {
@@ -676,7 +883,7 @@ export class OmrService {
         coordenadasDetectadas[q] = coordsPorLetra;
 
         // Ordena as alternativas pelo percentual de preenchimento (fill rate)
-        const sortedFills = letras
+        const sortedFills = letrasQ
           .map(l => ({ letra: l, fill: fillPorLetra[l] }))
           .sort((a, b) => b.fill - a.fill);
 
@@ -718,7 +925,7 @@ export class OmrService {
       // Pontuação para selecionar o layout com maior contraste e presença de bolhas/quadrados
       const sumFills = Object.values(fillRates).reduce((a, b) => a + b, 0);
       const score = totalHighFills * 10000 + sumFills * 10 + maxFillAll;
-      if (score >= bestScore) {
+      if (score > bestScore || bestResult === null) {
         bestScore = score;
         bestResult = {
           respostas,
@@ -756,7 +963,8 @@ export class OmrService {
     fillRatesCustom,
     fiduciaisValidados = true,
     simular = false,
-    stage = 'N1'
+    stage = 'N1',
+    gabaritoEmbutido
   }: {
     aluno: AlunoModel;
     turma: TurmaModel;
@@ -771,13 +979,17 @@ export class OmrService {
     fiduciaisValidados?: boolean;
     simular?: boolean;
     stage?: EvaluationStage;
+    /** Gabarito lido do QR Code da própria folha (fonte de verdade quando presente) */
+    gabaritoEmbutido?: GabaritoDecodificado | null;
   }): LeituraOMRRegistro {
     if (!fiduciaisValidados) {
       throw new Error('Falha no alinhamento óptico: 4 marcadores de canto não foram validados.');
     }
 
     const objetivas = questoesBase.filter(q => q.tipo === 'objetiva' || q.type === 'OBJECTIVE');
-    const totalQuestoes = Math.min(30, Math.max(1, objetivas.length));
+    const totalQuestoes = gabaritoEmbutido
+      ? gabaritoEmbutido.totalQuestoes
+      : Math.min(30, Math.max(1, objetivas.length));
     const versaoIndex = Math.max(0, versaoLetra.toUpperCase().charCodeAt(0) - 65);
 
     let versionQuestions = JSON.parse(JSON.stringify(objetivas)) as Question[];
@@ -785,7 +997,9 @@ export class OmrService {
       versionQuestions = this.shuffleArray(versionQuestions, versaoIndex + 1);
     }
 
-    const gabaritoOficial = this.gerarGabaritoOficialVersao(questoesBase, versaoLetra, shuffleQ, shuffleAlt);
+    const gabaritoOficial = gabaritoEmbutido
+      ? gabaritoEmbutido.gabarito
+      : this.gerarGabaritoOficialVersao(questoesBase, versaoLetra, shuffleQ, shuffleAlt);
 
     const respostasFinais: Record<number, string | null> = {};
     const detalhesQuestoes: OMRQuestionResult[] = [];
@@ -794,8 +1008,10 @@ export class OmrService {
     let somaPontosPossiveis = 0;
 
     for (let numero = 1; numero <= totalQuestoes; numero++) {
-      const q = versionQuestions[numero - 1];
-      const pontosQuestao = Number(q?.pontuacao ?? q?.points ?? (10 / totalQuestoes));
+      const q = gabaritoEmbutido ? undefined : versionQuestions[numero - 1];
+      const pontosQuestao = gabaritoEmbutido
+        ? gabaritoEmbutido.pontos[numero - 1]
+        : Number(q?.pontuacao ?? q?.points ?? (10 / totalQuestoes));
       somaPontosPossiveis += pontosQuestao;
 
       const gabarito = String(gabaritoOficial[numero] || 'A').trim().toUpperCase();
