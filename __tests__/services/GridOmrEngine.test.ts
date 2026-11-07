@@ -227,4 +227,34 @@ describe('GridOmrEngine - Leitura por ajuste de grade em foto estática', () => 
     expect(res!.statusQuestoes[4]).toBe('EM_BRANCO');
     expect(res!.respostas[5]).toBe('B');
   });
+
+  it('lê folha com 8 questões e 4 alternativas (A, B, C, D) com alternativa C assinalada na questão 1', () => {
+    const { img, anchor } = gerarFoto({
+      W: 1280,
+      H: 720,
+      qrX: 180,
+      qrY: 100,
+      qrSize: 115,
+      anguloGraus: 0,
+      aA: 4.35,
+      b1: 0.18,
+      pc: 0.22,
+      pr: 0.12,
+      half: 0.07,
+      borda: 0.012,
+      totalQuestoes: 8,
+      marcas: {
+        1: { C: 0.92 }
+      }
+    });
+
+    const opcoes4 = [4, 4, 4, 4, 4, 4, 4, 4];
+    const res = lerGradeOmrPorAjuste(img, 8, anchor, opcoes4);
+    expect(res).not.toBeNull();
+    expect(res!.respostas[1]).toBe('C');
+    expect(res!.statusQuestoes[1]).toBe('CORRETA');
+    expect(res!.statusQuestoes[2]).toBe('EM_BRANCO');
+    expect(res!.statusQuestoes[3]).toBe('EM_BRANCO');
+    expect(Object.keys(res!.respostas)).toHaveLength(8);
+  });
 });

@@ -6,3 +6,5 @@ export * from './OmrService';
 export * from './ExportService';
 export * from './AuthService';
 export * from './ProfessorService';
+export * from './RelatoriosService';
+

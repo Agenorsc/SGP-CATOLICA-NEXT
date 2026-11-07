@@ -1,6 +1,40 @@
-import { Question, Student } from '@/types';
+import { Question, Student, ProvaMontadaRegistro } from '@/types';
+import { IBaseRepository } from './base/IBaseRepository';
 
-export class ExamRepository {
+export class ExamRepository implements IBaseRepository<ProvaMontadaRegistro> {
+  private fallbackProvas: ProvaMontadaRegistro[] = [
+    {
+      id: 'prova_demo_1',
+      titulo: 'Avaliação Escrita N2 - Teoria Geral do Direito',
+      turmaId: 't1',
+      turmaNome: 'Direito Civil',
+      disciplina: 'Direito Civil',
+      semestre: '2026/2',
+      ciclo: 'N2',
+      totalQuestoes: 8,
+      pontuacaoTotal: 10.0,
+      shuffleQuestoes: true,
+      shuffleAlternativas: true,
+      nominalQrCode: true,
+      createdAt: new Date().toISOString(),
+      questoesSnapshot: [
+        {
+          id: 'q1',
+          tipo: 'objetiva',
+          enunciado: 'Marina nasceu com vida em uma maternidade e, desde então, passou a ser titular de direitos e deveres na ordem civil.',
+          pontuacao: 1.25,
+          tags: ['Direito Civil', 'Personalidade'],
+          alternativas: [
+            { id: 'alt_1_a', letraOriginal: 'A', texto: 'A imagem de uma criança pode ser utilizada livremente por empresas.', correta: false },
+            { id: 'alt_1_b', letraOriginal: 'B', texto: 'Os direitos da personalidade protegem atributos como imagem, nome, honra e privacidade.', correta: true },
+            { id: 'alt_1_c', letraOriginal: 'C', texto: 'A personalidade civil começa somente quando a pessoa completa 18 anos.', correta: false },
+            { id: 'alt_1_d', letraOriginal: 'D', texto: 'Os direitos da personalidade podem ser vendidos definitivamente a terceiros.', correta: false }
+          ]
+        }
+      ]
+    }
+  ];
+
   private mockStudents: Student[] = [
     { id: 'alu-01', nome: 'Gabriel Menezes', matricula: '20241001', email: 'gabriel.m@catolicasc.edu.br' },
     { id: 'alu-02', nome: 'Beatriz Ramos', matricula: '20241002', email: 'beatriz.r@catolicasc.edu.br' },
@@ -22,26 +56,6 @@ export class ExamRepository {
         { id: 'alt_1_4', letraOriginal: 'D', texto: 'Rota (Router)', correta: false },
         { id: 'alt_1_5', letraOriginal: 'E', texto: 'Model (Entidade)', correta: false }
       ]
-    },
-    {
-      id: 'q2',
-      tipo: 'objetiva',
-      enunciado: 'Por que a ordem das alternativas embaralhadas deve ser gravada e materializada na entidade ExamVersion?',
-      pontuacao: 2.5,
-      tags: ['Persistência', 'OMR'],
-      alternativas: [
-        { id: 'alt_2_1', letraOriginal: 'A', texto: 'Para o app mobile relacionar a alternativa marcada com a correta.', correta: true },
-        { id: 'alt_2_2', letraOriginal: 'B', texto: 'Apenas para gerar a estética visual do PDF.', correta: false },
-        { id: 'alt_2_3', letraOriginal: 'C', texto: 'Para permitir a remoção física de dados.', correta: false },
-        { id: 'alt_2_4', letraOriginal: 'D', texto: 'Não é necessário persistir.', correta: false }
-      ]
-    },
-    {
-      id: 'q3',
-      tipo: 'discursiva',
-      enunciado: 'Descreva como funciona o tratamento offline da fila de correções com deduplicação via clientCorrectionId.',
-      pontuacao: 5.0,
-      tags: ['Offline', 'Sincronização']
     }
   ];
 
@@ -51,5 +65,86 @@ export class ExamRepository {
 
   async getQuestions(): Promise<Question[]> {
     return this.mockQuestions;
+  }
+
+  async findAll(): Promise<ProvaMontadaRegistro[]> {
+    if (typeof window !== 'undefined') {
+      try {
+        const res = await fetch('/api/exams', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          this.fallbackProvas = data;
+          return this.fallbackProvas;
+        }
+      } catch (err) {
+        console.warn('Falha ao buscar provas da API, usando armazenamento local:', err);
+      }
+      try {
+        const saved = window.localStorage.getItem('sgp-provas-montadas');
+        if (saved) {
+          this.fallbackProvas = JSON.parse(saved);
+        }
+      } catch (_) {}
+    }
+    return [...this.fallbackProvas];
+  }
+
+  async findById(id: string): Promise<ProvaMontadaRegistro | undefined> {
+    const list = await this.findAll();
+    return list.find(p => p.id === id);
+  }
+
+  async findByTurmaId(turmaId: string): Promise<ProvaMontadaRegistro[]> {
+    const list = await this.findAll();
+    return list.filter(p => p.turmaId === turmaId);
+  }
+
+  async save(prova: ProvaMontadaRegistro): Promise<ProvaMontadaRegistro> {
+    if (typeof window !== 'undefined') {
+      try {
+        const res = await fetch('/api/exams', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(prova)
+        });
+        if (res.ok) {
+          const savedData = await res.json();
+          this.fallbackProvas = [savedData, ...this.fallbackProvas.filter(p => p.id !== savedData.id)];
+          this.persistLocalStorage();
+          return savedData;
+        }
+      } catch (err) {
+        console.warn('Falha ao salvar prova na API, persistindo localmente:', err);
+      }
+    }
+
+    const idx = this.fallbackProvas.findIndex(p => p.id === prova.id);
+    if (idx >= 0) {
+      this.fallbackProvas[idx] = prova;
+    } else {
+      this.fallbackProvas.unshift(prova);
+    }
+    this.persistLocalStorage();
+    return prova;
+  }
+
+  async delete(id: string): Promise<boolean> {
+    if (typeof window !== 'undefined') {
+      try {
+        await fetch(`/api/exams?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      } catch (_) {}
+    }
+    const initialLen = this.fallbackProvas.length;
+    this.fallbackProvas = this.fallbackProvas.filter(p => p.id !== id);
+    this.persistLocalStorage();
+    return this.fallbackProvas.length < initialLen;
+  }
+
+  private persistLocalStorage() {
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem('sgp-provas-montadas', JSON.stringify(this.fallbackProvas));
+      } catch (_) {}
+    }
   }
 }

@@ -216,6 +216,8 @@ export function lerGradeOmrPorAjuste(
 
   // ---------------------------------------------------------------------------
   // 3. Mapa de resposta de contorno de quadrado (borda escura + entorno claro)
+  // Robusto a marcações a caneta: detecta tanto quadrados vazios quanto preenchidos,
+  // rejeitando linhas contínuas e cabeçalhos de tabela
   // ---------------------------------------------------------------------------
   const mapaAnel = (r: Retificada, hPx: number): Float32Array => {
     const t = Math.max(1, Math.round(hPx * 0.25));
@@ -263,11 +265,13 @@ export function lerGradeOmrPorAjuste(
     bMinF: number,
     hPx: number,
     centros: Pt[][],
-    confianca: number
+    confianca: number,
+    qtdQuestoes: number = N
   ): ResultadoGradeOmr => {
     const raioInterno = Math.max(1, Math.round(hPx * 0.6));
     const areaInterna = (2 * raioInterno + 1) ** 2;
-    const fills: number[][] = centros.map((linha, q) =>
+    const centrosEfetivos = centros.slice(0, qtdQuestoes);
+    const fills: number[][] = centrosEfetivos.map((linha, q) =>
       linha.map((p, c) =>
         c < ops[q] ? Math.round((somaQuadrado(rf, p.x, p.y, raioInterno) / areaInterna) * 100) : 0
       )
@@ -303,7 +307,7 @@ export function lerGradeOmrPorAjuste(
       };
     };
 
-    for (let q = 0; q < N; q++) {
+    for (let q = 0; q < qtdQuestoes; q++) {
       const numero = q + 1;
       const letrasLinha = LETRAS.slice(0, ops[q]);
       const porLetra: Record<string, number> = {};
@@ -382,25 +386,24 @@ export function lerGradeOmrPorAjuste(
     const aMinC = 0.9;
     const aMaxC = 7.8;
     // O início da questão 1 (Q.01) na folha oficial Católica SC fica em torno de b1 = +0.18 a +0.22 do QR Code.
-    // Restringir b1Min a 0.10 e bMinC a 0.04 impede que o algoritmo suba e trave
-    // nas bordas do quadro ou no cabeçalho de letras "Q: a b c d e", garantindo alinhamento exato de Q.01.
-    const bMinC = 0.04;
-    const b1Min = 0.10;
-    const b1Max = 0.28;
-    const prMaxU = 0.25;
+    // Janela vertical ampla e busca horizontal que cobre toda a folha (inclusive grades de 4 ou 5 alternativas)
+    const bMinC = 0.02;
+    const b1Min = 0.08;
+    const b1Max = 0.34;
+    const prMaxU = 0.26;
     const bMaxC = b1Max + (N1 - 1) * prMaxU + 0.35;
     const rc = retificar(Sc, aMinC, aMaxC, bMinC, bMaxC);
     const anelC = criarCacheAnel(rc);
 
-    const pcMin = Math.max(8, Math.ceil(0.17 * Sc));
-    const pcMax = Math.floor(0.26 * Sc);
-    const aSearchMin = N > 15 ? 1.55 : 4.25;
-    const aSearchMax = N > 15 ? 2.15 : 4.65;
+    const pcMin = Math.max(7, Math.ceil(0.15 * Sc));
+    const pcMax = Math.floor(0.30 * Sc);
+    const aSearchMin = N > 15 ? 1.55 : 4.05;
+    const aSearchMax = N > 15 ? 2.15 : 4.95;
     const xMin = Math.max(0, Math.round((aSearchMin - aMinC) * Sc));
     const xMax = Math.min(rc.w - 1, Math.round((aSearchMax - aMinC) * Sc));
     const yMin = Math.max(0, Math.round((b1Min - bMinC) * Sc));
     const yMax = Math.round((b1Max - bMinC) * Sc);
-    const proporcoes = [0.3, 0.37, 0.44];
+    const proporcoes = [0.28, 0.35, 0.42];
     const multCol2 = N2 > 0 ? [6.6, 7.0, 7.4] : [0];
 
     let melhor = { score: -Infinity, x0: 0, y0: 0, pc: 0, pr: 0, prop: 0.37, off2: 0 };
@@ -573,10 +576,39 @@ export function lerGradeOmrPorAjuste(
       centros.push(linha);
     }
 
-    const confianca = celulasTotal > 0 ? celulasOk / celulasTotal : 0;
+    // Auto-detecção de quantidade real de questões impressas na folha:
+    // Se a folha tiver apenas 8 questões (ou N real menor que o configurado no banco),
+    // detecta a última linha com quadrados reais e ajusta N para evitar falsos negativos
+    let ultimaLinhaComCelulas = 0;
+    for (let q = 0; q < N; q++) {
+      let celulasNestaLinha = 0;
+      for (let c = 0; c < opsLinha(q); c++) {
+        const p = centros[q][c];
+        if (lerR(Rf, p.x, p.y) >= MIN_RESPOSTA_CELULA) celulasNestaLinha++;
+      }
+      if (celulasNestaLinha >= 2) {
+        ultimaLinhaComCelulas = q + 1;
+      }
+    }
+
+    const NEfetivo = (ultimaLinhaComCelulas >= 4 && ultimaLinhaComCelulas < N)
+      ? ultimaLinhaComCelulas
+      : N;
+
+    let celulasOkEfetivo = 0;
+    let celulasTotalEfetivo = 0;
+    for (let q = 0; q < NEfetivo; q++) {
+      for (let c = 0; c < opsLinha(q); c++) {
+        celulasTotalEfetivo++;
+        const p = centros[q][c];
+        if (lerR(Rf, p.x, p.y) >= MIN_RESPOSTA_CELULA) celulasOkEfetivo++;
+      }
+    }
+
+    const confianca = celulasTotalEfetivo > 0 ? celulasOkEfetivo / celulasTotalEfetivo : 0;
     if (confianca < MIN_CONFIANCA) return null;
 
-    return medirPreenchimento(rf, Sf, aMinF, bMinF, fino.hPx, centros, confianca);
+    return medirPreenchimento(rf, Sf, aMinF, bMinF, fino.hPx, centros, confianca, NEfetivo);
   };
 
   // ---------------------------------------------------------------------------

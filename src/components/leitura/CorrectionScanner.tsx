@@ -32,7 +32,8 @@ import {
   CardPayload,
   EvaluationStage,
   QuestionResult,
-  ScanResult
+  ScanResult,
+  ProvaMontadaRegistro
 } from '@/types';
 import { OmrService } from '@/services/OmrService';
 import { GabaritoDecodificado } from '@/lib/answerKey';
@@ -49,6 +50,7 @@ export interface CorrectionScannerProps {
   shuffleQ: boolean;
   shuffleAlt: boolean;
   leiturasOMR: LeituraOMRRegistro[];
+  provasMontadas?: ProvaMontadaRegistro[];
   onSalvarLeitura: (registro: LeituraOMRRegistro, alunoAtualizado: AlunoModel) => void;
   onSelecionarTurma?: (turmaId: string) => void;
 }
@@ -63,6 +65,7 @@ export function CorrectionScanner({
   shuffleQ,
   shuffleAlt,
   leiturasOMR,
+  provasMontadas = [],
   onSalvarLeitura,
   onSelecionarTurma
 }: CorrectionScannerProps) {
@@ -517,12 +520,21 @@ export function CorrectionScanner({
       const imgData = snapCtx.getImageData(0, 0, vw, vh);
 
       // Localiza questões e gabarito oficial para a turma e ciclo
-      const questoesBase = obterQuestoesParaProva(payload.classId, payload.stage);
+      // Prioridade 1: Snapshot da prova gerada no montador (pelo payload.examId)
+      const provaMontadaCorrespondente = provasMontadas?.find(
+        p => (payload.examId && (p.id === payload.examId || p.titulo === payload.examId))
+      );
+      const questoesBase = (provaMontadaCorrespondente?.questoesSnapshot && provaMontadaCorrespondente.questoesSnapshot.length > 0)
+        ? provaMontadaCorrespondente.questoesSnapshot
+        : obterQuestoesParaProva(payload.classId, payload.stage);
 
       // Quantidade exata de questões da folha:
       let totalObjetivas = 8;
       if (qtdQuestoesOverride !== 'AUTO') {
         totalObjetivas = Number(qtdQuestoesOverride);
+      } else if (provaMontadaCorrespondente?.questoesSnapshot && provaMontadaCorrespondente.questoesSnapshot.length > 0) {
+        const objCount = provaMontadaCorrespondente.questoesSnapshot.filter(q => q.tipo === 'objetiva' || q.type === 'OBJECTIVE').length;
+        if (objCount > 0) totalObjetivas = objCount;
       } else if (gabaritoEmbutido) {
         totalObjetivas = gabaritoEmbutido.totalQuestoes;
       } else if ((payload as any).nq) {
@@ -535,7 +547,7 @@ export function CorrectionScanner({
       }
       totalObjetivas = Math.min(30, Math.max(1, totalObjetivas));
 
-      const questoesEfetivas = questoesBase.slice(0, totalObjetivas);
+      let questoesEfetivas = questoesBase.slice(0, totalObjetivas);
       const opcoesPorQuestao = gabaritoEmbutido?.opcoesPorQuestao ||
         questoesEfetivas.map(q => {
           const totalAlts = (q.options && q.options.length > 0)
@@ -551,6 +563,13 @@ export function CorrectionScanner({
 
       const anchor = qrAnchorRef.current;
       const resOMR = omrService.processarGradeOMRFromImageData(imgData, totalObjetivas, anchor || undefined, opcoesPorQuestao);
+
+      // Se o motor OMR detectou fisicamente um número menor de linhas na folha (ex: 8 questões em vez de 15)
+      const qtdDetectada = Object.keys(resOMR.respostas).length;
+      if (qtdDetectada > 0 && qtdDetectada < totalObjetivas) {
+        totalObjetivas = qtdDetectada;
+        questoesEfetivas = questoesBase.slice(0, totalObjetivas);
+      }
 
       setAutoProgresso(80);
       setEtapaAnalise('✏️ Computando alternativas assinaladas...');

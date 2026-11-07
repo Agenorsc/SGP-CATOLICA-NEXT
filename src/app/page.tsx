@@ -14,14 +14,16 @@ import {
   QuestionService, 
   OmrService, 
   ExportService,
-  ProfessorService
+  ProfessorService,
+  ExamService
 } from '@/services';
 import { 
   AlunoRepository, 
   TurmaRepository, 
   QuestionRepository, 
   OmrRepository,
-  UsuarioRepository
+  UsuarioRepository,
+  ExamRepository
 } from '@/repositories';
 
 // Camada de Tipos
@@ -30,7 +32,8 @@ import {
   AlternativaCadastro, 
   LeituraOMRRegistro,
   AvaliacaoCiclo,
-  UserSession
+  UserSession,
+  ProvaMontadaRegistro
 } from '@/types';
 
 // Camada de Componentes de Apresentação
@@ -57,12 +60,14 @@ export default function Home() {
   const questionRepo = useMemo(() => new QuestionRepository(), []);
   const omrRepo = useMemo(() => new OmrRepository(), []);
   const usuarioRepo = useMemo(() => new UsuarioRepository(), []);
+  const examRepo = useMemo(() => new ExamRepository(), []);
 
   const alunoService = useMemo(() => new AlunoService(alunoRepo), [alunoRepo]);
   const turmaService = useMemo(() => new TurmaService(turmaRepo), [turmaRepo]);
   const questionService = useMemo(() => new QuestionService(questionRepo), [questionRepo]);
   const omrService = useMemo(() => new OmrService(omrRepo), [omrRepo]);
   const professorService = useMemo(() => new ProfessorService(usuarioRepo), [usuarioRepo]);
+  const examService = useMemo(() => new ExamService(examRepo), [examRepo]);
 
   // Autenticação Real e Navegação
   const [session, setSession] = useState<UserSession | null>(null);
@@ -97,6 +102,7 @@ export default function Home() {
   const [alunos, setAlunos] = useState<AlunoModel[]>([]);
   const [professores, setProfessores] = useState<UsuarioModel[]>([]);
   const [bancoQuestoes, setBancoQuestoes] = useState<Question[]>([]);
+  const [provasMontadas, setProvasMontadas] = useState<ProvaMontadaRegistro[]>([]);
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState<string>('t1');
 
   useEffect(() => {
@@ -104,7 +110,8 @@ export default function Home() {
     alunoService.listarAlunos().then(setAlunos);
     questionService.listarQuestoes().then(setBancoQuestoes);
     professorService.listarProfessores().then(setProfessores);
-  }, [turmaService, alunoService, questionService, professorService]);
+    examService.listarProvas().then(setProvasMontadas);
+  }, [turmaService, alunoService, questionService, professorService, examService]);
 
   // 1. ISOLAMENTO TOTAL POR PROFESSOR (MULTI-TENANCY / ESCOPO DE USUÁRIO)
   // Turmas do Professor: apenas onde professorId === session.id
@@ -157,6 +164,16 @@ export default function Home() {
       (l.professorId && l.professorId === session.id)
     );
   }, [session, leiturasOMR, turmasVisiveis]);
+
+  const provasMontadasVisiveis = useMemo(() => {
+    if (!session) return provasMontadas;
+    if (session.role === 'ADMIN') return provasMontadas;
+    const idsTurmas = new Set(turmasVisiveis.map(t => t.id));
+    return provasMontadas.filter(p => 
+      (p.turmaId && idsTurmas.has(p.turmaId)) ||
+      (p.professorId && p.professorId === session.id)
+    );
+  }, [session, provasMontadas, turmasVisiveis]);
 
   // Montador de Provas
   const [questoesSelecionadas, setQuestoesSelecionadas] = useState<Question[]>([]);
@@ -306,6 +323,38 @@ export default function Home() {
   // Exportação CSV via ExportService
   const exportarCSV = () => {
     ExportService.gerarCsvNotas(alunosVisiveis, turmasVisiveis, tituloProva);
+  };
+
+  // Handlers do Histórico de Provas Montadas
+  const handleSalvarProva = async (novaProva: ProvaMontadaRegistro) => {
+    const provaComProfessor: ProvaMontadaRegistro = {
+      ...novaProva,
+      professorId: session?.id
+    };
+    const saved = await examService.salvarProvaMontada(provaComProfessor);
+    setProvasMontadas(prev => [saved, ...prev.filter(p => p.id !== saved.id)]);
+  };
+
+  const handleExcluirProva = async (id: string) => {
+    if (confirm('Tem certeza que deseja excluir esta avaliação arquivada?')) {
+      await examService.excluirProvaMontada(id);
+      setProvasMontadas(prev => prev.filter(p => p.id !== id));
+    }
+  };
+
+  const handleCarregarProvaParaReimpressao = (prova: ProvaMontadaRegistro) => {
+    setTituloProva(prova.titulo);
+    setTurmaSelecionadaId(prova.turmaId);
+    setQuestoesSelecionadas(prova.questoesSnapshot || []);
+    setShuffleQ(prova.shuffleQuestoes);
+    setShuffleAlt(prova.shuffleAlternativas);
+    setWithId(prova.nominalQrCode);
+    setCurrentTab('impressao');
+  };
+
+  const handleIrParaRelatorioDaTurma = (turmaId: string) => {
+    setTurmaSelecionadaId(turmaId);
+    setCurrentTab('relatorios');
   };
 
   // Handlers do Montador (Flexibilidade total de quantidade: permite 0, 1, 2, 3... até 30)
@@ -743,6 +792,11 @@ export default function Home() {
             withId={withId}
             setWithId={setWithId}
             pontuacaoTotal={pontuacaoTotal}
+            provasMontadas={provasMontadasVisiveis}
+            onSalvarProva={handleSalvarProva}
+            onExcluirProva={handleExcluirProva}
+            onCarregarProvaParaReimpressao={handleCarregarProvaParaReimpressao}
+            onIrParaRelatorioDaTurma={handleIrParaRelatorioDaTurma}
             onOpenNovaQuestao={abrirModalNovaQuestao}
             onEditQuestao={abrirModalEditarQuestao}
             onDeleteQuestao={excluirQuestao}
@@ -781,6 +835,7 @@ export default function Home() {
             shuffleQ={shuffleQ}
             shuffleAlt={shuffleAlt}
             leiturasOMR={leiturasOMRVisiveis}
+            provasMontadas={provasMontadas}
             onSelecionarTurma={(tId) => {
               if (tId !== 'TODAS') {
                 setTurmaSelecionadaId(tId);
@@ -794,6 +849,7 @@ export default function Home() {
               };
               setAlunos(prevAlunos => prevAlunos.map(a => a.id === alunoAtualizado.id ? alunoAtualizado : a));
               setLeiturasOMR(prev => [registroComProfessor, ...prev]);
+              alunoService.salvarAluno(alunoAtualizado);
               omrService.registrarLeitura(registroComProfessor);
             }}
           />
@@ -805,6 +861,8 @@ export default function Home() {
             alunos={alunosVisiveis}
             leiturasOMR={leiturasOMRVisiveis}
             turmas={turmasVisiveis}
+            provasMontadas={provasMontadasVisiveis}
+            bancoQuestoes={bancoQuestoesVisiveis}
             buscaRelatorio={buscaRelatorio}
             setBuscaRelatorio={setBuscaRelatorio}
             alunosFiltradosRelatorio={alunosFiltradosRelatorio}

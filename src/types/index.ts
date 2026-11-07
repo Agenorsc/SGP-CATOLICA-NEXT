@@ -235,3 +235,117 @@ export interface LeituraOMRRegistro {
   detalhesQuestoes?: OMRQuestionResult[];
   fiduciaisDetectados?: boolean;
 }
+
+export interface ProvaMontadaRegistro {
+  id: string;
+  titulo: string;
+  turmaId: string;
+  turmaNome?: string;
+  disciplina?: string;
+  semestre?: string;
+  ciclo: AvaliacaoCiclo;
+  professorId?: string;
+  questoesSnapshot: Question[];
+  totalQuestoes: number;
+  pontuacaoTotal: number;
+  shuffleQuestoes: boolean;
+  shuffleAlternativas: boolean;
+  nominalQrCode: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface DistratorFrequencia {
+  letra: string;
+  quantidade: number;
+  percentual: number;
+}
+
+export interface ItemEstatisticaQuestao {
+  numero: number;
+  questaoId?: string;
+  enunciado: string;
+  tags: string[];
+  pontuacao: number;
+  totalSubmissoes: number;
+  totalAcertos: number;
+  totalErros: number;
+  totalEmBranco: number;
+  totalAnuladas: number;
+  taxaAcerto: number; // 0 a 100
+  taxaErro: number; // 0 a 100
+  gabaritoOficial: string;
+  distratores: DistratorFrequencia[];
+  distratorCritico?: { letra: string; quantidade: number; percentual: number };
+  alternativas?: any[];
+}
+
+export interface QuestaoHistoricoAluno {
+  numero: number;
+  enunciado: string;
+  respostaAluno: string | null;
+  respostaCorreta: string;
+  status: 'CORRETA' | 'INCORRETA' | 'ANULADA' | 'EM_BRANCO';
+  pontuacaoObtida: number;
+  pontuacaoMaxima: number;
+  tags: string[];
+  provaId?: string;
+  provaTitulo?: string;
+  etapa?: AvaliacaoCiclo;
+}
+
+export interface EvolucaoEtapaAluno {
+  etapa: 'N1' | 'N2' | 'N3';
+  notaAluno: number;
+  mediaTurma: number;
+  realizada: boolean;
+}
+
+export interface RelatorioIndividualAluno {
+  alunoId: string;
+  alunoNome: string;
+  ra: string;
+  turmaId: string;
+  turmaNome: string;
+  curso: string;
+  n1: number;
+  n2: number;
+  n3: number;
+  mediaFinal: number;
+  statusAprovacao: 'Aprovado' | 'Exame' | 'Reprovado';
+  totalProvasRealizadas: number;
+  taxaAcertoIndividual: number;
+  taxaAcertoMediaTurma: number;
+  deltaRelativoTurma: number;
+  evolucaoTemporal: EvolucaoEtapaAluno[];
+  mapaDeQuestoes: QuestaoHistoricoAluno[];
+}
+
+export interface MetricasTurmaGerais {
+  mediaGeral: number;
+  desvioPadrao: number;
+  taxaAprovacao: number;
+  taxaExame: number;
+  taxaReprovacao: number;
+  maiorNota: number;
+  menorNota: number;
+  totalAlunos: number;
+  totalProvasCorrigidas: number;
+  questaoCritica?: {
+    numero: number;
+    enunciado: string;
+    taxaErro: number;
+    distratorCritico?: string;
+  };
+}
+
+export interface RelatorioGeralTurma {
+  turmaId: string;
+  turmaNome: string;
+  semestre: string;
+  disciplina: string;
+  metricas: MetricasTurmaGerais;
+  rankingQuestoes: ItemEstatisticaQuestao[];
+  alunosConsolidado: RelatorioIndividualAluno[];
+}
+

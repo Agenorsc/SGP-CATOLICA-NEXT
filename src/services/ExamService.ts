@@ -1,6 +1,6 @@
 import { ExamRepository } from '@/repositories/ExamRepository';
 import { ExamModel } from '@/models/ExamModel';
-import { ExamVersionLayout, GenerateExamConfig, Question } from '@/types';
+import { ExamVersionLayout, GenerateExamConfig, Question, ProvaMontadaRegistro } from '@/types';
 import { shuffleArray } from '@/lib/shuffle';
 
 export class ExamService {
@@ -11,9 +11,25 @@ export class ExamService {
     return shuffleArray(array, seed);
   }
 
+  async listarProvas(turmaId?: string): Promise<ProvaMontadaRegistro[]> {
+    if (turmaId && turmaId !== 'TODAS') {
+      return this.examRepository.findByTurmaId(turmaId);
+    }
+    return this.examRepository.findAll();
+  }
+
+  async salvarProvaMontada(prova: ProvaMontadaRegistro): Promise<ProvaMontadaRegistro> {
+    return this.examRepository.save(prova);
+  }
+
+  async excluirProvaMontada(id: string): Promise<boolean> {
+    return this.examRepository.delete(id);
+  }
+
   /**
    * Trava Rígida de Pontuação Total: exatamente 10.0 pts para autorizar o gabarito
    */
+
   validarPontuacaoExame(questoes: Question[]): { valida: boolean; total: number; mensagem?: string } {
     const total = Number(questoes.reduce((acc, q) => acc + (q.pontuacao ?? q.points ?? 0), 0).toFixed(1));
     if (Math.abs(total - 10.0) > 0.05) {
