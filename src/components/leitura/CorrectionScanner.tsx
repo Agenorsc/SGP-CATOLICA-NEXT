@@ -19,7 +19,8 @@ import {
   Upload,
   ArrowRight,
   BookOpen,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 import jsQR from 'jsqr';
 import { AlunoModel } from '@/models/AlunoModel';
@@ -51,7 +52,7 @@ export interface CorrectionScannerProps {
   shuffleAlt: boolean;
   leiturasOMR: LeituraOMRRegistro[];
   provasMontadas?: ProvaMontadaRegistro[];
-  onSalvarLeitura: (registro: LeituraOMRRegistro, alunoAtualizado: AlunoModel) => void;
+  onSalvarLeitura: (registro: LeituraOMRRegistro, alunoAtualizado: AlunoModel) => Promise<void> | void;
   onSelecionarTurma?: (turmaId: string) => void;
 }
 
@@ -108,6 +109,8 @@ export function CorrectionScanner({
   const [resultadoRegistro, setResultadoRegistro] = useState<LeituraOMRRegistro | null>(null);
   const [alunoAtualizadoPendente, setAlunoAtualizadoPendente] = useState<AlunoModel | null>(null);
   const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
+  const [salvandoNota, setSalvandoNota] = useState<boolean>(false);
+  const [erroGravacao, setErroGravacao] = useState<string | null>(null);
 
   // Refs de Hardware e Canvas
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -685,6 +688,7 @@ export function CorrectionScanner({
     setCardPayloadDetectado(null);
     setCameraErro(null);
     setAlertaCruzado(null);
+    setErroGravacao(null);
     setAutoProgresso(0);
     setEtapaAnalise('');
     qrAnchorRef.current = null;
@@ -700,15 +704,26 @@ export function CorrectionScanner({
 
   /**
    * Ação: Validar Nota (Persiste a nota no ciclo correspondente e avança para VALIDATED)
+   * Aguarda a transação Prisma atômica e alerta o professor em caso de falha.
    */
-  const handleValidarNota = () => {
+  const handleValidarNota = async () => {
     if (!resultadoRegistro || !alunoAtualizadoPendente || !cardPayloadDetectado) return;
+    if (salvandoNota) return;
 
-    onSalvarLeitura(resultadoRegistro, alunoAtualizadoPendente);
+    try {
+      setSalvandoNota(true);
+      setErroGravacao(null);
+      await onSalvarLeitura(resultadoRegistro, alunoAtualizadoPendente);
 
-    const msg = `Nota da ${cardPayloadDetectado.stage} validada com sucesso para ${cardPayloadDetectado.studentName}!`;
-    setMensagemSucesso(msg);
-    setScannerState('VALIDATED');
+      const msg = `Nota da ${cardPayloadDetectado.stage} validada com sucesso para ${cardPayloadDetectado.studentName}!`;
+      setMensagemSucesso(msg);
+      setScannerState('VALIDATED');
+    } catch (err: any) {
+      console.error('Falha ao validar nota:', err);
+      setErroGravacao(err?.message || 'Falha ao gravar leitura e nota no banco de dados. Tente novamente.');
+    } finally {
+      setSalvandoNota(false);
+    }
   };
 
   /**
@@ -722,6 +737,7 @@ export function CorrectionScanner({
     setAlunoAutenticado(null);
     setCameraErro(null);
     setAlertaCruzado(null);
+    setErroGravacao(null);
     setMensagemSucesso(null);
     setAutoProgresso(0);
     setEtapaAnalise('');
@@ -1234,19 +1250,41 @@ export function CorrectionScanner({
 
               {/* 7. BOTÕES DE AÇÃO CONFORME A MÁQUINA DE ESTADOS */}
               {scannerState === 'ANALYZED' && (
-                <div className="pt-2 flex items-center gap-3">
-                  <button
-                    onClick={handleCorrigirNovamente}
-                    className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" /> Corrigir Novamente
-                  </button>
-                  <button
-                    onClick={handleValidarNota}
-                    className="flex-1 py-2.5 bg-catolica-primary hover:bg-catolica-dark text-white rounded-xl text-xs font-black transition shadow-md shadow-catolica-primary/20 flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Check className="w-4 h-4" /> Validar Nota
-                  </button>
+                <div className="pt-2 space-y-2.5">
+                  {erroGravacao && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700 animate-fadeIn">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="font-bold">Falha ao gravar no banco de dados:</p>
+                        <p className="text-[11px] text-rose-600 mt-0.5">{erroGravacao}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleCorrigirNovamente}
+                      disabled={salvandoNota}
+                      className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> Corrigir Novamente
+                    </button>
+                    <button
+                      onClick={handleValidarNota}
+                      disabled={salvandoNota}
+                      className="flex-1 py-2.5 bg-catolica-primary hover:bg-catolica-dark text-white rounded-xl text-xs font-black transition shadow-md shadow-catolica-primary/20 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {salvandoNota ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" /> Gravando no Banco...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4" /> Validar Nota
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               )}
 

@@ -1,5 +1,11 @@
-import { LeituraOMRRegistro } from '@/types';
+import { LeituraOMRRegistro, EvaluationStage } from '@/types';
+import { AlunoModel } from '@/models/AlunoModel';
 import { IBaseRepository } from './base/IBaseRepository';
+
+export interface SalvarLeituraResponse {
+  leitura: LeituraOMRRegistro;
+  aluno: AlunoModel;
+}
 
 export class OmrRepository implements IBaseRepository<LeituraOMRRegistro> {
   private fallbackLeituras: LeituraOMRRegistro[] = [];
@@ -39,26 +45,70 @@ export class OmrRepository implements IBaseRepository<LeituraOMRRegistro> {
     return this.fallbackLeituras.filter(l => l.alunoId === alunoId);
   }
 
-  async save(registro: LeituraOMRRegistro): Promise<LeituraOMRRegistro> {
+  /**
+   * Persiste a leitura OMR via API.
+   * Lança erro explicitamente em caso de falha HTTP/Rede (sem fallback silencioso em memória).
+   */
+  async save(registro: LeituraOMRRegistro, stage?: EvaluationStage): Promise<LeituraOMRRegistro> {
     if (typeof window !== 'undefined') {
-      try {
-        const res = await fetch('/api/omr', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(registro)
-        });
-        if (res.ok) {
-          const savedData = await res.json();
-          this.fallbackLeituras.unshift(savedData);
-          return savedData;
-        }
-      } catch (err) {
-        console.warn('Falha ao salvar leitura OMR na API, mantendo em memória:', err);
+      const res = await fetch('/api/omr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registro, stage: stage || registro.stage })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        const msg = errJson.error || `Erro HTTP ${res.status}: Falha ao persistir a leitura OMR no banco de dados.`;
+        throw new Error(msg);
       }
+
+      const data = await res.json();
+      const savedData: LeituraOMRRegistro = data.leitura || data;
+      this.fallbackLeituras.unshift(savedData);
+      return savedData;
     }
 
     this.fallbackLeituras.unshift(registro);
     return registro;
+  }
+
+  /**
+   * Grava a leitura OMR e a nota do aluno em uma única transação atômica.
+   * Lança erro explicitamente em caso de falha para alertar o professor.
+   */
+  async saveWithTransaction(
+    registro: LeituraOMRRegistro,
+    stage?: EvaluationStage
+  ): Promise<SalvarLeituraResponse> {
+    if (typeof window !== 'undefined') {
+      const res = await fetch('/api/omr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registro, stage: stage || registro.stage })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        const msg = errJson.error || `Erro HTTP ${res.status}: Falha na transação ao persistir leitura OMR e nota do aluno no banco de dados.`;
+        throw new Error(msg);
+      }
+
+      const data = await res.json();
+      const savedLeitura: LeituraOMRRegistro = data.leitura || data;
+      const alunoAtualizado = new AlunoModel(data.aluno);
+      this.fallbackLeituras.unshift(savedLeitura);
+      return {
+        leitura: savedLeitura,
+        aluno: alunoAtualizado
+      };
+    }
+
+    this.fallbackLeituras.unshift(registro);
+    return {
+      leitura: registro,
+      aluno: new AlunoModel({ id: registro.alunoId, ra: registro.ra, nome: registro.alunoNome })
+    };
   }
 
   async delete(id: string): Promise<boolean> {

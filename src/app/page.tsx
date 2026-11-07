@@ -841,16 +841,19 @@ export default function Home() {
                 setTurmaSelecionadaId(tId);
               }
             }}
-            onSalvarLeitura={(registro, alunoAtualizado) => {
+            onSalvarLeitura={async (registro, alunoAtualizado) => {
               const registroComProfessor = {
                 ...registro,
                 professorId: session?.id,
                 teacherId: session?.id
               };
-              setAlunos(prevAlunos => prevAlunos.map(a => a.id === alunoAtualizado.id ? alunoAtualizado : a));
-              setLeiturasOMR(prev => [registroComProfessor, ...prev]);
-              alunoService.salvarAluno(alunoAtualizado);
-              omrService.registrarLeitura(registroComProfessor);
+              // Persistência atômica via transação Prisma: LeituraOMR + Nota do Aluno (N1/N2/N3/N-1)
+              const resultado = await omrService.registrarLeituraComTransacao(registroComProfessor, registro.stage);
+              const alunoFinal = resultado.aluno || alunoAtualizado;
+              const leituraFinal = resultado.leitura || registroComProfessor;
+
+              setAlunos(prevAlunos => prevAlunos.map(a => a.id === alunoFinal.id ? alunoFinal : a));
+              setLeiturasOMR(prev => [leituraFinal, ...prev]);
             }}
           />
         )}

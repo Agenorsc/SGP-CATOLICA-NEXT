@@ -1170,7 +1170,14 @@ export class OmrService {
     }
   }
 
-  async registrarLeitura(registro: LeituraOMRRegistro): Promise<LeituraOMRRegistro> {
-    return this.omrRepository.save(registro);
+  async registrarLeitura(registro: LeituraOMRRegistro, stage?: EvaluationStage): Promise<LeituraOMRRegistro> {
+    return this.omrRepository.save(registro, stage);
+  }
+
+  async registrarLeituraComTransacao(
+    registro: LeituraOMRRegistro,
+    stage?: EvaluationStage
+  ): Promise<{ leitura: LeituraOMRRegistro; aluno: AlunoModel }> {
+    return this.omrRepository.saveWithTransaction(registro, stage);
   }
 }

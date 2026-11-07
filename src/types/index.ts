@@ -221,6 +221,8 @@ export interface LeituraOMRRegistro {
   classId?: string;
   professorId?: string;
   teacherId?: string;
+  provaMontadaId?: string;
+  examId?: string;
   turmaNome: string;
   className?: string;
   stage?: EvaluationStage;

@@ -397,14 +397,14 @@ export function lerGradeOmrPorAjuste(
 
     const pcMin = Math.max(7, Math.ceil(0.15 * Sc));
     const pcMax = Math.floor(0.30 * Sc);
-    const aSearchMin = N > 15 ? 1.55 : 4.05;
-    const aSearchMax = N > 15 ? 2.15 : 4.95;
+    const aSearchMin = N > 15 ? 1.40 : 3.50;
+    const aSearchMax = N > 15 ? 2.40 : 5.20;
     const xMin = Math.max(0, Math.round((aSearchMin - aMinC) * Sc));
     const xMax = Math.min(rc.w - 1, Math.round((aSearchMax - aMinC) * Sc));
     const yMin = Math.max(0, Math.round((b1Min - bMinC) * Sc));
     const yMax = Math.round((b1Max - bMinC) * Sc);
     const proporcoes = [0.28, 0.35, 0.42];
-    const multCol2 = N2 > 0 ? [6.6, 7.0, 7.4] : [0];
+    const multCol2 = N2 > 0 ? [6.2, 6.6, 7.0, 7.4, 7.8] : [0];
 
     let melhor = { score: -Infinity, x0: 0, y0: 0, pc: 0, pr: 0, prop: 0.37, off2: 0 };
     // somaLinha[k][y*w+x] = soma das k primeiras colunas (k = 2..5) a partir de x
