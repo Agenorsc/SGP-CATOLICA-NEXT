@@ -63,16 +63,53 @@ interface Retificada {
 }
 
 const LETRAS = ['A', 'B', 'C', 'D', 'E'];
-const CAP_RESPOSTA = 0.5;
-const MIN_RESPOSTA_CELULA = 0.05;
-const MIN_CONFIANCA = 0.50;
+
+export interface LimiaresOmr {
+  capResposta?: number;              // Teto da resposta do contorno (padrão: 0.50)
+  minRespostaCelula?: number;        // Resposta mínima do contorno de uma célula para validação (padrão: 0.05)
+  minConfianca?: number;             // Confiança mínima para aceitar detecção da grade (padrão: 0.50)
+  fatorBinarizacao?: number;         // Multiplicador da média local para binarização adaptativa (padrão: 0.82)
+  sensibilidadeAzulR?: number;       // Diferença mínima canal azul vs vermelho para caneta azul (padrão: 20)
+  sensibilidadeAzulG?: number;       // Diferença mínima canal azul vs verde para caneta azul (padrão: 10)
+  amplitudeMinGlobal?: number;       // Amplitude mínima (max - fundo) na folha para considerar marcação real (padrão: 16)
+  maxMinGlobal?: number;             // Preenchimento máximo mínimo na folha para considerar marcação real (padrão: 32)
+  limiarCorteBase?: number;          // Limiar base de corte para preenchimento de alternativa marcada (padrão: 28)
+  fatorCorteAmplitude?: number;      // Fator multiplicador da amplitude global no limiar de corte (padrão: 0.30)
+  deltaMarcada?: number;             // Diferença mínima entre a alternativa mais marcada e a linha de base (padrão: 14)
+  deltaAnulada?: number;             // Diferença mínima da 2ª alternativa para a linha de base em dupla marcação (padrão: 12)
+  fatorAnulada?: number;             // Fator do limiar de corte para a 2ª alternativa em anulação (padrão: 0.85)
+}
+
+export const LIMIARES_OMR_PADRAO: Required<LimiaresOmr> = {
+  capResposta: 0.5,
+  minRespostaCelula: 0.05,
+  minConfianca: 0.50,
+  fatorBinarizacao: 0.82,
+  sensibilidadeAzulR: 20,
+  sensibilidadeAzulG: 10,
+  amplitudeMinGlobal: 16,
+  maxMinGlobal: 32,
+  limiarCorteBase: 28,
+  fatorCorteAmplitude: 0.30,
+  deltaMarcada: 14,
+  deltaAnulada: 12,
+  fatorAnulada: 0.85
+};
 
 export function lerGradeOmrPorAjuste(
   img: ImagemRGBA,
   totalQuestoes: number,
   ancora: AncoraQrGrade,
-  opcoesPorQuestao?: number[]
+  opcoesPorQuestao?: number[],
+  limiaresCustom?: Partial<LimiaresOmr>
 ): ResultadoGradeOmr | null {
+  const limiares: Required<LimiaresOmr> = {
+    ...LIMIARES_OMR_PADRAO,
+    ...limiaresCustom
+  };
+  const CAP_RESPOSTA = limiares.capResposta;
+  const MIN_RESPOSTA_CELULA = limiares.minRespostaCelula;
+  const MIN_CONFIANCA = limiares.minConfianca;
   const N = Math.max(1, Math.min(30, Math.round(totalQuestoes)));
   // Quantidade de alternativas impressas em cada linha (2..5; padrão 5)
   const ops: number[] = Array.from({ length: N }, (_, i) => {
@@ -136,11 +173,14 @@ export function lerGradeOmrPorAjuste(
 
   const gray = new Uint8Array(total);
   const isBluePen = new Uint8Array(total);
+  const azulR = limiares.sensibilidadeAzulR;
+  const azulG = limiares.sensibilidadeAzulG;
   for (let i = 0, p = 0; i < total; i++, p += 4) {
     const r = data[p], g = data[p + 1], b = data[p + 2];
-    gray[i] = (r * 77 + g * 150 + b * 29) >> 8;
-    // Caneta azul esferográfica (BIC / similar): canal Azul bem mais forte que Vermelho e Verde
-    if (b > r + 24 && b > g + 10) {
+    const lum = (r * 77 + g * 150 + b * 29) >> 8;
+    gray[i] = lum;
+    // Caneta azul esferográfica (BIC / similar): deve ser tinta (lum < 175) e ter canal Azul predominante
+    if (lum < 175 && ((b > r + azulR && b > g + azulG) || (b > 100 && b > r * 1.18 && b > g * 1.10))) {
       isBluePen[i] = 1;
     }
   }
@@ -158,7 +198,7 @@ export function lerGradeOmrPorAjuste(
       const soma = somaImg(iiGray, x0, y0, x1, y1);
       const i = y * W + x;
       // Pixel é tinta se estiver mais escuro que o papel ao redor OU se for traço nítido de caneta azul
-      if (gray[i] * area < soma * 0.82 || isBluePen[i] === 1) escuro[i] = 1;
+      if (gray[i] * area < soma * limiares.fatorBinarizacao || isBluePen[i] === 1) escuro[i] = 1;
     }
   }
   const iiEscuro = integral(escuro);
@@ -286,9 +326,9 @@ export function lerGradeOmrPorAjuste(
     // As letras impressas 'a,b,c,d,e' têm preenchimento de ~10% a 20%.
     // Uma marcação real de caneta (azul ou preta) preenche de 40% a 95%.
     // O limiar de corte é posicionado dinamicamente entre o fundo impresso e a marca mais escura da folha.
-    const temMarcacaoRealNaFolha = amplitudeGlobal >= 16 && maxGlobal >= 32;
+    const temMarcacaoRealNaFolha = amplitudeGlobal >= limiares.amplitudeMinGlobal && maxGlobal >= limiares.maxMinGlobal;
     const limiarCorte = temMarcacaoRealNaFolha
-      ? Math.max(28, fundoGlobal + amplitudeGlobal * 0.30)
+      ? Math.max(limiares.limiarCorteBase, fundoGlobal + amplitudeGlobal * limiares.fatorCorteAmplitude)
       : 999;
 
     const respostas: Record<number, string | null> = {};
@@ -335,12 +375,12 @@ export function lerGradeOmrPorAjuste(
       // 2. Deve ter destaque claro sobre as outras alternativas da mesma questão
       const marcadaPrincipal = temMarcacaoRealNaFolha &&
         f1.fill >= limiarCorte &&
-        f1.fill - linhaBase >= 14;
+        f1.fill - linhaBase >= limiares.deltaMarcada;
 
       // Dupla marcação (anulada): duas alternativas preenchidas com tinta real
       const marcadaSecundaria = marcadaPrincipal &&
-        f2.fill >= limiarCorte * 0.85 &&
-        f2.fill - linhaBase >= 12;
+        f2.fill >= limiarCorte * limiares.fatorAnulada &&
+        f2.fill - linhaBase >= limiares.deltaAnulada;
 
       if (marcadaSecundaria) {
         respostas[numero] = null;
@@ -388,8 +428,8 @@ export function lerGradeOmrPorAjuste(
     // O início da questão 1 (Q.01) na folha oficial Católica SC fica em torno de b1 = +0.18 a +0.22 do QR Code.
     // Janela vertical ampla e busca horizontal que cobre toda a folha (inclusive grades de 4 ou 5 alternativas)
     const bMinC = 0.02;
-    const b1Min = 0.08;
-    const b1Max = 0.34;
+    const b1Min = 0.10;
+    const b1Max = 0.23;
     const prMaxU = 0.26;
     const bMaxC = b1Max + (N1 - 1) * prMaxU + 0.35;
     const rc = retificar(Sc, aMinC, aMaxC, bMinC, bMaxC);
@@ -797,15 +837,15 @@ export function lerGradeOmrPorAjuste(
   // Executa primeiramente o motor oficial Católica SC (grade à direita).
   // Se não encontrar com confiança suficiente, aciona o motor secundário legado.
   const resCatolica = ajustarGradeCatolica();
-  if (resCatolica && resCatolica.confianca >= MIN_CONFIANCA) {
+  if (resCatolica && resCatolica.confianca >= limiares.minConfianca) {
     return resCatolica;
   }
-  if (resCatolica && resCatolica.confianca >= 0.35) {
+  if (resCatolica && resCatolica.confianca >= Math.min(0.35, limiares.minConfianca)) {
     return resCatolica;
   }
 
   const resLegada = ajustarGradeLegada();
-  if (resLegada && resLegada.confianca >= MIN_CONFIANCA) {
+  if (resLegada && resLegada.confianca >= limiares.minConfianca) {
     return resLegada;
   }
 
