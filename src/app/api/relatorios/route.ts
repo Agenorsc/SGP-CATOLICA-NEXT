@@ -19,13 +19,19 @@ export async function GET(request: Request) {
     let provasRaw: any[] = [];
     let questoesRaw: any[] = [];
 
+    const whereAluno = turmaId !== 'TODAS' ? { turmaId } : undefined;
+    const whereLeitura = turmaId !== 'TODAS' ? { turmaId } : undefined;
+    const whereTurma = turmaId !== 'TODAS' ? { id: turmaId } : undefined;
+    const whereProva = turmaId !== 'TODAS' ? { turmaId } : undefined;
+    const whereQuestao = turmaId !== 'TODAS' ? { turmaId } : undefined;
+
     try {
       [alunosRaw, turmasRaw, leiturasRaw, provasRaw, questoesRaw] = await Promise.all([
-        prisma.aluno.findMany(),
-        prisma.turma.findMany(),
-        prisma.leituraOMR.findMany({ orderBy: { createdAt: 'desc' } }),
-        (prisma as any).provaMontada?.findMany({ orderBy: { createdAt: 'desc' } }) || [],
-        prisma.questao.findMany({ include: { alternativas: true } })
+        prisma.aluno.findMany({ where: whereAluno, orderBy: { nome: 'asc' } }),
+        prisma.turma.findMany({ where: whereTurma }),
+        prisma.leituraOMR.findMany({ where: whereLeitura, orderBy: { createdAt: 'desc' } }),
+        (prisma as any).provaMontada?.findMany({ where: whereProva, orderBy: { createdAt: 'desc' } }) || [],
+        prisma.questao.findMany({ where: whereQuestao, include: { alternativas: true } })
       ]);
     } catch (dbErr) {
       console.warn('Banco relacional inacessível no momento ao agregar relatórios via API:', dbErr);
@@ -116,7 +122,12 @@ export async function GET(request: Request) {
       filtroCiclo: ciclo
     });
 
-    return NextResponse.json(relatorio);
+    return NextResponse.json(relatorio, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'X-Response-Time-Target': 'p95 < 250ms'
+      }
+    });
   } catch (error: any) {
     console.error('Erro na rota de relatórios agregados:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
