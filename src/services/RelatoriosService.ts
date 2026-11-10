@@ -46,7 +46,9 @@ export class RelatoriosService {
       ? 'Todas as Turmas (Visão Consolidada)' 
       : (turmaObj?.nome || 'Turma Selecionada');
     const semestre = turmaObj?.semestre || filtroSemestre || '2026/2';
-    const disciplina = turmaObj?.curso || 'Direito / Engenharia';
+    const disciplina = turmaObj 
+      ? (turmaObj.curso ? `${turmaObj.nome} (${turmaObj.curso})` : turmaObj.nome)
+      : (filtroSemestre ? `Todas as Turmas - Semestre ${filtroSemestre}` : 'Consolidado Geral');
 
     // Alunos pertencentes ao escopo selecionado
     const alunosFiltrados = turmaId === 'TODAS'
@@ -118,8 +120,8 @@ export class RelatoriosService {
               pontuacaoObtida: det.score ?? (det.correta ? (det.maxScore ?? 1.25) : 0),
               pontuacaoMaxima: det.maxScore ?? 1.25,
               tags: questaoOrig?.tags || ['Geral'],
-              provaTitulo: leitura.materia || 'Avaliação OMR',
-              etapa: (leitura.stage as any) || 'N2'
+              provaTitulo: leitura.materia || (turmaObj?.nome ? `Avaliação - ${turmaObj.nome}` : 'Avaliação Acadêmica'),
+              etapa: (leitura.stage as any) || (filtroCiclo !== 'TODAS' ? filtroCiclo : 'N1')
             });
           });
         } else if (leitura.respostasDetectadas) {
@@ -140,8 +142,8 @@ export class RelatoriosService {
               pontuacaoObtida: status === 'CORRETA' ? 1.25 : 0,
               pontuacaoMaxima: 1.25,
               tags: ['Avaliação'],
-              provaTitulo: leitura.materia || 'Avaliação OMR',
-              etapa: (leitura.stage as any) || 'N2'
+              provaTitulo: leitura.materia || (turmaObj?.nome ? `Avaliação - ${turmaObj.nome}` : 'Avaliação Acadêmica'),
+              etapa: (leitura.stage as any) || (filtroCiclo !== 'TODAS' ? filtroCiclo : 'N1')
             });
           });
         }
@@ -195,7 +197,7 @@ export class RelatoriosService {
       };
     });
 
-    // 5. Agregações Granulares por Questão (Taxa de Acerto e Dificuldade)
+    // 5. Agregações Granulares por Questão (Taxa de Acerto e Dificuldade com Distribuição Completa)
     const acumuladorQuestoes: Record<number, {
       total: number;
       acertos: number;
@@ -204,6 +206,7 @@ export class RelatoriosService {
       anuladas: number;
       gabarito: string;
       distratores: Record<string, number>;
+      escolhasPorOpcao: Record<string, number>;
       enunciado?: string;
       tags?: string[];
       pontuacao?: number;
@@ -221,11 +224,18 @@ export class RelatoriosService {
               emBranco: 0,
               anuladas: 0,
               gabarito: det.respostaCorreta || 'A',
-              distratores: {}
+              distratores: {},
+              escolhasPorOpcao: {}
             };
           }
           const item = acumuladorQuestoes[det.numero];
           item.total++;
+          
+          if (det.respostaMarcada) {
+            const letraMarcada = det.respostaMarcada.toUpperCase();
+            item.escolhasPorOpcao[letraMarcada] = (item.escolhasPorOpcao[letraMarcada] || 0) + 1;
+          }
+
           if (det.status === 'CORRETA') item.acertos++;
           else if (det.status === 'EM_BRANCO') item.emBranco++;
           else if (det.status === 'ANULADA') item.anuladas++;
@@ -249,11 +259,18 @@ export class RelatoriosService {
               emBranco: 0,
               anuladas: 0,
               gabarito: gab,
-              distratores: {}
+              distratores: {},
+              escolhasPorOpcao: {}
             };
           }
           const item = acumuladorQuestoes[qNum];
           item.total++;
+
+          if (respostaMarcada) {
+            const letraMarcada = String(respostaMarcada).toUpperCase();
+            item.escolhasPorOpcao[letraMarcada] = (item.escolhasPorOpcao[letraMarcada] || 0) + 1;
+          }
+
           if (!respostaMarcada) {
             item.emBranco++;
           } else if (String(respostaMarcada).toUpperCase() === String(gab).toUpperCase()) {
@@ -274,14 +291,28 @@ export class RelatoriosService {
         const qNum = idx + 1;
         const correta = q.alternativas?.find(a => a.correta)?.letraOriginal || 
           q.options?.find(o => o.isCorrect)?.letter || 'A';
+        const totalSimulado = alunosFiltrados.length || 10;
+        const acertosSimulado = Math.round(totalSimulado * 0.75);
+        const errosSimulado = totalSimulado - acertosSimulado;
+        
+        const distratoresSimulados: Record<string, number> = {};
+        if (correta === 'A') { distratoresSimulados.B = Math.ceil(errosSimulado * 0.6); distratoresSimulados.C = errosSimulado - distratoresSimulados.B; }
+        else { distratoresSimulados.A = errosSimulado; }
+
+        const escolhasSimuladas: Record<string, number> = {
+          [correta]: acertosSimulado,
+          ...distratoresSimulados
+        };
+
         acumuladorQuestoes[qNum] = {
-          total: alunosFiltrados.length || 10,
-          acertos: Math.round((alunosFiltrados.length || 10) * 0.75),
-          erros: Math.round((alunosFiltrados.length || 10) * 0.25),
+          total: totalSimulado,
+          acertos: acertosSimulado,
+          erros: errosSimulado,
           emBranco: 0,
           anuladas: 0,
           gabarito: correta,
-          distratores: { B: 2, D: 1 },
+          distratores: distratoresSimulados,
+          escolhasPorOpcao: escolhasSimuladas,
           enunciado: q.enunciado || q.statement,
           tags: q.tags,
           pontuacao: q.pontuacao ?? q.points ?? 1.25,
@@ -309,6 +340,32 @@ export class RelatoriosService {
       const questaoOrig = bancoQuestoes.find((_, idx) => idx + 1 === numero) ||
         provasMontadas.flatMap(p => p.questoesSnapshot)[numero - 1];
 
+      // Determina quais alternativas a questão possui (ex: A-D ou A-E)
+      const letrasDisponiveis = ['A', 'B', 'C', 'D'];
+      if (
+        dados.escolhasPorOpcao?.['E'] !== undefined || 
+        dados.gabarito === 'E' || 
+        (dados.alternativas && dados.alternativas.length >= 5) ||
+        (questaoOrig?.alternativas && questaoOrig.alternativas.length >= 5) ||
+        (questaoOrig?.options && questaoOrig.options.length >= 5)
+      ) {
+        letrasDisponiveis.push('E');
+      }
+
+      // Distribuição completa de todas as alternativas para o Painel de Distratores
+      const distribuicaoOpcoes: Record<string, { quantidade: number; percentual: number }> = {};
+      letrasDisponiveis.forEach(letra => {
+        let qtd = dados.escolhasPorOpcao?.[letra];
+        if (qtd === undefined) {
+          qtd = letra === dados.gabarito ? dados.acertos : (dados.distratores[letra] || 0);
+        }
+        const pct = total > 0 ? Number(((qtd / total) * 100).toFixed(1)) : 0;
+        distribuicaoOpcoes[letra] = {
+          quantidade: qtd,
+          percentual: pct
+        };
+      });
+
       return {
         numero,
         enunciado: dados.enunciado || questaoOrig?.enunciado || questaoOrig?.statement || `Questão ${numero < 10 ? '0' : ''}${numero}`,
@@ -324,6 +381,7 @@ export class RelatoriosService {
         gabaritoOficial: dados.gabarito,
         distratores,
         distratorCritico,
+        distribuicaoOpcoes,
         alternativas: dados.alternativas || questaoOrig?.alternativas || questaoOrig?.options
       };
     });
