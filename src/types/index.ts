@@ -279,6 +279,7 @@ export interface ItemEstatisticaQuestao {
   gabaritoOficial: string;
   distratores: DistratorFrequencia[];
   distratorCritico?: { letra: string; quantidade: number; percentual: number };
+  distribuicaoOpcoes?: Record<string, { quantidade: number; percentual: number }>;
   alternativas?: any[];
 }
 

@@ -28,6 +28,7 @@ import {
 } from '@/types';
 import { RelatoriosService } from '@/services/RelatoriosService';
 import { GraficoDificuldadeQuestoes } from './GraficoDificuldadeQuestoes';
+import { PainelAnaliseDistratores } from './PainelAnaliseDistratores';
 import { ModalDetalheAluno } from './ModalDetalheAluno';
 
 interface RelatoriosTabProps {
@@ -62,6 +63,9 @@ export function RelatoriosTab({
   // Estado do Drilldown / Modal Individual do Aluno
   const [alunoSelecionadoDetalhe, setAlunoSelecionadoDetalhe] = useState<RelatorioIndividualAluno | null>(null);
 
+  // Modo de visualização analítica de itens e distratores
+  const [modoVisualizacaoItens, setModoVisualizacaoItens] = useState<'distratores' | 'dificuldade' | 'ambos'>('ambos');
+
   // Semestres únicos disponíveis
   const semestresDisponiveis = useMemo(() => {
     const s = new Set<string>();
@@ -74,6 +78,31 @@ export function RelatoriosTab({
   const turmasDoSemestre = useMemo(() => {
     return turmas.filter(t => !semestreFiltro || t.semestre === semestreFiltro);
   }, [turmas, semestreFiltro]);
+
+  // Turma selecionada como objeto (para exibição dinâmica sem strings fixas)
+  const turmaSelecionadaObj = useMemo(() => {
+    return turmas.find(t => t.id === turmaFiltroId);
+  }, [turmas, turmaFiltroId]);
+
+  // Rótulo da Etapa / Ciclo Dinâmico de Avaliação da Turma
+  const etapaDinamicaLabel = useMemo(() => {
+    if (cicloFiltro !== 'TODAS') {
+      return `Avaliação ${cicloFiltro}`;
+    }
+    const leiturasEscopo = leiturasOMR.filter(l => turmaFiltroId === 'TODAS' || l.turmaId === turmaFiltroId);
+    if (leiturasEscopo.length > 0) {
+      const contagem: Record<string, number> = {};
+      leiturasEscopo.forEach(l => {
+        const c = l.stage || 'N1';
+        contagem[c] = (contagem[c] || 0) + 1;
+      });
+      const ordenado = Object.entries(contagem).sort((a, b) => b[1] - a[1]);
+      if (ordenado[0]) {
+        return `Ciclo ${ordenado[0][0]} em Avaliação (${ordenado[0][1]} provas)`;
+      }
+    }
+    return 'Ciclo Consolidado (N1, N2 e N3)';
+  }, [cicloFiltro, leiturasOMR, turmaFiltroId]);
 
   // Execução do Pipeline de Agregação Estatística (RelatoriosService)
   const relatorioTurma = useMemo(() => {
@@ -194,7 +223,31 @@ export function RelatoriosTab({
         </div>
       </div>
 
-      {/* 2. CARDS DE MÉTRICAS GLOBAIS DA TURMA */}
+      {/* 2. BANNER DE ESCOPO ACADÊMICO DINÂMICO & ETAPA ATUAL */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-slate-900 to-catolica-primary text-white p-4 sm:p-5 rounded-2xl shadow-sm">
+        <div>
+          <div className="flex items-center gap-2">
+            <Layers className="w-5 h-5 text-catolica-gold" />
+            <h2 className="text-base font-black tracking-tight">
+              {turmaSelecionadaObj 
+                ? `${turmaSelecionadaObj.nome} — ${turmaSelecionadaObj.curso}` 
+                : `Visão Geral Consolidada — Semestre ${semestreFiltro}`}
+            </h2>
+          </div>
+          <p className="text-xs text-slate-200 mt-1">
+            Status Dinâmico do Ciclo: <strong className="text-amber-300">{etapaDinamicaLabel}</strong> • {relatorioTurma.metricas.totalAlunos} alunos inscritos • {relatorioTurma.metricas.totalProvasCorrigidas} leituras processadas
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 backdrop-blur px-3 py-1.5 text-xs font-bold text-white border border-white/20">
+            <Clock className="w-3.5 h-3.5 text-amber-300" />
+            {etapaDinamicaLabel}
+          </span>
+        </div>
+      </div>
+
+      {/* 3. CARDS DE MÉTRICAS GLOBAIS DA TURMA */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Média Geral */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
@@ -269,13 +322,69 @@ export function RelatoriosTab({
         </div>
       </div>
 
-      {/* 3. GRÁFICO ANALÍTICO POR QUESTÕES (TAXA DE ACERTO / DIFICULDADE COM DISTRATORES) */}
-      <GraficoDificuldadeQuestoes
-        questoes={relatorioTurma.rankingQuestoes}
-        turmaNome={relatorioTurma.turmaNome}
-      />
+      {/* 4. SELETOR DE MODO DE VISUALIZAÇÃO PEDAGÓGICA (DISTRATORES vs DIFICULDADE) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-catolica-primary" />
+          <span className="text-xs font-bold text-slate-800">Visualização Analítica de Itens:</span>
+        </div>
 
-      {/* 4. QUADRO CONSOLIDADO DE NOTAS (TABELA DA TURMA COM DRILLDOWN) */}
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setModoVisualizacaoItens('ambos')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+              modoVisualizacaoItens === 'ambos'
+                ? 'bg-catolica-primary text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Visão Completa
+          </button>
+          <button
+            type="button"
+            onClick={() => setModoVisualizacaoItens('distratores')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+              modoVisualizacaoItens === 'distratores'
+                ? 'bg-catolica-primary text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <AlertTriangle className="w-3.5 h-3.5" />
+            Painel de Distratores
+          </button>
+          <button
+            type="button"
+            onClick={() => setModoVisualizacaoItens('dificuldade')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+              modoVisualizacaoItens === 'dificuldade'
+                ? 'bg-catolica-primary text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            Taxa de Acerto & Dificuldade
+          </button>
+        </div>
+      </div>
+
+      {/* 5. PAINEL DE ANÁLISE DE DISTRATORES (ALTERNATIVA MAIS MARCADA POR QUESTÃO) */}
+      {(modoVisualizacaoItens === 'distratores' || modoVisualizacaoItens === 'ambos') && (
+        <PainelAnaliseDistratores
+          questoes={relatorioTurma.rankingQuestoes}
+          turmaNome={relatorioTurma.turmaNome}
+        />
+      )}
+
+      {/* 6. GRÁFICO ANALÍTICO POR QUESTÕES (TAXA DE ACERTO / DIFICULDADE COM BARRAS) */}
+      {(modoVisualizacaoItens === 'dificuldade' || modoVisualizacaoItens === 'ambos') && (
+        <GraficoDificuldadeQuestoes
+          questoes={relatorioTurma.rankingQuestoes}
+          turmaNome={relatorioTurma.turmaNome}
+        />
+      )}
+
+      {/* 7. QUADRO CONSOLIDADO DE NOTAS (TABELA DA TURMA COM DRILLDOWN) */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
           <div>
