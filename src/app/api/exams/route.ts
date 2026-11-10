@@ -28,7 +28,7 @@ export async function GET(request: Request) {
         return NextResponse.json(records.map((r: any) => ({
           id: r.id,
           titulo: r.titulo,
-          disciplina: r.disciplina || r.turma?.curso || 'Direito / Engenharia',
+          disciplina: r.disciplina || r.turma?.curso || r.turma?.nome || 'Geral',
           semestre: r.semestre || r.turma?.semestre || '2026/2',
           ciclo: r.ciclo,
           turmaId: r.turmaId,

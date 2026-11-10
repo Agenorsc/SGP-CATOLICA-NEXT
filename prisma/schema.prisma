@@ -43,6 +43,8 @@ model Turma {
   leiturasOMR    LeituraOMR[]
   questoes       Questao[]
 
+  @@index([professorId])
+  @@index([semestre])
   @@map("turmas")
 }
 
@@ -65,6 +67,7 @@ model Aluno {
 
   leiturasOMR LeituraOMR[]
 
+  @@index([turmaId])
   @@map("alunos")
 }
 
@@ -84,6 +87,9 @@ model Questao {
   professor    Usuario?      @relation(fields: [professorId], references: [id], onDelete: SetNull)
   alternativas Alternativa[]
 
+  @@index([turmaId])
+  @@index([professorId])
+  @@index([avaliacao])
   @@map("questoes")
 }
 
@@ -96,6 +102,7 @@ model Alternativa {
   questaoId     String
   questao       Questao  @relation(fields: [questaoId], references: [id], onDelete: Cascade)
 
+  @@index([questaoId])
   @@map("alternativas")
 }
 
@@ -120,6 +127,9 @@ model ProvaMontada {
   professor           Usuario?     @relation(fields: [professorId], references: [id], onDelete: SetNull)
   leiturasOMR         LeituraOMR[]
 
+  @@index([turmaId])
+  @@index([professorId])
+  @@index([ciclo])
   @@map("provas_montadas")
 }
 
@@ -149,5 +159,10 @@ model LeituraOMR {
   professor           Usuario?      @relation(fields: [professorId], references: [id], onDelete: SetNull)
   provaMontada        ProvaMontada? @relation(fields: [provaMontadaId], references: [id], onDelete: SetNull)
 
+  @@index([alunoId])
+  @@index([turmaId])
+  @@index([professorId])
+  @@index([provaMontadaId])
+  @@index([createdAt])
   @@map("leituras_omr")
 }
