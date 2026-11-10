@@ -39,7 +39,8 @@ interface RelatoriosTabProps {
   buscaRelatorio: string;
   setBuscaRelatorio: (busca: string) => void;
   alunosFiltradosRelatorio: AlunoModel[];
-  onExportarCsv: () => void;
+  onExportarCsv?: () => void;
+  onExportarExcel?: (params?: { turmaId?: string; ciclo?: AvaliacaoCiclo | 'TODAS'; semestre?: string }) => void;
 }
 
 export function RelatoriosTab({
@@ -50,7 +51,8 @@ export function RelatoriosTab({
   bancoQuestoes = [],
   buscaRelatorio,
   setBuscaRelatorio,
-  onExportarCsv
+  onExportarCsv,
+  onExportarExcel
 }: RelatoriosTabProps) {
   // Filtros Dinâmicos de Escopo
   const [turmaFiltroId, setTurmaFiltroId] = useState<string>('TODAS');
@@ -171,11 +173,21 @@ export function RelatoriosTab({
             </div>
 
             <button
-              onClick={onExportarCsv}
-              className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition shrink-0 cursor-pointer shadow-sm"
-              title="Exportar quadro de notas consolidado para formato CSV"
+              onClick={() => {
+                if (onExportarExcel) {
+                  onExportarExcel({
+                    turmaId: turmaFiltroId,
+                    ciclo: cicloFiltro,
+                    semestre: semestreFiltro
+                  });
+                } else if (onExportarCsv) {
+                  onExportarCsv();
+                }
+              }}
+              className="bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-emerald-800 transition shrink-0 cursor-pointer shadow-sm shadow-emerald-700/20"
+              title="Exportar relatório completo em planilha Excel (.xlsx) com abas de Notas, Espelho e Estatísticas"
             >
-              <Download className="w-3.5 h-3.5" /> Exportar CSV
+              <FileSpreadsheet className="w-4 h-4" /> Exportar Planilha Excel (.xlsx)
             </button>
           </div>
 

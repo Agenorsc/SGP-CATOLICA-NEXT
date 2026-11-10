@@ -325,6 +325,25 @@ export default function Home() {
     ExportService.gerarCsvNotas(alunosVisiveis, turmasVisiveis, tituloProva);
   };
 
+  // Exportação Excel (.xlsx) com 3 abas (Notas, Espelho, Estatística) via ExportService (TSK 40)
+  const exportarExcel = (params?: {
+    turmaId?: string;
+    ciclo?: AvaliacaoCiclo | 'TODAS';
+    semestre?: string;
+  }) => {
+    ExportService.gerarRelatorioExcelCompleto({
+      alunos: alunosVisiveis,
+      turmas: turmasVisiveis,
+      leiturasOMR: leiturasOMRVisiveis,
+      provasMontadas: provasMontadasVisiveis,
+      bancoQuestoes: bancoQuestoesVisiveis,
+      turmaId: params?.turmaId,
+      filtroCiclo: params?.ciclo,
+      filtroSemestre: params?.semestre,
+      tituloProva
+    });
+  };
+
   // Handlers do Histórico de Provas Montadas
   const handleSalvarProva = async (novaProva: ProvaMontadaRegistro) => {
     const provaComProfessor: ProvaMontadaRegistro = {
@@ -870,6 +889,7 @@ export default function Home() {
             setBuscaRelatorio={setBuscaRelatorio}
             alunosFiltradosRelatorio={alunosFiltradosRelatorio}
             onExportarCsv={exportarCSV}
+            onExportarExcel={exportarExcel}
           />
         )}
 
