@@ -11,7 +11,7 @@ import {
   QuestionResult,
   ScanResult
 } from '@/types';
-import { lerGradeOmrPorAjuste } from '@/services/omr/GridOmrEngine';
+import { lerGradeOmrPorAjuste, LimiaresOmr } from '@/services/omr/GridOmrEngine';
 import { shuffleArray } from '@/lib/shuffle';
 import { decodificarGabaritoQr, sementeGabarito, GabaritoDecodificado } from '@/lib/answerKey';
 
@@ -313,7 +313,8 @@ export class OmrService {
     imgData: { width: number; height: number; data: Uint8ClampedArray | Buffer | Uint8Array },
     totalQuestoes: number = 3,
     qrAnchor?: QrCodeAnchor,
-    opcoesPorQuestao?: number[]
+    opcoesPorQuestao?: number[],
+    limiares?: Partial<LimiaresOmr>
   ): {
     respostas: Record<number, string | null>;
     statusQuestoes: Record<number, 'CORRETA' | 'INCORRETA' | 'ANULADA' | 'EM_BRANCO'>;
@@ -326,7 +327,7 @@ export class OmrService {
     // Motor principal: localiza a grade de quadrados real na foto (robusto a escala de impressão)
     if (qrAnchor) {
       try {
-        const resultadoGrade = lerGradeOmrPorAjuste(imgData, totalQuestoes, qrAnchor, opcoesPorQuestao);
+        const resultadoGrade = lerGradeOmrPorAjuste(imgData, totalQuestoes, qrAnchor, opcoesPorQuestao, limiares);
         if (resultadoGrade) return resultadoGrade;
       } catch (e) {
         console.warn('Falha no motor de ajuste de grade, usando método legado:', e);

@@ -12,10 +12,10 @@ export async function GET(request: Request) {
     const turmaId = searchParams.get('turmaId') || undefined;
     const provaMontadaId = searchParams.get('provaMontadaId') || undefined;
     const leiturasRaw = await prisma.leituraOMR.findMany({
-      where: { ...(turmaId ? { turmaId } : {}), ...(provaMontadaId ? { provaMontadaId } : {}) },
+      where: { ...(turmaId ? { turmaId } : {}), ...(provaMontadaId ? ({ provaMontadaId } as any) : {}) },
       orderBy: { createdAt: 'desc' }
     });
-    const leituras: LeituraOMRRegistro[] = leiturasRaw.map(leitura => ({
+    const leituras: LeituraOMRRegistro[] = leiturasRaw.map((leitura: any) => ({
       id: leitura.id, alunoId: leitura.alunoId, alunoNome: leitura.alunoNome, ra: leitura.ra,
       turmaId: leitura.turmaId ?? undefined, professorId: leitura.professorId ?? undefined,
       provaMontadaId: leitura.provaMontadaId ?? undefined, turmaNome: leitura.turmaNome,

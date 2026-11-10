@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "jest --runInBand",
+    "test:accuracy": "jest --runInBand __tests__/services/OmrAccuracyBenchmark.test.ts",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
