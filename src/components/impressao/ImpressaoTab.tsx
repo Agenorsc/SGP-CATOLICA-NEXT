@@ -762,7 +762,7 @@ export function ImpressaoTab({
                     </div>
 
                     {/* Grade de Respostas: 1 ou 2 subcolunas para até 30 questões com Marcadores Fiduciais Dedicados */}
-                    <div className="relative border border-slate-300 print:border-black p-2.5 pt-3 pb-2.5 bg-white rounded-sm font-mono">
+                    <div className="relative border border-slate-300 print:border-black p-3 pt-3.5 pb-3 pr-4 bg-white rounded-sm font-mono">
                       {/* 4 Marcadores Fiduciais de Alta Precisão nos cantos da Grade */}
                       <div className="absolute top-1 left-1 w-2.5 h-2.5 bg-black print:bg-black" />
                       <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-black print:bg-black" />
@@ -772,14 +772,14 @@ export function ImpressaoTab({
                       <div className="flex items-start gap-6 px-1">
                         {/* Sub-coluna 1: Questões 1 até 15 (ou todas se <= 15) */}
                         <div className="flex flex-col items-start">
-                          <div className="flex items-center gap-2 text-[10px] font-black text-slate-800 print:text-black pb-1">
-                            <span className="w-8 inline-block text-right pr-2">Q:</span>
+                          <div className="flex items-center gap-2.5 text-[10px] font-black text-slate-800 print:text-black pb-1">
+                            <span className="w-9 inline-block text-right pr-2">Q:</span>
                             {letrasCol1.map(l => (
                               <span key={l} className="w-5 text-center">{l}</span>
                             ))}
                           </div>
 
-                          <div className="space-y-1.5">
+                          <div className="space-y-2">
                             {questoesObjetivas.slice(0, questoesObjetivas.length > 15 ? 15 : questoesObjetivas.length).map((q, idx) => {
                               const totalOpcoes = (q.options && q.options.length > 0)
                                 ? q.options.length
@@ -790,14 +790,14 @@ export function ImpressaoTab({
 
                               return (
                                 <div key={q.id || idx} className="flex items-center gap-2 text-[9px]">
-                                  <span className="w-8 text-right font-black text-slate-900 print:text-black pr-2 select-none">
+                                  <span className="w-9 text-right font-black text-slate-900 print:text-black pr-2 select-none shrink-0">
                                     Q.{idx + 1 < 10 ? `0${idx + 1}` : idx + 1}:
                                   </span>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2.5">
                                     {letras.slice(0, totalOpcoes).map(l => (
                                       <div
                                         key={l}
-                                        className="w-5 h-4.5 border-[1.5px] border-slate-800 print:border-black rounded-xs flex items-center justify-center text-[7.5px] font-medium text-slate-400 print:text-slate-500 bg-white"
+                                        className="w-5 h-4.5 border-[1px] border-slate-700 print:border-black rounded-xs flex items-center justify-center text-[7.5px] font-normal text-slate-400 print:text-slate-500 bg-white"
                                       >
                                         {l}
                                       </div>
@@ -808,8 +808,8 @@ export function ImpressaoTab({
                             })}
                           </div>
 
-                          <div className="flex items-center gap-2 text-[10px] font-black text-slate-800 print:text-black pt-1">
-                            <span className="w-8 inline-block text-right pr-2">Q:</span>
+                          <div className="flex items-center gap-2.5 text-[10px] font-black text-slate-800 print:text-black pt-1.5">
+                            <span className="w-9 inline-block text-right pr-2">Q:</span>
                             {letrasCol1.map(l => (
                               <span key={l} className="w-5 text-center">{l}</span>
                             ))}
@@ -819,14 +819,14 @@ export function ImpressaoTab({
                         {/* Sub-coluna 2: Questões 16 até 30 (renderizada quando há mais de 15 questões) */}
                         {questoesObjetivas.length > 15 && (
                           <div className="flex flex-col items-start">
-                            <div className="flex items-center gap-2 text-[10px] font-black text-slate-800 print:text-black pb-1">
-                              <span className="w-8 inline-block text-right pr-2">Q:</span>
+                            <div className="flex items-center gap-2.5 text-[10px] font-black text-slate-800 print:text-black pb-1">
+                              <span className="w-9 inline-block text-right pr-2">Q:</span>
                               {letrasCol2.map(l => (
                                 <span key={l} className="w-5 text-center">{l}</span>
                               ))}
                             </div>
 
-                            <div className="space-y-1.5">
+                            <div className="space-y-2">
                               {questoesObjetivas.slice(15, 30).map((q, idxRel) => {
                                 const qNum = 16 + idxRel;
                                 const totalOpcoes = (q.options && q.options.length > 0)
@@ -838,14 +838,14 @@ export function ImpressaoTab({
 
                                 return (
                                   <div key={q.id || qNum} className="flex items-center gap-2 text-[9px]">
-                                    <span className="w-8 text-right font-black text-slate-900 print:text-black pr-2 select-none">
+                                    <span className="w-9 text-right font-black text-slate-900 print:text-black pr-2 select-none shrink-0">
                                       Q.{qNum}:
                                     </span>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2.5">
                                       {letras.slice(0, totalOpcoes).map(l => (
                                         <div
                                           key={l}
-                                          className="w-5 h-4.5 border-[1.5px] border-slate-800 print:border-black rounded-xs flex items-center justify-center text-[7.5px] font-medium text-slate-400 print:text-slate-500 bg-white"
+                                          className="w-5 h-4.5 border-[1px] border-slate-700 print:border-black rounded-xs flex items-center justify-center text-[7.5px] font-normal text-slate-400 print:text-slate-500 bg-white"
                                         >
                                           {l}
                                         </div>
@@ -856,8 +856,8 @@ export function ImpressaoTab({
                               })}
                             </div>
 
-                            <div className="flex items-center gap-2 text-[10px] font-black text-slate-800 print:text-black pt-1">
-                              <span className="w-8 inline-block text-right pr-2">Q:</span>
+                            <div className="flex items-center gap-2.5 text-[10px] font-black text-slate-800 print:text-black pt-1.5">
+                              <span className="w-9 inline-block text-right pr-2">Q:</span>
                               {letrasCol2.map(l => (
                                 <span key={l} className="w-5 text-center">{l}</span>
                               ))}

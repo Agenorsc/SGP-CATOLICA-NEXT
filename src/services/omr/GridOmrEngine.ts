@@ -447,8 +447,8 @@ export function lerGradeOmrPorAjuste(
     const multCol2 = N2 > 0 ? [6.2, 6.6, 7.0, 7.4, 7.8] : [0];
 
     let melhor = { score: -Infinity, x0: 0, y0: 0, pc: 0, pr: 0, prop: 0.37, off2: 0 };
-    // somaLinha[k][y*w+x] = soma das k primeiras colunas (k = 2..5) a partir de x
-    const somaK: Float32Array[] = [2, 3, 4, 5].map(() => new Float32Array(rc.w * rc.h));
+    // somaLinha[k][y*w+x] = soma das k primeiras colunas (k = 1..5) a partir de x
+    const somaK: Float32Array[] = [1, 2, 3, 4, 5].map(() => new Float32Array(rc.w * rc.h));
 
     for (let pc = pcMin; pc <= pcMax; pc++) {
       for (const prop of proporcoes) {
@@ -462,12 +462,12 @@ export function lerGradeOmrPorAjuste(
               const xx = x + c * pc;
               const v = xx < rc.w ? R[off + xx] : -0.2;
               s += v > CAP_RESPOSTA ? CAP_RESPOSTA : v;
-              if (c >= 1) somaK[c - 1][off + x] = s;
+              somaK[c][off + x] = s;
             }
           }
         }
         const lerSoma = (k: number, x: number, y: number) =>
-          x < 0 || y < 0 || x >= rc.w || y >= rc.h ? -0.2 * k : somaK[k - 2][y * rc.w + x];
+          x < 0 || y < 0 || x >= rc.w || y >= rc.h ? -0.2 * k : somaK[k - 1][y * rc.w + x];
 
         const prIni = Math.max(2, Math.round(pc * 0.45));
         const prFim = Math.round(pc * 1.08);
@@ -481,6 +481,21 @@ export function lerGradeOmrPorAjuste(
                 let s = 0;
                 for (let q = 0; q < N1; q++) s += lerSoma(opsLinha(q), x0, y0 + q * pr);
                 for (let q = 0; q < N2; q++) s += lerSoma(opsLinha(15 + q), x0 + off2, y0 + q * pr);
+
+                // Anti-deslocamento lateral para gabaritos de 4 alternativas (A, B, C, D):
+                // Se houver uma coluna ativa de alternativas à esquerda (em x0 - pc),
+                // significa que x0 é na verdade a coluna B, e não a coluna A!
+                if (x0 - pc >= 0) {
+                  let sLeft = 0;
+                  for (let q = 0; q < N1; q++) {
+                    const vL = lerSoma(1, x0 - pc, y0 + q * pr);
+                    if (vL > 0.05) sLeft += vL;
+                  }
+                  if (sLeft > 0.15 * N1) {
+                    s -= sLeft * 1.5;
+                  }
+                }
+
                 if (s > melhor.score) melhor = { score: s, x0, y0, pc, pr, prop, off2 };
               }
             }
@@ -528,6 +543,16 @@ export function lerGradeOmrPorAjuste(
           const v = lerR(R, Math.round(xb + c * pcF), yy);
           s += v > CAP_RESPOSTA ? CAP_RESPOSTA : v;
         }
+      }
+      // Penalidade de borda esquerda para manter alinhamento estrito na coluna A
+      let sLeft = 0;
+      for (let q = 0; q < N1; q++) {
+        const yy = Math.round(by + q * prF);
+        const vL = lerR(R, Math.round(bx - pcF), yy);
+        if (vL > 0.05) sLeft += vL;
+      }
+      if (sLeft > 0.15 * N1) {
+        s -= sLeft * 1.5;
       }
       return s;
     };
