@@ -33,3 +33,26 @@
     background: #ffffff;
   }
 }
+
+/* TSK-54/TSK-52: o pacote é nominal e conserva o conjunto enunciado/figura/alternativas. */
+.sgp-question-statement { white-space: pre-wrap; overflow-wrap: anywhere; }
+.sgp-question-image { display: block; max-height: 160mm; object-fit: contain; }
+@media print {
+  .sgp-print-batch, .sgp-student-packet, .sgp-question-booklet { overflow: visible !important; height: auto; }
+  .sgp-student-packet + .sgp-student-packet { break-before: page; page-break-before: always; }
+  .sgp-print-batch:has(.sgp-answer-sheet-back) .sgp-student-packet + .sgp-student-packet { break-before: right; }
+  .sgp-answer-sheet { break-inside: avoid; page-break-inside: avoid; break-after: page; }
+  .sgp-answer-sheet-back { break-before: page; break-after: page; }
+  .sgp-answer-columns { display: grid !important; grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .sgp-answer-columns > :first-child { grid-column: span 5 / span 5; }
+  .sgp-answer-columns > :last-child { grid-column: span 7 / span 7; }
+  .sgp-answer-columns[data-two-columns="true"] { grid-template-columns: 1fr; }
+  .sgp-answer-columns[data-two-columns="true"] > * { grid-column: 1; }
+  .sgp-question { display: block; break-inside: avoid-page; page-break-inside: avoid; orphans: 3; widows: 3; }
+  .sgp-question-heading { break-after: avoid-page; page-break-after: avoid; }
+  .sgp-question-options, .sgp-question-option, .sgp-question-image, .sgp-discursive-answer { break-inside: avoid-page; page-break-inside: avoid; }
+  .sgp-question--oversized { break-inside: auto; page-break-inside: auto; }
+  .sgp-question--oversized .sgp-question-options { break-inside: auto; page-break-inside: auto; }
+  .sgp-question--oversized .sgp-question-heading { break-inside: auto; }
+  .sgp-question-booklet { clear: both; }
+}
