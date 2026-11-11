@@ -691,3 +691,8 @@ O desenvolvimento do **SGP Católica** cumpriu com excelência a totalidade dos 
 <div align="center">
   <sub>Centro Universitário Católica de Santa Catarina — Engenharia de Software 2026</sub>
 </div>
+
+
+### TSK-55 — Senhas (Erick Andreas, 09/11 a 10/11)
+
+Hash bcrypt, migração das contas legadas e troca de senha: veja [instruções da TSK-55](docs/TSK-55-Erick-Andreas.md). Antes de usar esta versão com um banco existente, execute a migração de senhas descrita no documento.
