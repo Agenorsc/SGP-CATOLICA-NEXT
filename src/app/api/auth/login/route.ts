@@ -1,3 +1,4 @@
+import { verifyPassword } from '@/lib/password';
 import { NextResponse } from 'next/server';
 import { PrismaUsuarioRepository } from '@/repositories/prisma/PrismaUsuarioRepository';
 
@@ -9,10 +10,13 @@ const usuarioRepo = new PrismaUsuarioRepository();
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, senha } = body;
+    const { email, senha } = body || {};
+    if (typeof email !== 'string' || typeof senha !== 'string' || email.length > 254 || senha.length > 72) {
+      return NextResponse.json({ error: 'Credenciais inválidas.' }, { status: 400 });
+    }
 
     const cleanEmail = (email || '').toLowerCase().trim();
-    const cleanSenha = (senha || '').trim();
+    const cleanSenha = senha;
 
     if (!cleanEmail || !cleanSenha) {
       return NextResponse.json(
@@ -25,14 +29,14 @@ export async function POST(request: Request) {
 
     if (!usuario) {
       return NextResponse.json(
-        { error: 'Credenciais inválidas. Usuário não encontrado.' },
+        { error: 'Credenciais inválidas.' },
         { status: 401 }
       );
     }
 
-    if (usuario.senha !== cleanSenha) {
+    if (!await verifyPassword(cleanSenha, usuario.senha)) {
       return NextResponse.json(
-        { error: 'Credenciais inválidas. Senha incorreta.' },
+        { error: 'Credenciais inválidas.' },
         { status: 401 }
       );
     }
@@ -47,7 +51,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Erro no login:', error);
     return NextResponse.json(
-      { error: error.message || 'Erro interno de autenticação.' },
+      { error: 'Erro interno de autenticação.' },
       { status: 500 }
     );
   }
