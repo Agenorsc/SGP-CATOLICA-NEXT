@@ -1,3 +1,4 @@
+import { hashPassword } from '@/lib/password';
 import { prisma } from '@/lib/prisma';
 import { UsuarioModel } from '@/models/UsuarioModel';
 import { UserRole } from '@/types';
@@ -53,11 +54,14 @@ export class PrismaUsuarioRepository implements IBaseRepository<UsuarioModel> {
   }
 
   async save(usuario: UsuarioModel): Promise<UsuarioModel> {
+    const existing = await prisma.usuario.findUnique({ where: { email: usuario.email.toLowerCase().trim() } });
+    // Alterações de senha de contas existentes exigem comprovação da senha atual.
+    if (existing && usuario.senha) throw new Error('Utilize a opção Trocar senha para alterar a senha.');
+    const senhaHash = existing ? existing.senha : await hashPassword(usuario.senha || '');
     const saved = await prisma.usuario.upsert({
       where: { email: usuario.email.toLowerCase().trim() },
       update: {
         nome: usuario.nome,
-        senha: usuario.senha,
         role: usuario.role,
         disciplina: usuario.disciplina || null
       },
@@ -65,7 +69,7 @@ export class PrismaUsuarioRepository implements IBaseRepository<UsuarioModel> {
         id: usuario.id,
         nome: usuario.nome,
         email: usuario.email.toLowerCase().trim(),
-        senha: usuario.senha || 'admin',
+        senha: senhaHash,
         role: usuario.role || 'PROFESSOR',
         disciplina: usuario.disciplina || null
       }

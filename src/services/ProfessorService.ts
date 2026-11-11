@@ -29,9 +29,6 @@ export class ProfessorService {
 
     // Força role PROFESSOR para professores cadastrados
     professor.role = 'PROFESSOR';
-    if (!professor.senha) {
-      professor.senha = 'admin'; // Senha padrão caso não informada
-    }
 
     return this.usuarioRepository.save(professor);
   }

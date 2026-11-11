@@ -19,7 +19,7 @@ export function ModalProfessor({
 }: ModalProfessorProps) {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('admin');
+  const [senha, setSenha] = useState('');
   const [disciplina, setDisciplina] = useState('');
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
@@ -28,12 +28,12 @@ export function ModalProfessor({
     if (professorEmEdicao) {
       setNome(professorEmEdicao.nome);
       setEmail(professorEmEdicao.email);
-      setSenha(professorEmEdicao.senha || 'admin');
+      setSenha('');
       setDisciplina(professorEmEdicao.disciplina || '');
     } else {
       setNome('');
       setEmail('');
-      setSenha('admin');
+      setSenha('');
       setDisciplina('');
     }
     setErro('');
@@ -60,7 +60,7 @@ export function ModalProfessor({
       await onSave({
         nome: nome.trim(),
         email: email.trim().toLowerCase(),
-        senha: senha.trim() || 'admin',
+        senha: professorEmEdicao ? undefined : senha,
         disciplina: disciplina.trim()
       });
       onClose();
@@ -138,14 +138,18 @@ export function ModalProfessor({
             <div className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 focus-within:border-catolica-primary focus-within:ring-2 focus-within:ring-catolica-primary/10">
               <LockKeyhole className="w-4 h-4 text-slate-400" />
               <input
-                type="text"
-                placeholder="Ex: admin ou senha123"
+                type="password"
+                required={!professorEmEdicao}
+                disabled={!!professorEmEdicao}
+                minLength={12}
+                autoComplete="new-password"
+                placeholder="Mínimo de 12 caracteres"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 className="w-full text-xs outline-none bg-transparent font-mono"
               />
             </div>
-            <p className="mt-1 text-[11px] text-slate-400">Padrão do sistema: <strong>admin</strong></p>
+            <p className="mt-1 text-[11px] text-slate-400">{professorEmEdicao ? 'Para alterar sua senha, utilize Trocar senha.' : 'Informe uma senha inicial exclusiva (12 caracteres ou mais).'}</p>
           </div>
 
           <div>

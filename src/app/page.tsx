@@ -1,5 +1,6 @@
 'use client';
 
+import { ChangePassword } from '@/components/auth/ChangePassword';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Menu } from 'lucide-react';
 
@@ -703,7 +704,7 @@ export default function Home() {
       id: professorEmEdicao?.id || `usr_prof_${Date.now()}`,
       nome: dados.nome,
       email: dados.email,
-      senha: dados.senha || 'admin',
+      senha: dados.senha || undefined,
       role: 'PROFESSOR',
       disciplina: dados.disciplina
     });
@@ -759,6 +760,7 @@ export default function Home() {
             </div>
           </div>
           <Header currentTab={currentTab} />
+          <ChangePassword email={session.email} />
         </div>
 
         {/* 1. ABA CADASTROS (ALUNOS E TURMAS DO PROFESSOR) */}

@@ -1,8 +1,9 @@
 'use client';
 
 import React, { FormEvent, useState } from 'react';
-import { ArrowRight, LockKeyhole, Mail, ShieldCheck, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowRight, LockKeyhole, Mail, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
 import { UserSession } from '@/types';
+import { ChangePassword } from './ChangePassword';
 import { AuthService } from '@/services/AuthService';
 
 interface LoginScreenProps {
@@ -22,7 +23,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     setError('');
 
     const cleanEmail = email.trim().toLowerCase();
-    const cleanPass = password.trim();
+    const cleanPass = password;
 
     if (!cleanEmail || !cleanPass) {
       setError('Informe e-mail e senha para acessar.');
@@ -32,45 +33,13 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     setLoading(true);
 
     try {
-      // Tenta via API primeiro
-      if (typeof window !== 'undefined') {
-        try {
-          const res = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: cleanEmail, senha: cleanPass })
-          });
-
-          if (res.ok) {
-            const data: UserSession = await res.json();
-            onLogin(data);
-            return;
-          } else {
-            const errData = await res.json();
-            throw new Error(errData.error || 'Credenciais inválidas.');
-          }
-        } catch (apiErr: any) {
-          // Se for erro de credencial da API, propaga o erro
-          if (apiErr.message && !apiErr.message.includes('fetch')) {
-            throw apiErr;
-          }
-          // Fallback para serviço local em caso de indisponibilidade de rede
-          const session = await authService.login(cleanEmail, cleanPass);
-          onLogin(session);
-          return;
-        }
-      }
+      const session = await authService.login(cleanEmail, cleanPass);
+      onLogin(session);
     } catch (err: any) {
       setError(err.message || 'Credenciais inválidas. Verifique seu e-mail e senha.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const preencherCredenciais = (userEmail: string, userPass: string) => {
-    setEmail(userEmail);
-    setPassword(userPass);
-    setError('');
   };
 
   return (
@@ -165,41 +134,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               </button>
             </form>
 
-            {/* Atalhos Rápidos para Demonstração / Testes */}
-            <div className="mt-6 pt-5 border-t border-slate-100">
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <KeyRound className="w-3.5 h-3.5 text-catolica-primary" /> Credenciais Pré-configuradas:
-              </p>
-              <div className="flex flex-col gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => preencherCredenciais('admin@admin.com', 'admin')}
-                  className="w-full text-left px-3 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs transition flex justify-between items-center group cursor-pointer"
-                >
-                  <div>
-                    <span className="font-bold text-slate-800">Administrador:</span>{' '}
-                    <span className="text-slate-600 font-mono">admin@admin.com</span>
-                  </div>
-                  <span className="text-[10px] bg-slate-200 text-slate-700 font-bold px-1.5 py-0.5 rounded group-hover:bg-catolica-primary group-hover:text-white transition">
-                    Usar
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => preencherCredenciais('prof.agenor@catolica.edu.br', 'admin')}
-                  className="w-full text-left px-3 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs transition flex justify-between items-center group cursor-pointer"
-                >
-                  <div>
-                    <span className="font-bold text-slate-800">Prof. Agenor:</span>{' '}
-                    <span className="text-slate-600 font-mono">prof.agenor@catolica.edu.br</span>
-                  </div>
-                  <span className="text-[10px] bg-slate-200 text-slate-700 font-bold px-1.5 py-0.5 rounded group-hover:bg-catolica-primary group-hover:text-white transition">
-                    Usar
-                  </span>
-                </button>
-              </div>
-            </div>
+            <ChangePassword />
           </div>
         </section>
       </div>
