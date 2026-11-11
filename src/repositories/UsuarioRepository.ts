@@ -1,13 +1,15 @@
 import { UsuarioModel } from '@/models/UsuarioModel';
 import { IBaseRepository } from './base/IBaseRepository';
+import { hashPasswordSync } from '@/lib/password';
 
 export class UsuarioRepository implements IBaseRepository<UsuarioModel> {
+  // Usuários padrão com senhas seguras migradas e armazenadas com hash bcrypt
   private fallbackUsuarios: UsuarioModel[] = [
     new UsuarioModel({
       id: 'usr-admin-01',
       nome: 'Administrador SGP',
       email: 'admin@admin.com',
-      senha: 'admin',
+      senha: hashPasswordSync('Admin@Catolica2026!'),
       role: 'ADMIN',
       disciplina: 'Gestão Acadêmica'
     }),
@@ -15,7 +17,7 @@ export class UsuarioRepository implements IBaseRepository<UsuarioModel> {
       id: 'usr-prof-01',
       nome: 'Prof. Agenor Alvise',
       email: 'prof.agenor@catolica.edu.br',
-      senha: 'admin',
+      senha: hashPasswordSync('Agenor@Catolica2026!'),
       role: 'PROFESSOR',
       disciplina: 'Engenharia de Software IV'
     }),
@@ -23,7 +25,7 @@ export class UsuarioRepository implements IBaseRepository<UsuarioModel> {
       id: 'usr-prof-02',
       nome: 'Prof. Marcos Silva',
       email: 'prof.marcos@catolica.edu.br',
-      senha: 'admin',
+      senha: hashPasswordSync('Marcos@Catolica2026!'),
       role: 'PROFESSOR',
       disciplina: 'Arquitetura de Software'
     })

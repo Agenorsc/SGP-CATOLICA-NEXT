@@ -1,40 +1,50 @@
 import { ProfessorService } from '../../src/services/ProfessorService';
 import { UsuarioRepository } from '../../src/repositories/UsuarioRepository';
 import { UsuarioModel } from '../../src/models/UsuarioModel';
+import { hashPasswordSync, isBcryptHash } from '../../src/lib/password';
 
 describe('ProfessorService - Gestão Exclusiva de Professores pelo Admin', () => {
   let service: ProfessorService;
   let mockRepo: UsuarioRepository;
 
-  const mockUsuarios: UsuarioModel[] = [
-    new UsuarioModel({
-      id: 'usr-admin-01',
-      nome: 'Administrador SGP',
-      email: 'admin@admin.com',
-      senha: 'admin',
-      role: 'ADMIN'
-    }),
-    new UsuarioModel({
-      id: 'usr-prof-01',
-      nome: 'Prof. Agenor Alvise',
-      email: 'prof.agenor@catolica.edu.br',
-      senha: 'admin',
-      role: 'PROFESSOR',
-      disciplina: 'Engenharia de Software IV'
-    }),
-    new UsuarioModel({
-      id: 'usr-prof-02',
-      nome: 'Prof. Marcos Silva',
-      email: 'prof.marcos@catolica.edu.br',
-      senha: 'admin',
-      role: 'PROFESSOR',
-      disciplina: 'Arquitetura de Software'
-    })
-  ];
+  let mockUsuarios: UsuarioModel[];
 
   beforeEach(() => {
+    mockUsuarios = [
+      new UsuarioModel({
+        id: 'usr-admin-01',
+        nome: 'Administrador SGP',
+        email: 'admin@admin.com',
+        senha: hashPasswordSync('Admin@Catolica2026!'),
+        role: 'ADMIN'
+      }),
+      new UsuarioModel({
+        id: 'usr-prof-01',
+        nome: 'Prof. Agenor Alvise',
+        email: 'prof.agenor@catolica.edu.br',
+        senha: hashPasswordSync('Agenor@Catolica2026!'),
+        role: 'PROFESSOR',
+        disciplina: 'Engenharia de Software IV'
+      }),
+      new UsuarioModel({
+        id: 'usr-prof-02',
+        nome: 'Prof. Marcos Silva',
+        email: 'prof.marcos@catolica.edu.br',
+        senha: hashPasswordSync('Marcos@Catolica2026!'),
+        role: 'PROFESSOR',
+        disciplina: 'Arquitetura de Software'
+      })
+    ];
+
     mockRepo = new UsuarioRepository();
     jest.spyOn(mockRepo, 'findAll').mockResolvedValue(mockUsuarios);
+    jest.spyOn(mockRepo, 'findByEmail').mockImplementation(async (email: string) => {
+      const clean = email.toLowerCase().trim();
+      return mockUsuarios.find(u => u.email === clean);
+    });
+    jest.spyOn(mockRepo, 'findById').mockImplementation(async (id: string) => {
+      return mockUsuarios.find(u => u.id === id);
+    });
     jest.spyOn(mockRepo, 'save').mockImplementation(async (u) => u);
     jest.spyOn(mockRepo, 'delete').mockResolvedValue(true);
     service = new ProfessorService(mockRepo);
@@ -52,11 +62,12 @@ describe('ProfessorService - Gestão Exclusiva de Professores pelo Admin', () =>
     expect(profs.some(p => p.email === 'admin@admin.com')).toBe(false);
   });
 
-  it('deve permitir que o ADMINISTRADOR cadastre um novo professor', async () => {
+  it('deve permitir que o ADMINISTRADOR cadastre um novo professor e criptografe a senha com Bcrypt', async () => {
     const novoProf = new UsuarioModel({
       nome: 'Prof. Carlos Santos',
       email: 'prof.carlos@catolica.edu.br',
-      disciplina: 'Banco de Dados'
+      disciplina: 'Banco de Dados',
+      senha: 'SenhaForte@2026'
     });
 
     const salvo = await service.salvarProfessor(novoProf, 'ADMIN');
@@ -64,6 +75,20 @@ describe('ProfessorService - Gestão Exclusiva de Professores pelo Admin', () =>
     expect(salvo).toBeDefined();
     expect(salvo.nome).toBe('Prof. Carlos Santos');
     expect(salvo.role).toBe('PROFESSOR');
+    expect(isBcryptHash(salvo.senha)).toBe(true);
+  });
+
+  it('deve BLOQUEAR o cadastro de professor se a senha informada for a padrão "admin"', async () => {
+    const profComSenhaAdmin = new UsuarioModel({
+      nome: 'Prof. Tentativa Insegura',
+      email: 'inseguro@catolica.edu.br',
+      disciplina: 'Segurança',
+      senha: 'admin'
+    });
+
+    await expect(service.salvarProfessor(profComSenhaAdmin, 'ADMIN'))
+      .rejects
+      .toThrow('A senha padrão "admin" não é permitida por motivos de segurança.');
   });
 
   it('deve BLOQUEAR o cadastro de professor se o usuário não for ADMIN', async () => {

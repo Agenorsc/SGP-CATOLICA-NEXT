@@ -9,7 +9,8 @@ import {
   BarChart3, 
   X, 
   LogOut,
-  GraduationCap
+  GraduationCap,
+  KeyRound
 } from 'lucide-react';
 import { UserSession } from '@/types';
 
@@ -22,6 +23,7 @@ interface SidebarProps {
   onCloseSidebar: () => void;
   session: UserSession;
   onLogout: () => void;
+  onOpenTrocarSenha?: () => void;
 }
 
 const navItems: { id: TabType; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
@@ -39,7 +41,8 @@ export function Sidebar({
   sidebarOpen,
   onCloseSidebar,
   session,
-  onLogout
+  onLogout,
+  onOpenTrocarSenha
 }: SidebarProps) {
   const visibleNavItems = navItems.filter(item => {
     if (item.adminOnly) {
@@ -135,6 +138,16 @@ export function Sidebar({
             )}
           </div>
           <p className="font-semibold text-slate-300">Católica SC - Campus Jaraguá</p>
+          {onOpenTrocarSenha && (
+            <button
+              type="button"
+              onClick={onOpenTrocarSenha}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 text-xs font-bold text-slate-300 transition hover:border-catolica-primary hover:bg-slate-800 hover:text-white cursor-pointer"
+              title="Alterar senha de acesso"
+            >
+              <KeyRound className="h-4 w-4 text-catolica-primary" /> Alterar Senha
+            </button>
+          )}
           <button
             type="button"
             onClick={onLogout}

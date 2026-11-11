@@ -43,6 +43,7 @@ import { LoginScreen } from '@/components/auth/LoginScreen';
 import { CadastrosTab } from '@/components/cadastros/CadastrosTab';
 import { ProfessoresTab } from '@/components/professores/ProfessoresTab';
 import { ModalProfessor } from '@/components/professores/ModalProfessor';
+import { ModalTrocarSenha } from '@/components/auth/ModalTrocarSenha';
 import { ModalAluno, FormAlunoState } from '@/components/cadastros/ModalAluno';
 import { ModalTurma, FormTurmaState } from '@/components/cadastros/ModalTurma';
 import { AlertaModal } from '@/components/common/AlertaModal';
@@ -74,6 +75,7 @@ export default function Home() {
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [currentTab, setCurrentTab] = useState<TabType>('cadastros');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [modalTrocarSenhaAberto, setModalTrocarSenhaAberto] = useState(false);
 
   useEffect(() => {
     const savedSession = window.localStorage.getItem('sgp-user-session');
@@ -703,7 +705,7 @@ export default function Home() {
       id: professorEmEdicao?.id || `usr_prof_${Date.now()}`,
       nome: dados.nome,
       email: dados.email,
-      senha: dados.senha || 'admin',
+      senha: dados.senha || undefined,
       role: 'PROFESSOR',
       disciplina: dados.disciplina
     });
@@ -738,6 +740,7 @@ export default function Home() {
         onCloseSidebar={() => setSidebarOpen(false)}
         session={session}
         onLogout={handleLogout}
+        onOpenTrocarSenha={() => setModalTrocarSenhaAberto(true)}
       />
 
       {/* CONTEÚDO PRINCIPAL EM CAMADAS */}
@@ -902,6 +905,13 @@ export default function Home() {
             onSave={handleSaveProfessorSubmit}
           />
         )}
+
+        {/* MODAL DE TROCA DE SENHA (TODOS OS PERFIS AUTENTICADOS) */}
+        <ModalTrocarSenha
+          isOpen={modalTrocarSenhaAberto}
+          onClose={() => setModalTrocarSenhaAberto(false)}
+          session={session}
+        />
 
         {/* MODAL DE CADASTRO/EDIÇÃO DE QUESTÃO */}
         <ModalQuestao

@@ -1,17 +1,19 @@
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('--- Iniciando Seed do Banco de Dados Supabase ---');
 
-  // 1. Usuários do Sistema (Admin e Professores)
+  // 1. Usuários do Sistema (Admin e Professores) com senhas criptografadas com bcrypt
+  // A senha padrão fraca 'admin' foi completamente removida.
   const usuarios = [
     {
       id: 'usr-admin-01',
       nome: 'Administrador SGP',
       email: 'admin@admin.com',
-      senha: 'admin',
+      senha: bcrypt.hashSync('Admin@Catolica2026!', 10),
       role: 'ADMIN',
       disciplina: 'Gestão Acadêmica'
     },
@@ -19,7 +21,7 @@ async function main() {
       id: 'usr-prof-01',
       nome: 'Prof. Agenor Alvise',
       email: 'prof.agenor@catolica.edu.br',
-      senha: 'admin',
+      senha: bcrypt.hashSync('Agenor@Catolica2026!', 10),
       role: 'PROFESSOR',
       disciplina: 'Engenharia de Software IV'
     },
@@ -27,7 +29,7 @@ async function main() {
       id: 'usr-prof-02',
       nome: 'Prof. Marcos Silva',
       email: 'prof.marcos@catolica.edu.br',
-      senha: 'admin',
+      senha: bcrypt.hashSync('Marcos@Catolica2026!', 10),
       role: 'PROFESSOR',
       disciplina: 'Arquitetura de Software'
     }

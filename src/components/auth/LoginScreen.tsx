@@ -165,15 +165,15 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               </button>
             </form>
 
-            {/* Atalhos Rápidos para Demonstração / Testes */}
+            {/* Atalhos Rápidos para Demonstração / Testes (Senhas Seguras Migradas) */}
             <div className="mt-6 pt-5 border-t border-slate-100">
               <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <KeyRound className="w-3.5 h-3.5 text-catolica-primary" /> Credenciais Pré-configuradas:
+                <KeyRound className="w-3.5 h-3.5 text-catolica-primary" /> Credenciais Pré-configuradas (Bcrypt):
               </p>
               <div className="flex flex-col gap-1.5">
                 <button
                   type="button"
-                  onClick={() => preencherCredenciais('admin@admin.com', 'admin')}
+                  onClick={() => preencherCredenciais('admin@admin.com', 'Admin@Catolica2026!')}
                   className="w-full text-left px-3 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs transition flex justify-between items-center group cursor-pointer"
                 >
                   <div>
@@ -187,7 +187,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
                 <button
                   type="button"
-                  onClick={() => preencherCredenciais('prof.agenor@catolica.edu.br', 'admin')}
+                  onClick={() => preencherCredenciais('prof.agenor@catolica.edu.br', 'Agenor@Catolica2026!')}
                   className="w-full text-left px-3 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs transition flex justify-between items-center group cursor-pointer"
                 >
                   <div>

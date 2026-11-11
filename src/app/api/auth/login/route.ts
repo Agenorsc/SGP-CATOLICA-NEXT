@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PrismaUsuarioRepository } from '@/repositories/prisma/PrismaUsuarioRepository';
+import { comparePassword, hashPassword, isBcryptHash } from '@/lib/password';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -30,11 +31,25 @@ export async function POST(request: Request) {
       );
     }
 
-    if (usuario.senha !== cleanSenha) {
+    // Validação criptográfica com bcrypt (e fallback para compatibilidade de produção)
+    const senhaValida = await comparePassword(cleanSenha, usuario.senha);
+
+    if (!senhaValida) {
       return NextResponse.json(
         { error: 'Credenciais inválidas. Senha incorreta.' },
         { status: 401 }
       );
+    }
+
+    // Auto-migração transparente para Bcrypt em produção caso a senha estivesse legada
+    if (usuario.senha && !isBcryptHash(usuario.senha)) {
+      try {
+        const hash = await hashPassword(cleanSenha);
+        usuario.senha = hash;
+        await usuarioRepo.save(usuario);
+      } catch (err) {
+        console.warn('Falha na atualização automática para hash bcrypt:', err);
+      }
     }
 
     return NextResponse.json({
