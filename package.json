@@ -12,6 +12,7 @@
     "test:latency": "jest --runInBand __tests__/api/ApiLatencyBenchmark.test.ts",
     "test:accuracy": "jest --runInBand __tests__/services/OmrAccuracyBenchmark.test.ts",
     "measure:api": "node scripts/measure-api-latency.js",
+    "migrate:passwords": "node scripts/migrate-user-passwords.js",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
@@ -20,6 +21,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "html5-qrcode": "^2.3.8",
     "jsqr": "^1.4.0",
@@ -34,6 +36,7 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.4.6",
     "@testing-library/react": "^16.0.0",
+    "@types/bcryptjs": "^2.4.6",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.14.2",
     "@types/react": "^18.3.3",

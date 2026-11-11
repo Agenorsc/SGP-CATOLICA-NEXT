@@ -510,6 +510,7 @@ A esteira de integração contínua do GitHub Actions executou **61 pipelines**,
 
 #### 🟠 Erick Andreas Pontecelli (`@Erick-Andreas-Ponticelli`)
 - **Autenticação Real e Isolamento:** Implementação do sistema de login com credenciais criptografadas (`admin@admin.com` e docentes) com segregação estrita de dados por professor (`e6ba2d7`, `f782ce2`).
+- **Segurança de Credenciais e Hashing Bcrypt:** Criptografia de senhas com algoritmo Bcrypt (fator de custo 10), migração dos usuários do seed institucional com eliminação definitiva da senha padrão 'admin', validações de força de senha e módulo de troca de senha (`/api/auth/trocar-senha` e `ModalTrocarSenha`) com retrocompatibilidade em produção.
 - **Algoritmos Determinísticos:** Implementação do embaralhamento determinístico Fisher-Yates com sementes auditáveis de 64 bits por versão de prova (`PR #04`).
 
 #### 🔴 Edinei Junio Machado (`@edineiJM`)

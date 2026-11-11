@@ -16,7 +16,7 @@ export async function GET(
     if (!usuario) {
       return NextResponse.json({ error: 'Professor não encontrado' }, { status: 404 });
     }
-    return NextResponse.json(usuario);
+    return NextResponse.json(usuario.toSafeObject());
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
