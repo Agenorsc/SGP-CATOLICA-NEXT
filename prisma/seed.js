@@ -1,3 +1,4 @@
+const { hashPassword, isPasswordHash } = require('../src/lib/password');
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
@@ -11,7 +12,7 @@ async function main() {
       id: 'usr-admin-01',
       nome: 'Administrador SGP',
       email: 'admin@admin.com',
-      senha: 'admin',
+      senha: process.env.SEED_ADMIN_PASSWORD,
       role: 'ADMIN',
       disciplina: 'Gestão Acadêmica'
     },
@@ -19,7 +20,7 @@ async function main() {
       id: 'usr-prof-01',
       nome: 'Prof. Agenor Alvise',
       email: 'prof.agenor@catolica.edu.br',
-      senha: 'admin',
+      senha: process.env.SEED_AGENOR_PASSWORD,
       role: 'PROFESSOR',
       disciplina: 'Engenharia de Software IV'
     },
@@ -27,19 +28,25 @@ async function main() {
       id: 'usr-prof-02',
       nome: 'Prof. Marcos Silva',
       email: 'prof.marcos@catolica.edu.br',
-      senha: 'admin',
+      senha: process.env.SEED_MARCOS_PASSWORD,
       role: 'PROFESSOR',
       disciplina: 'Arquitetura de Software'
     }
   ];
 
-  for (const u of usuarios) {
-    await prisma.usuario.upsert({
-      where: { email: u.email },
-      update: u,
-      create: u
-    });
+  // Valida e prepara todos os hashes antes de escrever; reruns preservam senhas já migradas.
+  const prepared = [];
+  for (const { senha, ...u } of usuarios) {
+    const existing = await prisma.usuario.findUnique({ where: { email: u.email } });
+    if (existing && isPasswordHash(existing.senha)) continue;
+    if (!senha) throw new Error(`Configure a senha inicial exclusiva de ${u.email} nas variáveis SEED_*_PASSWORD.`);
+    prepared.push({ ...u, senha: await hashPassword(senha) });
   }
+  await prisma.$transaction(async tx => {
+    for (const u of prepared) {
+      await tx.usuario.upsert({ where: { email: u.email }, update: { senha: u.senha }, create: u });
+    }
+  });
   console.log(`Usuários inseridos/atualizados: ${usuarios.length}`);
 
   // 2. Turmas vinculadas aos Professores
