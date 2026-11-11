@@ -944,9 +944,9 @@ export function ImpressaoTab({
           {/* Lista de Questões Formatada (1), 2), 3) com alternativas a), b), c), d), e)) */}
           <div className="space-y-6">
             {questoesEmbaralhadas.map((q, idx) => (
-              <div key={q.id || idx} className="text-xs space-y-2.5 border-b border-slate-100 pb-4 print:break-inside-avoid">
-                <div className="flex justify-between font-bold text-slate-900 print:text-black">
-                  <span className="text-xs sm:text-sm font-black">
+              <div key={q.id || idx} className="text-xs space-y-2.5 border-b border-slate-100 pb-4 sgp-print-question">
+                <div className="flex justify-between font-bold text-slate-900 print:text-black sgp-print-question-heading">
+                  <span className="min-w-0 whitespace-pre-wrap break-words text-xs sm:text-sm font-black">
                     {idx + 1}) {q.enunciado || q.statement}
                   </span>
                   <span className="text-[11px] font-mono shrink-0 ml-2">
@@ -954,15 +954,24 @@ export function ImpressaoTab({
                   </span>
                 </div>
 
+                {q.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    className="sgp-print-question-image block max-w-full object-contain"
+                    src={q.imageUrl}
+                    alt={q.imageAlt || `Imagem da questão ${idx + 1}`}
+                  />
+                )}
+
                 {/* Alternativas (a, b, c, d, e) com indentação e espaçamento idênticos à prova real */}
                 {(q.tipo === 'objetiva' || q.type === 'OBJECTIVE') && q.alternativas && (
                   <div className="space-y-1.5 pl-4 pt-1">
                     {q.alternativas.map((alt, altIdx) => (
-                      <div key={alt.id || altIdx} className="flex items-start gap-2 text-slate-800 print:text-black leading-relaxed">
+                      <div key={alt.id || altIdx} className="sgp-print-question-option flex items-start gap-2 text-slate-800 print:text-black leading-relaxed">
                         <span className="font-bold w-4 shrink-0">
                           {String.fromCharCode(97 + altIdx)})
                         </span>
-                        <span className="flex-1">{alt.texto}</span>
+                        <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">{alt.texto}</span>
                       </div>
                     ))}
                   </div>
