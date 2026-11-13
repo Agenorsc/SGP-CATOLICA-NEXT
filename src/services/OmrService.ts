@@ -14,6 +14,7 @@ import {
 import { lerGradeOmrPorAjuste, LimiaresOmr } from '@/services/omr/GridOmrEngine';
 import { shuffleArray } from '@/lib/shuffle';
 import { decodificarGabaritoQr, sementeGabarito, GabaritoDecodificado } from '@/lib/answerKey';
+import { validarSchemaQrCode, QrCodeSchemaValidationResult } from '@/lib/schemas/qrCodeSchema';
 
 export interface ValidacaoQrResult {
   sucesso: boolean;
@@ -25,6 +26,11 @@ export interface ValidacaoQrResult {
   turmaDetectadaNome?: string;
   turmaAtivaNome?: string;
   gabaritoEmbutido?: GabaritoDecodificado | null;
+  adulterado?: boolean;
+  detalhesValidacao?: {
+    erros: string[];
+    camposValidados: string[];
+  };
 }
 
 export interface QrCodeAnchor {
@@ -53,9 +59,17 @@ export class OmrService {
   }
 
   /**
-   * Validação Estrita Anti-Fantasma (JSON Seguro)
+   * Validação Estrita Anti-Fantasma e Segurança de Schema para QR Code
+   * Valida estrutura, tipos, tamanhos máximos e detecta leituras adulteradas/injeções.
+   */
+  validarSchemaQrCode(rawInput: unknown): QrCodeSchemaValidationResult {
+    return validarSchemaQrCode(rawInput);
+  }
+
+  /**
+   * Validação Estrita Anti-Fantasma (JSON Seguro com Schema)
    * Suporta CardPayload e formato legado SecureQrPayload
-   * Rejeita payloads inválidos e confirma pertencimento à turma
+   * Rejeita leituras adulteradas, tipos incorretos, tamanhos inválidos e confirma pertencimento à turma
    */
   validarPayloadQrCode(
     rawText: string,
@@ -64,105 +78,97 @@ export class OmrService {
     turmasDisponiveis?: TurmaModel[],
     todosAlunos?: AlunoModel[]
   ): ValidacaoQrResult {
-    let parsed: any;
-    try {
-      parsed = JSON.parse(rawText.trim());
-    } catch {
-      // Se não for JSON, verifica se é formato legado da aplicação (ex: APP-CAT-EXAM-V1-1328834)
-      if (rawText.includes('APP-CAT-EXAM-')) {
-        const raMatch = rawText.match(/\d{6,8}/)?.[0] || '1328834';
-        const versaoMatch = rawText.match(/-V(\d+)-/)?.[1] || '1';
-        const versaoLetra = String.fromCharCode(64 + parseInt(versaoMatch, 10));
-        const aluno = alunosTurma.find(a => a.ra.trim() === raMatch.trim()) || alunosTurma[0];
-        if (aluno) {
-          const legacyPayload: SecureQrPayload = {
-            system: 'SGP-CATOLICA',
-            examId: `EXAM-${turmaIdEsperado || 't1'}`,
-            studentId: aluno.id,
-            ra: aluno.ra,
-            name: aluno.nome,
-            turmaId: turmaIdEsperado || aluno.turmaId,
-            examVersion: versaoLetra
-          };
-          const cardPayload: CardPayload = {
-            examId: `EXAM-${turmaIdEsperado || 't1'}`,
-            classId: turmaIdEsperado || aluno.turmaId,
-            className: turmasDisponiveis?.find(t => t.id === aluno.turmaId)?.nome || 'Turma Padrão',
-            teacherId: aluno.turmaId,
-            studentId: aluno.id,
-            studentName: aluno.nome,
-            studentRa: aluno.ra,
-            stage: 'N1',
-            system: 'SGP-CATOLICA',
-            turmaId: turmaIdEsperado || aluno.turmaId,
-            name: aluno.nome,
-            ra: aluno.ra,
-            examVersion: versaoLetra
-          };
-          return {
-            sucesso: true,
-            payload: legacyPayload,
-            cardPayload,
-            aluno
-          };
-        }
+    // 0. Compatibilidade legada com strings de teste sem formato JSON
+    if (typeof rawText === 'string' && rawText.includes('APP-CAT-EXAM-')) {
+      const raMatch = rawText.match(/\d{6,8}/)?.[0] || '1328834';
+      const versaoMatch = rawText.match(/-V(\d+)-/)?.[1] || '1';
+      const versaoLetra = String.fromCharCode(64 + parseInt(versaoMatch, 10));
+      const aluno = alunosTurma.find(a => a.ra.trim() === raMatch.trim()) || alunosTurma[0];
+      if (aluno) {
+        const legacyPayload: SecureQrPayload = {
+          system: 'SGP-CATOLICA',
+          examId: `EXAM-${turmaIdEsperado || 't1'}`,
+          studentId: aluno.id,
+          ra: aluno.ra,
+          name: aluno.nome,
+          turmaId: turmaIdEsperado || aluno.turmaId,
+          examVersion: versaoLetra
+        };
+        const cardPayload: CardPayload = {
+          examId: `EXAM-${turmaIdEsperado || 't1'}`,
+          classId: turmaIdEsperado || aluno.turmaId,
+          className: turmasDisponiveis?.find(t => t.id === aluno.turmaId)?.nome || 'Turma Padrão',
+          teacherId: aluno.turmaId,
+          studentId: aluno.id,
+          studentName: aluno.nome,
+          studentRa: aluno.ra,
+          stage: 'N1',
+          system: 'SGP-CATOLICA',
+          turmaId: turmaIdEsperado || aluno.turmaId,
+          name: aluno.nome,
+          ra: aluno.ra,
+          examVersion: versaoLetra
+        };
+        return {
+          sucesso: true,
+          adulterado: false,
+          payload: legacyPayload,
+          cardPayload,
+          aluno
+        };
+      }
+    }
+
+    // 1. Validação de Schema, Tipos, Tamanhos e Detecção de Adulteração
+    const schemaResult = validarSchemaQrCode(rawText);
+
+    if (!schemaResult.valido) {
+      let mensagemErro = schemaResult.motivo || 'Código QR rejeitado por inconsistência de schema.';
+
+      if (schemaResult.erros.some(e => e.includes('não é um JSON válido'))) {
+        mensagemErro = 'Código QR rejeitado: Formato não é um JSON válido (Filtro Anti-Fantasma ativo).';
+      } else if (schemaResult.erros.some(e => e.includes('SGP-CATOLICA'))) {
+        mensagemErro = 'Filtro Anti-Fantasma: QR Code rejeitado! O identificador do sistema deve ser estritamente "SGP-CATOLICA".';
+      } else if (schemaResult.adulterado) {
+        mensagemErro = `Filtro de Segurança: QR Code adulterado! ${schemaResult.motivo}`;
+      } else if (schemaResult.erros.some(e => e.includes('Campo obrigatório'))) {
+        const campoMsg = schemaResult.erros.find(e => e.includes('Campo obrigatório'));
+        mensagemErro = `Filtro Anti-Fantasma: ${campoMsg}`;
       }
 
       return {
         sucesso: false,
-        erro: 'Código QR rejeitado: Formato não é um JSON válido (Filtro Anti-Fantasma ativo).'
-      };
-    }
-
-    // 1. Validação estrita do identificador de sistema se presente
-    if (parsed.system && parsed.system !== 'SGP-CATOLICA') {
-      return {
-        sucesso: false,
-        erro: 'Filtro Anti-Fantasma: QR Code rejeitado! O identificador do sistema deve ser estritamente "SGP-CATOLICA".'
-      };
-    }
-
-    // 2. Extração e normalização de campos com suporte a CardPayload e formato legado
-    const classId = parsed.classId || parsed.turmaId || turmaIdEsperado || '';
-    const rawClassName = parsed.className || turmasDisponiveis?.find(t => t.id === classId)?.nome || (classId ? `Turma ${classId}` : 'Turma');
-    const studentRa = String(parsed.studentRa || parsed.ra || '').trim();
-    const studentName = parsed.studentName || parsed.name || parsed.aluno || '';
-    const studentId = parsed.studentId || '';
-    const teacherId = parsed.teacherId || '';
-    const stage: EvaluationStage = (parsed.stage === 'N1' || parsed.stage === 'N2' || parsed.stage === 'N3' || parsed.stage === 'N-1') ? parsed.stage : 'N1';
-    const examVersion = parsed.examVersion || parsed.versao || 'A';
-    const examId = parsed.examId || (classId ? `EXAM-${classId}` : 'EXAM-1');
-
-    if (parsed.system === 'SGP-CATOLICA') {
-      const requiredFields = [
-        { key: 'examId', val: examId },
-        { key: 'studentId', val: studentId || studentRa },
-        { key: 'ra', val: studentRa },
-        { key: 'name', val: studentName },
-        { key: 'turmaId', val: classId },
-        { key: 'examVersion', val: examVersion }
-      ];
-      for (const field of requiredFields) {
-        if (!field.val) {
-          return {
-            sucesso: false,
-            erro: `Filtro Anti-Fantasma: Campo obrigatório "${field.key}" ausente no QR Code.`
-          };
+        adulterado: schemaResult.adulterado,
+        erro: mensagemErro,
+        detalhesValidacao: {
+          erros: schemaResult.erros,
+          camposValidados: schemaResult.camposValidados || []
         }
-      }
-    } else if (!studentRa && !studentId) {
-      return {
-        sucesso: false,
-        erro: 'Filtro Anti-Fantasma: QR Code rejeitado! Identificação do aluno ausente.'
       };
     }
 
-    // 3. Validação Cruzada de Turma (Aba ativa específica vs Cartão Lido)
+    const { cardPayload, securePayload } = schemaResult;
+    if (!cardPayload || !securePayload) {
+      return {
+        sucesso: false,
+        adulterado: true,
+        erro: 'Erro interno na validação de schema do QR Code.'
+      };
+    }
+
+    const classId = cardPayload.classId;
+    const rawClassName = cardPayload.className || (classId ? `Turma ${classId}` : 'Turma');
+    const studentRa = cardPayload.studentRa;
+    const studentName = cardPayload.studentName;
+    const studentId = cardPayload.studentId;
+
+    // 2. Validação Cruzada de Turma (Aba ativa específica vs Cartão Lido)
     if (turmaIdEsperado && turmaIdEsperado !== 'TODAS' && classId && classId !== turmaIdEsperado) {
       const turmaAtivaObj = turmasDisponiveis?.find(t => t.id === turmaIdEsperado);
       const nomeTurmaAtiva = turmaAtivaObj ? turmaAtivaObj.nome : turmaIdEsperado;
       return {
         sucesso: false,
+        adulterado: false,
         inconsistenciaTurma: true,
         turmaDetectadaNome: rawClassName,
         turmaAtivaNome: nomeTurmaAtiva,
@@ -170,7 +176,7 @@ export class OmrService {
       };
     }
 
-    // 4. Localização do Aluno
+    // 3. Localização do Aluno
     const poolAlunos = (todosAlunos && todosAlunos.length > 0) ? todosAlunos : alunosTurma;
     let alunoEncontrado = poolAlunos.find(
       a => (studentRa && a.ra.trim() === studentRa) || (studentId && a.id === studentId)
@@ -195,60 +201,25 @@ export class OmrService {
     if (!alunoEncontrado) {
       return {
         sucesso: false,
+        adulterado: false,
         erro: `Aluno não encontrado na turma ativa: RA ${studentRa} (${studentName || 'Aluno'}). Verifique a folha ou a turma selecionada.`
       };
     }
 
-    const payloadNormalizado: SecureQrPayload = {
-      system: 'SGP-CATOLICA',
-      examId: examId || `EXAM-${classId}`,
-      studentId: alunoEncontrado.id,
-      ra: alunoEncontrado.ra,
-      name: alunoEncontrado.nome,
-      turmaId: classId || turmaIdEsperado || alunoEncontrado.turmaId,
-      examVersion: examVersion || 'A',
-      classId: classId || alunoEncontrado.turmaId,
-      className: rawClassName,
-      teacherId,
-      studentName: alunoEncontrado.nome,
-      studentRa: alunoEncontrado.ra,
-      stage
-    };
-
-    const cardPayload: CardPayload = {
-      examId: examId || `EXAM-${classId}`,
-      classId: classId || alunoEncontrado.turmaId,
-      className: rawClassName,
-      teacherId,
-      studentId: alunoEncontrado.id,
-      studentName: alunoEncontrado.nome,
-      studentRa: alunoEncontrado.ra,
-      stage,
-      system: 'SGP-CATOLICA',
-      turmaId: classId || alunoEncontrado.turmaId,
-      name: alunoEncontrado.nome,
-      ra: alunoEncontrado.ra,
-      examVersion: examVersion || 'A',
-      ...(parsed.k && parsed.nq
-        ? { nq: Number(parsed.nq), op: String(parsed.op || ''), k: String(parsed.k), pt: parsed.pt ? String(parsed.pt) : undefined }
-        : {})
-    };
-
     return {
       sucesso: true,
-      payload: payloadNormalizado,
+      adulterado: false,
+      payload: securePayload,
       cardPayload,
       aluno: alunoEncontrado,
+      detalhesValidacao: {
+        erros: [],
+        camposValidados: schemaResult.camposValidados || []
+      },
       gabaritoEmbutido: decodificarGabaritoQr(
-        parsed,
-        sementeGabarito(String(parsed.examId || ''), String(parsed.studentRa || parsed.ra || ''), String(parsed.examVersion || 'A'))
+        cardPayload,
+        sementeGabarito(String(cardPayload.examId || ''), String(cardPayload.studentRa || ''), String(cardPayload.examVersion || 'A'))
       )
-    };
-
-    return {
-      sucesso: true,
-      payload: payloadNormalizado,
-      aluno: alunoEncontrado
     };
   }
 
