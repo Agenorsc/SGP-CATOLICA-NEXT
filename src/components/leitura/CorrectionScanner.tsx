@@ -81,6 +81,12 @@ export function CorrectionScanner({
   // 2.1 Seletor de Quantidade de Questões da Prova: 'AUTO' | 5 | 8 | 10 | 15 | 20 | 25 | 30
   const [qtdQuestoesOverride, setQtdQuestoesOverride] = useState<'AUTO' | number>('AUTO');
 
+  // TSK-46: Contador de folhas corrigidas na sessão
+  const [folhasCorrigidas, setFolhasCorrigidas] = useState<number>(0);
+
+  // TSK-46: Painel de configurações avançadas colapsável (oculto por padrão — interface minimalista)
+  const [mostrarConfiguracoes, setMostrarConfiguracoes] = useState<boolean>(false);
+
   // 3. Máquina de Estados: IDLE -> SCANNING -> ANALYZED -> VALIDATED
   const [scannerState, setScannerState] = useState<ScannerState>('IDLE');
   const [cameraAtiva, setCameraAtiva] = useState<boolean>(false);
@@ -718,6 +724,11 @@ export function CorrectionScanner({
       const msg = `Nota da ${cardPayloadDetectado.stage} validada com sucesso para ${cardPayloadDetectado.studentName}!`;
       setMensagemSucesso(msg);
       setScannerState('VALIDATED');
+      // TSK-46: Incrementa contador e avança automaticamente para a próxima folha
+      setFolhasCorrigidas(prev => prev + 1);
+      setTimeout(() => {
+        handleCorrigirProximoAluno();
+      }, 1800);
     } catch (err: any) {
       console.error('Falha ao validar nota:', err);
       setErroGravacao(err?.message || 'Falha ao gravar leitura e nota no banco de dados. Tente novamente.');
@@ -785,16 +796,14 @@ export function CorrectionScanner({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       
-      {/* 1. SELETOR HORIZONTAL DE ABAS DE TURMA */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <div>
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">
-            Modo de Reconhecimento e Seleção de Turma:
-          </label>
+      {/* 1. BARRA SUPERIOR: SELETOR DE TURMA + CONTADOR + CONFIG */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Seletor de Turma */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Aba Padrão: Todas as Turmas (Automático) */}
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Turma:</span>
             <button
               onClick={() => {
                 setAbaTurmaAtiva('TODAS');
@@ -802,17 +811,16 @@ export function CorrectionScanner({
                 isPausedRef.current = false;
                 if (onSelecionarTurma) onSelecionarTurma('TODAS');
               }}
-              className={`px-4 py-2.5 rounded-xl text-xs font-black transition flex items-center gap-2 cursor-pointer shadow-sm ${
+              className={`px-3 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-sm ${
                 abaTurmaAtiva === 'TODAS'
-                  ? 'bg-catolica-primary text-white shadow-catolica-primary/20 ring-2 ring-catolica-primary'
+                  ? 'bg-catolica-primary text-white ring-2 ring-catolica-primary'
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              [ Todas as Turmas (Automático) ]
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              Automático
             </button>
 
-            {/* Abas Individuais de cada turma cadastrada */}
             {turmas.map(t => (
               <button
                 key={t.id}
@@ -822,9 +830,9 @@ export function CorrectionScanner({
                   isPausedRef.current = false;
                   if (onSelecionarTurma) onSelecionarTurma(t.id);
                 }}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm ${
                   abaTurmaAtiva === t.id
-                    ? 'bg-slate-900 text-white shadow-slate-900/20 ring-2 ring-slate-900'
+                    ? 'bg-slate-900 text-white ring-2 ring-slate-900'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
@@ -833,63 +841,86 @@ export function CorrectionScanner({
               </button>
             ))}
           </div>
+
+          {/* TSK-46: Contador de Folhas Corrigidas + Botão Configurações */}
+          <div className="flex items-center gap-3">
+            {folhasCorrigidas > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl">
+                <FileCheck2 className="w-4 h-4 text-emerald-600" />
+                <span className="text-xs font-black text-emerald-800">
+                  {folhasCorrigidas} {folhasCorrigidas === 1 ? 'folha corrigida' : 'folhas corrigidas'}
+                </span>
+              </div>
+            )}
+            <button
+              onClick={() => setMostrarConfiguracoes(v => !v)}
+              className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 transition cursor-pointer flex items-center gap-1.5"
+              title="Configurações avançadas"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              {mostrarConfiguracoes ? 'Ocultar Config.' : 'Configurações'}
+            </button>
+          </div>
         </div>
 
-        {/* 2. SELETOR DE CICLO AVALIATIVO DE CONTINGÊNCIA */}
-        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-600">Ciclo Avaliativo:</span>
-            <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
-              {(['AUTO', 'N1', 'N2', 'N3', 'N-1'] as const).map(opcao => (
-                <button
-                  key={opcao}
-                  onClick={() => setCicloContingencia(opcao)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    cicloContingencia === opcao
-                      ? 'bg-white text-catolica-primary shadow-sm font-black'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  {opcao === 'AUTO' ? 'Automático (via QR)' : opcao}
-                </button>
-              ))}
+        {/* TSK-46: Configurações Avançadas (colapsável — oculto por padrão) */}
+        {mostrarConfiguracoes && (
+          <div className="pt-3 border-t border-slate-100 space-y-3 animate-fadeIn">
+            {/* Ciclo Avaliativo de Contingência */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-600">Ciclo Avaliativo:</span>
+                <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+                  {(['AUTO', 'N1', 'N2', 'N3', 'N-1'] as const).map(opcao => (
+                    <button
+                      key={opcao}
+                      onClick={() => setCicloContingencia(opcao)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        cicloContingencia === opcao
+                          ? 'bg-white text-catolica-primary shadow-sm font-black'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {opcao === 'AUTO' ? 'Automático (via QR)' : opcao}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="text-[11px] text-slate-500 font-medium">
+                {cicloContingencia === 'AUTO'
+                  ? '🎯 Ciclo detectado dinamicamente no QR Code da prova.'
+                  : `⚠️ Contingência ativa: Forçando registro das notas em ${cicloContingencia}.`}
+              </div>
+            </div>
+
+            {/* Quantidade de Questões da Prova */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-600">Questões na Prova:</span>
+                <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+                  {(['AUTO', 5, 8, 10, 15, 20, 25, 30] as const).map(opcao => (
+                    <button
+                      key={String(opcao)}
+                      onClick={() => setQtdQuestoesOverride(opcao)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        qtdQuestoesOverride === opcao
+                          ? 'bg-catolica-primary text-white shadow-sm font-black'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {opcao === 'AUTO' ? 'Auto' : `${opcao} Q`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="text-[11px] text-slate-500 font-medium">
+                {qtdQuestoesOverride === 'AUTO'
+                  ? '🎯 Quantidade detectada do QR / Prova montada.'
+                  : `📌 Limitando leitura a exatamente ${qtdQuestoesOverride} questões.`}
+              </div>
             </div>
           </div>
-
-          <div className="text-[11px] text-slate-500 font-medium">
-            {cicloContingencia === 'AUTO' 
-              ? '🎯 Ciclo detectado dinamicamente no QR Code da prova.' 
-              : `⚠️ Contingência ativa: Forçando registro das notas em ${cicloContingencia}.`}
-          </div>
-        </div>
-
-        {/* 2.1 SELETOR DE QUANTIDADE DE QUESTÕES DA PROVA */}
-        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-600">Questões na Prova:</span>
-            <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
-              {(['AUTO', 5, 8, 10, 15, 20, 25, 30] as const).map(opcao => (
-                <button
-                  key={String(opcao)}
-                  onClick={() => setQtdQuestoesOverride(opcao)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    qtdQuestoesOverride === opcao
-                      ? 'bg-catolica-primary text-white shadow-sm font-black'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  {opcao === 'AUTO' ? 'Auto' : `${opcao} Q`}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="text-[11px] text-slate-500 font-medium">
-            {qtdQuestoesOverride === 'AUTO' 
-              ? '🎯 Quantidade detectada do QR / Prova montada.' 
-              : `📌 Limitando leitura a exatamente ${qtdQuestoesOverride} questões.`}
-          </div>
-        </div>
+        )}
       </div>
 
       {/* 3. ALERTA DE VALIDAÇÃO CRUZADA (CARTÃO DE OUTRA TURMA LIDO) */}
@@ -941,22 +972,13 @@ export function CorrectionScanner({
 
       {/* 4. BANNER DE SUCESSO APÓS VALIDAÇÃO */}
       {mensagemSucesso && scannerState === 'VALIDATED' && (
-        <div className="bg-emerald-50 border-2 border-emerald-400 p-4 rounded-2xl shadow-md text-emerald-950 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fadeIn">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
-            <div>
-              <h4 className="text-sm font-black text-emerald-900">{mensagemSucesso}</h4>
-              <p className="text-xs text-emerald-800">
-                A nota foi registrada com sucesso e o histórico acadêmico foi atualizado.
-              </p>
-            </div>
+        <div className="bg-emerald-50 border-2 border-emerald-400 p-4 rounded-2xl shadow-md text-emerald-950 flex items-center gap-3 animate-fadeIn">
+          <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
+          <div className="flex-1">
+            <h4 className="text-sm font-black text-emerald-900">{mensagemSucesso}</h4>
+            <p className="text-xs text-emerald-700">Avançando automaticamente para a próxima folha...</p>
           </div>
-          <button
-            onClick={handleCorrigirProximoAluno}
-            className="px-5 py-2.5 bg-catolica-primary hover:bg-catolica-dark text-white rounded-xl text-xs font-bold shadow-md shadow-catolica-primary/20 transition flex items-center gap-2 cursor-pointer shrink-0"
-          >
-            <RotateCcw className="w-4 h-4" /> Corrigir Próximo Aluno
-          </button>
+          <Loader2 className="w-5 h-5 text-emerald-500 animate-spin shrink-0" />
         </div>
       )}
 
@@ -1059,7 +1081,7 @@ export function CorrectionScanner({
                     </>
                   ) : (
                     <>
-                      <Camera className="w-4 h-4" /> Iniciar Câmera do Computador
+                      <Scan className="w-4 h-4" /> Iniciar Correção
                     </>
                   )}
                 </button>
@@ -1290,12 +1312,10 @@ export function CorrectionScanner({
 
               {scannerState === 'VALIDATED' && (
                 <div className="pt-2">
-                  <button
-                    onClick={handleCorrigirProximoAluno}
-                    className="w-full py-3 bg-catolica-primary hover:bg-catolica-dark text-white rounded-xl text-xs font-black transition shadow-md shadow-catolica-primary/20 flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <RotateCcw className="w-4 h-4" /> Corrigir Próximo Aluno
-                  </button>
+                  <div className="flex items-center justify-center gap-2 py-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                    <Loader2 className="w-4 h-4 text-emerald-500 animate-spin" />
+                    <span className="text-xs font-bold text-emerald-700">Avançando para a próxima folha...</span>
+                  </div>
                 </div>
               )}
 
