@@ -313,7 +313,7 @@ export function validarSchemaQrCode(rawInput: unknown): QrCodeSchemaValidationRe
           erros.push(`Pontuações embutidas (pt) excede o tamanho máximo de ${QR_SCHEMA_LIMITS.MAX_PT_STRING_LENGTH} caracteres.`);
         } else {
           const partes = parsed.pt.split(',').map(Number);
-          const pontosInvalidos = partes.some(p => isNaN(p) || p <= 0 || p > 10.0);
+          const pontosInvalidos = partes.some((p: number) => isNaN(p) || p <= 0 || p > 10.0);
           if (pontosInvalidos) {
             adulterado = true;
             erros.push(`Valores numéricos de pontuação (pt) corrompidos ou fora dos limites aceitáveis (0.05 a 10.0).`);
