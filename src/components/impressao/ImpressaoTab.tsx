@@ -607,7 +607,7 @@ export function ImpressaoTab({
         {/* ========================================================================= */}
         {/* PÁGINA 1: FOLHA DE RESPOSTAS E GABARITO (IDÊNTICO AO MODELO CATÓLICA SC) */}
         {/* ========================================================================= */}
-        <div className="rounded-xl border-2 border-slate-300 bg-white p-4 shadow-lg print:border-none print:p-0 print:m-0 print:shadow-none sm:p-8 print:break-after-page">
+        <div className="sgp-answer-sheet rounded-xl border-2 border-slate-300 bg-white p-4 shadow-lg print:border-none print:p-0 print:m-0 print:shadow-none sm:p-8">
           <div className="mb-4 flex flex-col gap-1 border-b-2 border-dashed border-slate-300 pb-2 text-xs font-bold uppercase text-slate-500 sm:flex-row sm:items-center sm:justify-between print:hidden">
             <span>✂️ Destaque aqui — Entregar somente este gabarito ao professor</span>
             <span className="flex items-center gap-1 text-catolica-primary">
@@ -896,16 +896,7 @@ export function ImpressaoTab({
         {/* PÁGINA 2: VERSO DO CARTÃO GABARITO (PÁGINA EM BRANCO INTENCIONAL DUPLEX) */}
         {/* ========================================================================= */}
         {modoFrenteVerso && (
-          <div className="hidden print:flex print:flex-col print:justify-center print:items-center print:h-[240mm] print:break-after-page">
-            <div className="w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-slate-300 text-slate-400 text-xs uppercase p-8 text-center space-y-3 rounded-2xl">
-              <div className="w-12 h-12 rounded-full border-2 border-slate-300 flex items-center justify-center font-bold text-lg">✂️</div>
-              <p className="font-bold text-sm tracking-wide text-slate-600">PÁGINA EM BRANCO INTENCIONAL</p>
-              <p className="text-[11px] font-bold text-slate-400">VERSO DA FOLHA DE RESPOSTAS</p>
-              <p className="text-[10px] text-slate-400 max-w-sm normal-case leading-relaxed">
-                Esta página é mantida em branco para que o estudante possa destacar a folha de respostas e entregá-la ao professor sem rasgar o caderno de questões no verso.
-              </p>
-            </div>
-          </div>
+          <div className="sgp-answer-sheet-back hidden print:block" aria-hidden="true" />
         )}
 
         {/* ========================================================================= */}
