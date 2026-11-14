@@ -731,7 +731,7 @@ export default function Home() {
   if (!session) return <LoginScreen onLogin={handleLogin} />;
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-100 font-sans text-slate-900 md:block md:h-screen">
+    <div className="flex min-h-screen flex-col bg-slate-100 font-sans text-slate-900 md:block md:h-screen print:block print:h-auto print:min-h-0 print:bg-white">
       {/* SIDEBAR NAVEGAÇÃO MODULAR */}
       <Sidebar
         currentTab={currentTab}
@@ -744,7 +744,7 @@ export default function Home() {
       />
 
       {/* CONTEÚDO PRINCIPAL EM CAMADAS */}
-      <main className="w-full flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 md:ml-64 md:h-screen md:w-auto print:ml-0 print:h-auto">
+      <main className="w-full flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 md:ml-64 md:h-screen md:w-auto print:ml-0 print:h-auto print:overflow-visible print:p-0">
         <div className="print:hidden">
           <div className="mb-4 flex items-center rounded-xl bg-slate-900 px-4 py-3 text-white shadow-sm md:hidden">
             <button
