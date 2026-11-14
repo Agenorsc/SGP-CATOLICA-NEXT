@@ -842,6 +842,7 @@ export default function Home() {
             turmas={turmasVisiveis}
             teacherId={session?.id}
             stage={cicloSelecionado === 'TODAS' ? 'N1' : cicloSelecionado}
+            session={session}
           />
         )}
 

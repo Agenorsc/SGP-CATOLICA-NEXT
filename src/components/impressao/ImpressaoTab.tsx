@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Printer, 
   CheckSquare, 
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { AlunoModel } from '@/models/AlunoModel';
 import { TurmaModel } from '@/models/TurmaModel';
-import { Question, CardPayload, EvaluationStage, AvaliacaoCiclo } from '@/types';
+import { Question, CardPayload, EvaluationStage, AvaliacaoCiclo, UserSession } from '@/types';
 import { QRCodeWrapper } from '@/components/common/QRCodeWrapper';
 import { codificarGabaritoQr, sementeGabarito } from '@/lib/answerKey';
 
@@ -77,6 +77,7 @@ interface ImpressaoTabProps {
   turmas?: TurmaModel[];
   teacherId?: string;
   stage?: EvaluationStage | AvaliacaoCiclo;
+  session?: UserSession | null;
 }
 
 export function ImpressaoTab({
@@ -90,7 +91,8 @@ export function ImpressaoTab({
   questoesEmbaralhadas,
   turmas,
   teacherId,
-  stage
+  stage,
+  session
 }: ImpressaoTabProps) {
   // Controle de Frente e Verso (Gera página de verso em branco para destacar o gabarito sem perder questões)
   const [modoFrenteVerso, setModoFrenteVerso] = useState(true);
@@ -101,9 +103,9 @@ export function ImpressaoTab({
 
   const turmaAtual = turmas?.find(t => t.id === turmaSelecionadaId);
   const nomeTurma = turmaAtual?.nome || 'Turma Padrão';
-  const defaultEscola = turmaAtual?.curso 
-    ? (turmaAtual.curso.toLowerCase().includes('direito') ? 'Escola de Direito' : turmaAtual.curso) 
-    : 'Escola de Direito';
+  const defaultEscola = turmaAtual?.curso || 'Engenharia de Software';
+  const defaultDisciplina = turmaAtual?.nome || (session?.role === 'PROFESSOR' && session?.disciplina ? session.disciplina : '') || tituloProva || 'Engenharia de Software IV';
+  const resolvedTeacherId = teacherId || session?.id || turmaAtual?.professorId || 'usr-prof-01';
 
   const resolvedStage: EvaluationStage = (stage === 'N1' || stage === 'N2' || stage === 'N3' || stage === 'N-1') ? stage : 'N1';
   const versaoLetra = String.fromCharCode(65 + (selectedVersionIdx % 4));
@@ -117,10 +119,18 @@ export function ImpressaoTab({
   const [instituicao, setInstituicao] = useState('Católica SC');
   const [subinstituicao, setSubinstituicao] = useState('Centro Universitário');
   const [escolaCurso, setEscolaCurso] = useState(defaultEscola);
-  const [disciplina, setDisciplina] = useState(tituloProva || 'DIREITO DE PROPRIEDADE E RESPONSABILIDADE CIVIL');
+  const [disciplina, setDisciplina] = useState(defaultDisciplina);
   const [subtitulo, setSubtitulo] = useState(defaultSubtitulo);
   const [dataProva, setDataProva] = useState(new Date().toLocaleDateString('pt-BR'));
   const [duracaoProva, setDuracaoProva] = useState('3 (três) horas');
+
+  // Atualiza dinamicamente os campos do cabeçalho com os dados da turma selecionada
+  useEffect(() => {
+    if (turmaAtual) {
+      if (turmaAtual.curso) setEscolaCurso(turmaAtual.curso);
+      if (turmaAtual.nome) setDisciplina(turmaAtual.nome);
+    }
+  }, [turmaSelecionadaId, turmaAtual]);
 
   // Estados Editáveis das Orientações da Prova
   const [tituloOrientacoes, setTituloOrientacoes] = useState(DEFAULT_TITULO_ORIENTACOES);
@@ -173,7 +183,7 @@ export function ImpressaoTab({
     examId,
     classId: turmaSelecionadaId || 't1',
     className: nomeTurma,
-    teacherId: teacherId || turmaAtual?.professorId || 'prof-01',
+    teacherId: resolvedTeacherId,
     studentId: alunoAtual?.id || 'alu-01',
     studentName: withId ? (alunoAtual?.nome || 'AGENOR ALVISE') : 'ANONIMO',
     studentRa: raQr,
@@ -223,7 +233,7 @@ export function ImpressaoTab({
     setInstituicao('Católica SC');
     setSubinstituicao('Centro Universitário');
     setEscolaCurso(defaultEscola);
-    setDisciplina(tituloProva || 'DIREITO DE PROPRIEDADE E RESPONSABILIDADE CIVIL');
+    setDisciplina(defaultDisciplina);
     setSubtitulo(defaultSubtitulo);
     setDataProva(new Date().toLocaleDateString('pt-BR'));
     setDuracaoProva('3 (três) horas');
@@ -382,7 +392,7 @@ export function ImpressaoTab({
                   type="text"
                   value={escolaCurso}
                   onChange={(e) => setEscolaCurso(e.target.value)}
-                  placeholder="Ex: Escola de Direito ou Engenharia de Software"
+                  placeholder="Ex: Engenharia de Software"
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-catolica-primary"
                 />
               </div>
@@ -393,7 +403,7 @@ export function ImpressaoTab({
                   type="text"
                   value={disciplina}
                   onChange={(e) => setDisciplina(e.target.value)}
-                  placeholder="Ex: DIREITO DE PROPRIEDADE E RESPONSABILIDADE CIVIL"
+                  placeholder="Ex: Engenharia de Software IV"
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none focus:border-catolica-primary"
                 />
               </div>
