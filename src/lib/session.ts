@@ -4,7 +4,7 @@ export const SESSION_COOKIE = 'sgp_session';
 const encoder = new TextEncoder();
 const TTL_SECONDS = 8 * 60 * 60;
 
-export type SessionPayload = { id: string; email: string; role: 'ADMIN' | 'PROFESSOR'; exp: number };
+export type SessionPayload = { id: string; name: string; email: string; role: 'ADMIN' | 'PROFESSOR'; exp: number };
 
 function base64url(bytes: Uint8Array): string {
   let binary = '';
