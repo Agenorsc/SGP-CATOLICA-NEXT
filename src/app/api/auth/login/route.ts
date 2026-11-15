@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Credenciais inválidas.' }, { status: 401 });
     }
     if (usuario.role !== 'ADMIN' && usuario.role !== 'PROFESSOR') return NextResponse.json({ error: 'Perfil inválido.' }, { status: 403 });
-    const token = await createSession({ id: usuario.id, email: usuario.email, role: usuario.role });
+    const token = await createSession({ id: usuario.id, name: usuario.nome, email: usuario.email, role: usuario.role });
     const response = NextResponse.json({ id: usuario.id, name: usuario.nome, email: usuario.email, role: usuario.role, disciplina: usuario.disciplina });
     response.cookies.set(SESSION_COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: SESSION_MAX_AGE });
     response.headers.set('Cache-Control', 'no-store');
