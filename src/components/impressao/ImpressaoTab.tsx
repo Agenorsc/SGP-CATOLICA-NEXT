@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Printer, 
   CheckSquare, 
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { AlunoModel } from '@/models/AlunoModel';
 import { TurmaModel } from '@/models/TurmaModel';
-import { Question, CardPayload, EvaluationStage, AvaliacaoCiclo } from '@/types';
+import { Question, CardPayload, EvaluationStage, AvaliacaoCiclo, UserSession } from '@/types';
 import { QRCodeWrapper } from '@/components/common/QRCodeWrapper';
 import { codificarGabaritoQr, sementeGabarito } from '@/lib/answerKey';
 
@@ -77,6 +77,7 @@ interface ImpressaoTabProps {
   turmas?: TurmaModel[];
   teacherId?: string;
   stage?: EvaluationStage | AvaliacaoCiclo;
+  session?: UserSession | null;
 }
 
 export function ImpressaoTab({
@@ -90,7 +91,8 @@ export function ImpressaoTab({
   questoesEmbaralhadas,
   turmas,
   teacherId,
-  stage
+  stage,
+  session
 }: ImpressaoTabProps) {
   // Controle de Frente e Verso (Gera página de verso em branco para destacar o gabarito sem perder questões)
   const [modoFrenteVerso, setModoFrenteVerso] = useState(true);
@@ -101,9 +103,9 @@ export function ImpressaoTab({
 
   const turmaAtual = turmas?.find(t => t.id === turmaSelecionadaId);
   const nomeTurma = turmaAtual?.nome || 'Turma Padrão';
-  const defaultEscola = turmaAtual?.curso 
-    ? (turmaAtual.curso.toLowerCase().includes('direito') ? 'Escola de Direito' : turmaAtual.curso) 
-    : 'Escola de Direito';
+  const defaultEscola = turmaAtual?.curso || 'Engenharia de Software';
+  const defaultDisciplina = turmaAtual?.nome || (session?.role === 'PROFESSOR' && session?.disciplina ? session.disciplina : '') || tituloProva || 'Engenharia de Software IV';
+  const resolvedTeacherId = teacherId || session?.id || turmaAtual?.professorId || 'usr-prof-01';
 
   const resolvedStage: EvaluationStage = (stage === 'N1' || stage === 'N2' || stage === 'N3' || stage === 'N-1') ? stage : 'N1';
   const versaoLetra = String.fromCharCode(65 + (selectedVersionIdx % 4));
@@ -117,10 +119,18 @@ export function ImpressaoTab({
   const [instituicao, setInstituicao] = useState('Católica SC');
   const [subinstituicao, setSubinstituicao] = useState('Centro Universitário');
   const [escolaCurso, setEscolaCurso] = useState(defaultEscola);
-  const [disciplina, setDisciplina] = useState(tituloProva || 'DIREITO DE PROPRIEDADE E RESPONSABILIDADE CIVIL');
+  const [disciplina, setDisciplina] = useState(defaultDisciplina);
   const [subtitulo, setSubtitulo] = useState(defaultSubtitulo);
   const [dataProva, setDataProva] = useState(new Date().toLocaleDateString('pt-BR'));
   const [duracaoProva, setDuracaoProva] = useState('3 (três) horas');
+
+  // Atualiza dinamicamente os campos do cabeçalho com os dados da turma selecionada
+  useEffect(() => {
+    if (turmaAtual) {
+      if (turmaAtual.curso) setEscolaCurso(turmaAtual.curso);
+      if (turmaAtual.nome) setDisciplina(turmaAtual.nome);
+    }
+  }, [turmaSelecionadaId, turmaAtual]);
 
   // Estados Editáveis das Orientações da Prova
   const [tituloOrientacoes, setTituloOrientacoes] = useState(DEFAULT_TITULO_ORIENTACOES);
@@ -173,7 +183,7 @@ export function ImpressaoTab({
     examId,
     classId: turmaSelecionadaId || 't1',
     className: nomeTurma,
-    teacherId: teacherId || turmaAtual?.professorId || 'prof-01',
+    teacherId: resolvedTeacherId,
     studentId: alunoAtual?.id || 'alu-01',
     studentName: withId ? (alunoAtual?.nome || 'AGENOR ALVISE') : 'ANONIMO',
     studentRa: raQr,
@@ -223,7 +233,7 @@ export function ImpressaoTab({
     setInstituicao('Católica SC');
     setSubinstituicao('Centro Universitário');
     setEscolaCurso(defaultEscola);
-    setDisciplina(tituloProva || 'DIREITO DE PROPRIEDADE E RESPONSABILIDADE CIVIL');
+    setDisciplina(defaultDisciplina);
     setSubtitulo(defaultSubtitulo);
     setDataProva(new Date().toLocaleDateString('pt-BR'));
     setDuracaoProva('3 (três) horas');
@@ -382,7 +392,7 @@ export function ImpressaoTab({
                   type="text"
                   value={escolaCurso}
                   onChange={(e) => setEscolaCurso(e.target.value)}
-                  placeholder="Ex: Escola de Direito ou Engenharia de Software"
+                  placeholder="Ex: Engenharia de Software"
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:border-catolica-primary"
                 />
               </div>
@@ -393,7 +403,7 @@ export function ImpressaoTab({
                   type="text"
                   value={disciplina}
                   onChange={(e) => setDisciplina(e.target.value)}
-                  placeholder="Ex: DIREITO DE PROPRIEDADE E RESPONSABILIDADE CIVIL"
+                  placeholder="Ex: Engenharia de Software IV"
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none focus:border-catolica-primary"
                 />
               </div>
@@ -597,7 +607,7 @@ export function ImpressaoTab({
         {/* ========================================================================= */}
         {/* PÁGINA 1: FOLHA DE RESPOSTAS E GABARITO (IDÊNTICO AO MODELO CATÓLICA SC) */}
         {/* ========================================================================= */}
-        <div className="rounded-xl border-2 border-slate-300 bg-white p-4 shadow-lg print:border-none print:p-0 print:m-0 print:shadow-none sm:p-8 print:break-after-page">
+        <div className="sgp-answer-sheet rounded-xl border-2 border-slate-300 bg-white p-4 shadow-lg print:border-none print:p-0 print:m-0 print:shadow-none sm:p-8">
           <div className="mb-4 flex flex-col gap-1 border-b-2 border-dashed border-slate-300 pb-2 text-xs font-bold uppercase text-slate-500 sm:flex-row sm:items-center sm:justify-between print:hidden">
             <span>✂️ Destaque aqui — Entregar somente este gabarito ao professor</span>
             <span className="flex items-center gap-1 text-catolica-primary">
@@ -886,16 +896,7 @@ export function ImpressaoTab({
         {/* PÁGINA 2: VERSO DO CARTÃO GABARITO (PÁGINA EM BRANCO INTENCIONAL DUPLEX) */}
         {/* ========================================================================= */}
         {modoFrenteVerso && (
-          <div className="hidden print:flex print:flex-col print:justify-center print:items-center print:h-[240mm] print:break-after-page">
-            <div className="w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-slate-300 text-slate-400 text-xs uppercase p-8 text-center space-y-3 rounded-2xl">
-              <div className="w-12 h-12 rounded-full border-2 border-slate-300 flex items-center justify-center font-bold text-lg">✂️</div>
-              <p className="font-bold text-sm tracking-wide text-slate-600">PÁGINA EM BRANCO INTENCIONAL</p>
-              <p className="text-[11px] font-bold text-slate-400">VERSO DA FOLHA DE RESPOSTAS</p>
-              <p className="text-[10px] text-slate-400 max-w-sm normal-case leading-relaxed">
-                Esta página é mantida em branco para que o estudante possa destacar a folha de respostas e entregá-la ao professor sem rasgar o caderno de questões no verso.
-              </p>
-            </div>
-          </div>
+          <div className="sgp-answer-sheet-back hidden print:block" aria-hidden="true" />
         )}
 
         {/* ========================================================================= */}
@@ -944,9 +945,9 @@ export function ImpressaoTab({
           {/* Lista de Questões Formatada (1), 2), 3) com alternativas a), b), c), d), e)) */}
           <div className="space-y-6">
             {questoesEmbaralhadas.map((q, idx) => (
-              <div key={q.id || idx} className="text-xs space-y-2.5 border-b border-slate-100 pb-4 print:break-inside-avoid">
-                <div className="flex justify-between font-bold text-slate-900 print:text-black">
-                  <span className="text-xs sm:text-sm font-black">
+              <div key={q.id || idx} className="text-xs space-y-2.5 border-b border-slate-100 pb-4 sgp-print-question">
+                <div className="flex justify-between font-bold text-slate-900 print:text-black sgp-print-question-heading">
+                  <span className="min-w-0 whitespace-pre-wrap break-words text-xs sm:text-sm font-black">
                     {idx + 1}) {q.enunciado || q.statement}
                   </span>
                   <span className="text-[11px] font-mono shrink-0 ml-2">
@@ -954,15 +955,24 @@ export function ImpressaoTab({
                   </span>
                 </div>
 
+                {q.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    className="sgp-print-question-image block max-w-full object-contain"
+                    src={q.imageUrl}
+                    alt={q.imageAlt || `Imagem da questão ${idx + 1}`}
+                  />
+                )}
+
                 {/* Alternativas (a, b, c, d, e) com indentação e espaçamento idênticos à prova real */}
                 {(q.tipo === 'objetiva' || q.type === 'OBJECTIVE') && q.alternativas && (
                   <div className="space-y-1.5 pl-4 pt-1">
                     {q.alternativas.map((alt, altIdx) => (
-                      <div key={alt.id || altIdx} className="flex items-start gap-2 text-slate-800 print:text-black leading-relaxed">
+                      <div key={alt.id || altIdx} className="sgp-print-question-option flex items-start gap-2 text-slate-800 print:text-black leading-relaxed">
                         <span className="font-bold w-4 shrink-0">
                           {String.fromCharCode(97 + altIdx)})
                         </span>
-                        <span className="flex-1">{alt.texto}</span>
+                        <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">{alt.texto}</span>
                       </div>
                     ))}
                   </div>

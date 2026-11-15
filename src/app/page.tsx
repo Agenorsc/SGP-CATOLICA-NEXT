@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Menu } from 'lucide-react';
 
 // Camadas de Domínio (Models)
@@ -43,6 +43,7 @@ import { LoginScreen } from '@/components/auth/LoginScreen';
 import { CadastrosTab } from '@/components/cadastros/CadastrosTab';
 import { ProfessoresTab } from '@/components/professores/ProfessoresTab';
 import { ModalProfessor } from '@/components/professores/ModalProfessor';
+import { ModalTrocarSenha } from '@/components/auth/ModalTrocarSenha';
 import { ModalAluno, FormAlunoState } from '@/components/cadastros/ModalAluno';
 import { ModalTurma, FormTurmaState } from '@/components/cadastros/ModalTurma';
 import { AlertaModal } from '@/components/common/AlertaModal';
@@ -54,6 +55,30 @@ import { LeituraTab } from '@/components/leitura/LeituraTab';
 import { RelatoriosTab } from '@/components/relatorios/RelatoriosTab';
 
 export default function Home() {
+  const [session, setSession] = useState<UserSession | null>(null);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/auth/me', { cache: 'no-store', signal: controller.signal })
+      .then(response => response.ok ? response.json() : null)
+      .then(profile => {
+        if (!controller.signal.aborted) setSession(profile);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!controller.signal.aborted) setSessionLoaded(true);
+      });
+    return () => controller.abort();
+  }, []);
+
+  if (!sessionLoaded) return <div className="min-h-screen bg-slate-100" />;
+  if (!session) return <LoginScreen onLogin={setSession} />;
+
+  return <Painel session={session} onLogout={() => setSession(null)} />;
+}
+
+function Painel({ session, onLogout }: { session: UserSession; onLogout: () => void }) {
   // Instâncias dos Serviços da Arquitetura em Camadas
   const alunoRepo = useMemo(() => new AlunoRepository(), []);
   const turmaRepo = useMemo(() => new TurmaRepository(), []);
@@ -69,31 +94,22 @@ export default function Home() {
   const professorService = useMemo(() => new ProfessorService(usuarioRepo), [usuarioRepo]);
   const examService = useMemo(() => new ExamService(examRepo), [examRepo]);
 
-  // Autenticação Real e Navegação
-  const [session, setSession] = useState<UserSession | null>(null);
-  const [sessionLoaded, setSessionLoaded] = useState(false);
   const [currentTab, setCurrentTab] = useState<TabType>('cadastros');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/auth/me', { credentials: 'same-origin', cache: 'no-store' })
-      .then(async res => {
-        if (!res.ok) return null;
-        const profile = await res.json();
-        return profile as UserSession;
-      })
-      .then(setSession)
-      .catch(() => setSession(null))
-      .finally(() => setSessionLoaded(true));
-  }, []);
-
-  const handleLogin = (userSession: UserSession) => {
-    setSession(userSession);
-  };
+  const [modalTrocarSenhaAberto, setModalTrocarSenhaAberto] = useState(false);
 
   const handleLogout = async () => {
-    try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }); }
-    finally { setSession(null); }
+    try {
+      const response = await fetch('/api/auth/logout', { method: 'POST' });
+      if (!response.ok && response.status !== 401) throw new Error('Falha no logout');
+      onLogout();
+    } catch {
+      setAlertaVisual({
+        aberto: true,
+        tipo: 'erro',
+        mensagem: 'Não foi possível sair. Tente novamente.'
+      });
+    }
   };
 
   // Estados de Dados
@@ -702,7 +718,7 @@ export default function Home() {
       id: professorEmEdicao?.id || `usr_prof_${Date.now()}`,
       nome: dados.nome,
       email: dados.email,
-      senha: dados.senha || 'admin',
+      senha: dados.senha || undefined,
       role: 'PROFESSOR',
       disciplina: dados.disciplina
     });
@@ -723,12 +739,8 @@ export default function Home() {
     }
   };
 
-  if (!sessionLoaded) return <div className="min-h-screen bg-slate-100" />;
-
-  if (!session) return <LoginScreen onLogin={handleLogin} />;
-
   return (
-    <div className="flex min-h-screen flex-col bg-slate-100 font-sans text-slate-900 md:block md:h-screen">
+    <div className="flex min-h-screen flex-col bg-slate-100 font-sans text-slate-900 md:block md:h-screen print:block print:h-auto print:min-h-0 print:bg-white">
       {/* SIDEBAR NAVEGAÇÃO MODULAR */}
       <Sidebar
         currentTab={currentTab}
@@ -737,10 +749,11 @@ export default function Home() {
         onCloseSidebar={() => setSidebarOpen(false)}
         session={session}
         onLogout={handleLogout}
+        onOpenTrocarSenha={() => setModalTrocarSenhaAberto(true)}
       />
 
       {/* CONTEÚDO PRINCIPAL EM CAMADAS */}
-      <main className="w-full flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 md:ml-64 md:h-screen md:w-auto print:ml-0 print:h-auto">
+      <main className="w-full flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 md:ml-64 md:h-screen md:w-auto print:ml-0 print:h-auto print:overflow-visible print:p-0">
         <div className="print:hidden">
           <div className="mb-4 flex items-center rounded-xl bg-slate-900 px-4 py-3 text-white shadow-sm md:hidden">
             <button
@@ -838,6 +851,7 @@ export default function Home() {
             turmas={turmasVisiveis}
             teacherId={session?.id}
             stage={cicloSelecionado === 'TODAS' ? 'N1' : cicloSelecionado}
+            session={session}
           />
         )}
 
@@ -901,6 +915,13 @@ export default function Home() {
             onSave={handleSaveProfessorSubmit}
           />
         )}
+
+        {/* MODAL DE TROCA DE SENHA (TODOS OS PERFIS AUTENTICADOS) */}
+        <ModalTrocarSenha
+          isOpen={modalTrocarSenhaAberto}
+          onClose={() => setModalTrocarSenhaAberto(false)}
+          session={session}
+        />
 
         {/* MODAL DE CADASTRO/EDIÇÃO DE QUESTÃO */}
         <ModalQuestao

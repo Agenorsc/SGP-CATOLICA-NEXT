@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sessionFromRequest } from '@/lib/session';
-export async function GET(request: NextRequest) {
-  const session = await sessionFromRequest(request);
-  if (!session) return NextResponse.json({ error: 'Sessão expirada.' }, { status: 401 });
-  return NextResponse.json({ id: session.id, name: session.name, email: session.email, role: session.role }, { headers: { 'Cache-Control': 'no-store' } });
+
+export function GET(request: NextRequest) {
+  const headers = { 'Cache-Control': 'no-store' };
+  const session = sessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ error: 'Autenticação necessária.' }, { status: 401, headers });
+  }
+  return NextResponse.json(session, { headers });
 }

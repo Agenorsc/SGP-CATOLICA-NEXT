@@ -12,6 +12,7 @@
     "test:latency": "jest --runInBand __tests__/api/ApiLatencyBenchmark.test.ts",
     "test:accuracy": "jest --runInBand __tests__/services/OmrAccuracyBenchmark.test.ts",
     "measure:api": "node scripts/measure-api-latency.js",
+    "migrate:passwords": "node scripts/migrate-user-passwords.js",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
@@ -20,6 +21,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "html5-qrcode": "^2.3.8",
     "jsqr": "^1.4.0",
@@ -29,12 +31,12 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "tailwind-merge": "^2.3.0",
-    "xlsx": "^0.18.5",
-    "bcryptjs": "^2.4.3"
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.4.6",
     "@testing-library/react": "^16.0.0",
+    "@types/bcryptjs": "^2.4.6",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.14.2",
     "@types/react": "^18.3.3",
@@ -47,7 +49,6 @@
     "tailwindcss": "^3.4.4",
     "ts-jest": "^29.1.4",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.5",
-    "@types/bcryptjs": "^2.4.6"
+    "typescript": "^5.4.5"
   }
 }

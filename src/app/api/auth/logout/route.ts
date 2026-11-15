@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { SESSION_COOKIE } from '@/lib/session';
-export async function POST() {
-  const response = NextResponse.json({ success: true });
-  response.cookies.set(SESSION_COOKIE, '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 0 });
-  response.headers.set('Cache-Control', 'no-store');
+import { SESSION_COOKIE, sessionCookieOptions } from '@/lib/session';
+
+export function POST() {
+  const response = NextResponse.json({ success: true }, { headers: { 'Cache-Control': 'no-store' } });
+  response.cookies.set(SESSION_COOKIE, '', sessionCookieOptions(0));
   return response;
 }

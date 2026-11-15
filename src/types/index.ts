@@ -46,6 +46,8 @@ export interface Alternative {
 
 export interface Question {
   id: string;
+  imageUrl?: string;
+  imageAlt?: string;
   // Especificação nova:
   teacherId?: string;
   classId?: string;

@@ -1,5 +1,6 @@
 import { UsuarioRepository } from '@/repositories/UsuarioRepository';
 import { UsuarioModel } from '@/models/UsuarioModel';
+import { hashPassword, isBcryptHash, validatePasswordStrength } from '@/lib/password';
 
 export class ProfessorService {
   constructor(private usuarioRepository: UsuarioRepository = new UsuarioRepository()) {}
@@ -27,10 +28,33 @@ export class ProfessorService {
       throw new Error('O e-mail do professor é obrigatório.');
     }
 
-    // Força role PROFESSOR para professores cadastrados
+    // Força papel PROFESSOR para os docentes cadastrados
     professor.role = 'PROFESSOR';
-    if (!professor.senha) {
-      professor.senha = 'admin'; // Senha padrão caso não informada
+
+    // Se o professor já existe no repositório, verifica se a senha foi informada ou deve ser mantida
+    const existente = await this.usuarioRepository.findByEmail(professor.email);
+
+    if (professor.senha && professor.senha.trim().length > 0) {
+      // Rejeita explicitamente a antiga senha padrão 'admin'
+      if (professor.senha.trim().toLowerCase() === 'admin') {
+        throw new Error('A senha padrão "admin" não é permitida por motivos de segurança. Defina uma senha segura.');
+      }
+
+      // Se ainda não for um hash bcrypt, valida a força e aplica hash
+      if (!isBcryptHash(professor.senha)) {
+        const validacao = validatePasswordStrength(professor.senha);
+        if (!validacao.isValid) {
+          throw new Error(validacao.message || 'Senha fraca informada para o professor.');
+        }
+        professor.senha = await hashPassword(professor.senha.trim());
+      }
+    } else if (existente && existente.senha) {
+      // Mantém a senha/hash já existente caso o admin esteja apenas editando nome/disciplina
+      professor.senha = existente.senha;
+    } else {
+      // Para novos cadastros sem senha explícita, define uma senha segura inicial criptografada
+      // e NUNCA a senha fraca 'admin'
+      professor.senha = await hashPassword('Prof@Catolica2026!');
     }
 
     return this.usuarioRepository.save(professor);

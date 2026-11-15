@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, GraduationCap, Mail, LockKeyhole, BookOpen, Save, Loader2 } from 'lucide-react';
+import { X, GraduationCap, Mail, LockKeyhole, BookOpen, Save, Loader2, ShieldAlert } from 'lucide-react';
 import { UsuarioModel } from '@/models/UsuarioModel';
 
 interface ModalProfessorProps {
@@ -19,7 +19,7 @@ export function ModalProfessor({
 }: ModalProfessorProps) {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('admin');
+  const [senha, setSenha] = useState('');
   const [disciplina, setDisciplina] = useState('');
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
@@ -28,12 +28,12 @@ export function ModalProfessor({
     if (professorEmEdicao) {
       setNome(professorEmEdicao.nome);
       setEmail(professorEmEdicao.email);
-      setSenha(professorEmEdicao.senha || 'admin');
+      setSenha(''); // Para edição, deixa em branco por segurança (mantém a existente se não alterada)
       setDisciplina(professorEmEdicao.disciplina || '');
     } else {
       setNome('');
       setEmail('');
-      setSenha('admin');
+      setSenha('');
       setDisciplina('');
     }
     setErro('');
@@ -55,12 +55,24 @@ export function ModalProfessor({
       return;
     }
 
+    const cleanSenha = senha.trim();
+
+    if (cleanSenha.toLowerCase() === 'admin') {
+      setErro('A senha padrão "admin" foi descontinuada por motivos de segurança. Escolha uma senha segura.');
+      return;
+    }
+
+    if (cleanSenha && cleanSenha.length < 6) {
+      setErro('A senha de acesso deve possuir no mínimo 6 caracteres.');
+      return;
+    }
+
     setLoading(true);
     try {
       await onSave({
         nome: nome.trim(),
         email: email.trim().toLowerCase(),
-        senha: senha.trim() || 'admin',
+        senha: cleanSenha || undefined,
         disciplina: disciplina.trim()
       });
       onClose();
@@ -98,8 +110,9 @@ export function ModalProfessor({
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {erro && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-600">
-              {erro}
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-600 flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 shrink-0 text-red-500" />
+              <span>{erro}</span>
             </div>
           )}
 
@@ -134,18 +147,28 @@ export function ModalProfessor({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">Senha de Acesso</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              {professorEmEdicao ? 'Nova Senha (Opcional)' : 'Senha de Acesso'}
+            </label>
             <div className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 focus-within:border-catolica-primary focus-within:ring-2 focus-within:ring-catolica-primary/10">
               <LockKeyhole className="w-4 h-4 text-slate-400" />
               <input
-                type="text"
-                placeholder="Ex: admin ou senha123"
+                type="password"
+                placeholder={
+                  professorEmEdicao
+                    ? 'Deixe em branco para manter a senha atual'
+                    : 'Ex: SenhaSegura@2026 (mín. 6 caracteres)'
+                }
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 className="w-full text-xs outline-none bg-transparent font-mono"
               />
             </div>
-            <p className="mt-1 text-[11px] text-slate-400">Padrão do sistema: <strong>admin</strong></p>
+            <p className="mt-1 text-[11px] text-slate-400">
+              {professorEmEdicao
+                ? 'Preencha apenas se desejar redefinir a senha do professor.'
+                : 'Armazenada com hash seguro Bcrypt. A senha fraca "admin" não é permitida.'}
+            </p>
           </div>
 
           <div>

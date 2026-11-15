@@ -30,6 +30,42 @@
   body {
     overflow: visible !important;
     height: auto !important;
-    background: #ffffff;
+    background: #ffffff !important;
+  }
+}
+
+@media print {
+  .sgp-answer-sheet {
+    break-inside: avoid-page;
+    break-after: page;
+  }
+
+  .sgp-answer-sheet-back {
+    /* A altura preserva a página mesmo sem conteúdo. */
+    min-height: 1mm;
+    break-after: page;
+  }
+
+  /* A questão só se divide quando não cabe inteira em uma página. */
+  .sgp-print-question {
+    page-break-inside: avoid;
+    break-inside: avoid-page;
+    orphans: 2;
+    widows: 2;
+  }
+
+  .sgp-print-question-heading {
+    page-break-after: avoid;
+    break-after: avoid-page;
+  }
+
+  .sgp-print-question-image,
+  .sgp-print-question-option {
+    page-break-inside: avoid;
+    break-inside: avoid-page;
+  }
+
+  .sgp-print-question-image {
+    max-height: 160mm;
   }
 }
