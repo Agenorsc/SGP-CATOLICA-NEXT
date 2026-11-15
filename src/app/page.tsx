@@ -80,7 +80,7 @@ export default function Home() {
       .then(async res => {
         if (!res.ok) return null;
         const profile = await res.json();
-        return { ...profile, name: profile.email } as UserSession;
+        return profile as UserSession;
       })
       .then(setSession)
       .catch(() => setSession(null))
