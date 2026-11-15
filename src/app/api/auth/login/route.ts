@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PrismaUsuarioRepository } from '@/repositories/prisma/PrismaUsuarioRepository';
+import { createSession, SESSION_COOKIE, sessionCookieOptions } from '@/lib/session';
 import { comparePassword, hashPassword, isBcryptHash } from '@/lib/password';
 
 export const dynamic = 'force-dynamic';
@@ -10,10 +11,8 @@ const usuarioRepo = new PrismaUsuarioRepository();
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, senha } = body;
-
-    const cleanEmail = (email || '').toLowerCase().trim();
-    const cleanSenha = (senha || '').trim();
+    const cleanEmail = typeof body?.email === 'string' ? body.email.toLowerCase().trim() : '';
+    const cleanSenha = typeof body?.senha === 'string' ? body.senha.trim() : '';
 
     if (!cleanEmail || !cleanSenha) {
       return NextResponse.json(
@@ -52,17 +51,24 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({
+    if (usuario.role !== 'ADMIN' && usuario.role !== 'PROFESSOR') {
+      return NextResponse.json({ error: 'Perfil inválido.' }, { status: 403 });
+    }
+
+    const perfil = {
       id: usuario.id,
       name: usuario.nome,
       email: usuario.email,
       role: usuario.role,
-      disciplina: usuario.disciplina
-    });
-  } catch (error: any) {
+      disciplina: usuario.disciplina ?? undefined
+    };
+    const response = NextResponse.json(perfil, { headers: { 'Cache-Control': 'no-store' } });
+    response.cookies.set(SESSION_COOKIE, createSession(perfil), sessionCookieOptions());
+    return response;
+  } catch (error) {
     console.error('Erro no login:', error);
     return NextResponse.json(
-      { error: error.message || 'Erro interno de autenticação.' },
+      { error: 'Erro interno de autenticação.' },
       { status: 500 }
     );
   }

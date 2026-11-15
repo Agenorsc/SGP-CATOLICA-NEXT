@@ -87,7 +87,10 @@ async function dispararRequisicaoHttp(urlCompleta) {
     const client = isHttps ? https : http;
     const t0 = performance.now();
 
-    const req = client.get(urlCompleta, { timeout: 10000 }, (res) => {
+    const headers = process.env.API_SESSION_COOKIE
+      ? { Cookie: process.env.API_SESSION_COOKIE }
+      : undefined;
+    const req = client.get(urlCompleta, { timeout: 10000, headers }, (res) => {
       let data = '';
       res.on('data', chunk => { data += chunk; });
       res.on('end', () => {

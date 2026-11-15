@@ -17,8 +17,16 @@ const mockFindUnique = prisma.usuario.findUnique as jest.Mock;
 const mockUpsert = prisma.usuario.upsert as jest.Mock;
 
 describe('POST /api/auth/login', () => {
+  const originalSecret = process.env.SESSION_SECRET;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.SESSION_SECRET = 'test-only-session-secret-for-login-tests';
+  });
+
+  afterEach(() => {
+    if (originalSecret === undefined) delete process.env.SESSION_SECRET;
+    else process.env.SESSION_SECRET = originalSecret;
   });
 
   it('deve autenticar com sucesso usuário com hash Bcrypt', async () => {
@@ -50,6 +58,8 @@ describe('POST /api/auth/login', () => {
     expect(body.name).toBe('Prof. Teste');
     // Nunca deve vazar a senha na resposta
     expect(body.senha).toBeUndefined();
+    expect(response.headers.get('set-cookie')).toMatch(/sgp_session=.+HttpOnly/i);
+    expect(response.headers.get('set-cookie')).toContain('SameSite=lax');
   });
 
   it('deve manter retrocompatibilidade com senha em texto plano e auto-migrar para Bcrypt', async () => {
@@ -110,6 +120,7 @@ describe('POST /api/auth/login', () => {
 
     expect(response.status).toBe(401);
     expect(body.error).toContain('Senha incorreta');
+    expect(response.headers.get('set-cookie')).toBeNull();
   });
 
   it('deve retornar 400 se e-mail ou senha não forem informados', async () => {

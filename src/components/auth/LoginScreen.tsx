@@ -3,7 +3,6 @@
 import React, { FormEvent, useState } from 'react';
 import { ArrowRight, LockKeyhole, Mail, ShieldCheck, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
 import { UserSession } from '@/types';
-import { AuthService } from '@/services/AuthService';
 
 interface LoginScreenProps {
   onLogin: (session: UserSession) => void;
@@ -14,8 +13,6 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const authService = React.useMemo(() => new AuthService(), []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -32,36 +29,16 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     setLoading(true);
 
     try {
-      // Tenta via API primeiro
-      if (typeof window !== 'undefined') {
-        try {
-          const res = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: cleanEmail, senha: cleanPass })
-          });
-
-          if (res.ok) {
-            const data: UserSession = await res.json();
-            onLogin(data);
-            return;
-          } else {
-            const errData = await res.json();
-            throw new Error(errData.error || 'Credenciais inválidas.');
-          }
-        } catch (apiErr: any) {
-          // Se for erro de credencial da API, propaga o erro
-          if (apiErr.message && !apiErr.message.includes('fetch')) {
-            throw apiErr;
-          }
-          // Fallback para serviço local em caso de indisponibilidade de rede
-          const session = await authService.login(cleanEmail, cleanPass);
-          onLogin(session);
-          return;
-        }
-      }
-    } catch (err: any) {
-      setError(err.message || 'Credenciais inválidas. Verifique seu e-mail e senha.');
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, senha: cleanPass })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Credenciais inválidas.');
+      onLogin(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível entrar.');
     } finally {
       setLoading(false);
     }

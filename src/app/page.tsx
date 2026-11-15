@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Menu } from 'lucide-react';
 
 // Camadas de Domínio (Models)
@@ -55,6 +55,30 @@ import { LeituraTab } from '@/components/leitura/LeituraTab';
 import { RelatoriosTab } from '@/components/relatorios/RelatoriosTab';
 
 export default function Home() {
+  const [session, setSession] = useState<UserSession | null>(null);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/auth/me', { cache: 'no-store', signal: controller.signal })
+      .then(response => response.ok ? response.json() : null)
+      .then(profile => {
+        if (!controller.signal.aborted) setSession(profile);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!controller.signal.aborted) setSessionLoaded(true);
+      });
+    return () => controller.abort();
+  }, []);
+
+  if (!sessionLoaded) return <div className="min-h-screen bg-slate-100" />;
+  if (!session) return <LoginScreen onLogin={setSession} />;
+
+  return <Painel session={session} onLogout={() => setSession(null)} />;
+}
+
+function Painel({ session, onLogout }: { session: UserSession; onLogout: () => void }) {
   // Instâncias dos Serviços da Arquitetura em Camadas
   const alunoRepo = useMemo(() => new AlunoRepository(), []);
   const turmaRepo = useMemo(() => new TurmaRepository(), []);
@@ -70,33 +94,22 @@ export default function Home() {
   const professorService = useMemo(() => new ProfessorService(usuarioRepo), [usuarioRepo]);
   const examService = useMemo(() => new ExamService(examRepo), [examRepo]);
 
-  // Autenticação Real e Navegação
-  const [session, setSession] = useState<UserSession | null>(null);
-  const [sessionLoaded, setSessionLoaded] = useState(false);
   const [currentTab, setCurrentTab] = useState<TabType>('cadastros');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [modalTrocarSenhaAberto, setModalTrocarSenhaAberto] = useState(false);
 
-  useEffect(() => {
-    const savedSession = window.localStorage.getItem('sgp-user-session');
-    if (savedSession) {
-      try {
-        setSession(JSON.parse(savedSession));
-      } catch {
-        window.localStorage.removeItem('sgp-user-session');
-      }
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', { method: 'POST' });
+      if (!response.ok && response.status !== 401) throw new Error('Falha no logout');
+      onLogout();
+    } catch {
+      setAlertaVisual({
+        aberto: true,
+        tipo: 'erro',
+        mensagem: 'Não foi possível sair. Tente novamente.'
+      });
     }
-    setSessionLoaded(true);
-  }, []);
-
-  const handleLogin = (userSession: UserSession) => {
-    window.localStorage.setItem('sgp-user-session', JSON.stringify(userSession));
-    setSession(userSession);
-  };
-
-  const handleLogout = () => {
-    window.localStorage.removeItem('sgp-user-session');
-    setSession(null);
   };
 
   // Estados de Dados
@@ -725,10 +738,6 @@ export default function Home() {
       setProfessores(prev => prev.filter(p => p.id !== id));
     }
   };
-
-  if (!sessionLoaded) return <div className="min-h-screen bg-slate-100" />;
-
-  if (!session) return <LoginScreen onLogin={handleLogin} />;
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-100 font-sans text-slate-900 md:block md:h-screen print:block print:h-auto print:min-h-0 print:bg-white">
