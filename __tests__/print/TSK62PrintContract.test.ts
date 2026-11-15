@@ -9,8 +9,8 @@ const component = readFileSync(join(process.cwd(), 'src/components/impressao/Imp
 
 describe('TSK-62 — contrato de impressão A4', () => {
   it('define página A4 retrato e margens de impressão', () => {
-    expect(css).toMatch(/@page\s*\{[^}]*size:\s*A4 portrait\s*;/s);
-    expect(css).toMatch(/@page\s*\{[^}]*margin:\s*10mm 12mm\s*;/s);
+    expect(css).toMatch(/@page\s*\{[^}]*size:\s*A4 portrait\s*;/);
+    expect(css).toMatch(/@page\s*\{[^}]*margin:\s*10mm 12mm\s*;/);
   });
 
   it('oculta controles interativos na impressão', () => {
@@ -24,8 +24,8 @@ describe('TSK-62 — contrato de impressão A4', () => {
   });
 
   it('força quebra após o cartão e após o verso em branco', () => {
-    expect(css).toMatch(/\.sgp-answer-sheet\s*\{[^}]*break-after:\s*page/s);
-    expect(css).toMatch(/\.sgp-answer-sheet-back\s*\{[^}]*break-after:\s*page/s);
+    expect(css).toMatch(/\.sgp-answer-sheet\s*\{[^}]*break-after:\s*page/);
+    expect(css).toMatch(/\.sgp-answer-sheet-back\s*\{[^}]*break-after:\s*page/);
   });
 
   it('evita dividir enunciado, imagem e alternativas quando cabem', () => {
@@ -33,8 +33,8 @@ describe('TSK-62 — contrato de impressão A4', () => {
       expect(css).toContain('.' + selector);
       expect(component).toContain(selector);
     }
-    expect(css).toMatch(/\.sgp-print-question\s*\{[^}]*break-inside:\s*avoid-page/s);
-    expect(css).toMatch(/\.sgp-print-question-image,\s*\.sgp-print-question-option\s*\{[^}]*break-inside:\s*avoid-page/s);
+    expect(css).toMatch(/\.sgp-print-question\s*\{[^}]*break-inside:\s*avoid-page/);
+    expect(css).toMatch(/\.sgp-print-question-image,\s*\.sgp-print-question-option\s*\{[^}]*break-inside:\s*avoid-page/);
   });
 
   it('preserva a opção de impressão frente e verso para o usuário', () => {
