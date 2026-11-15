@@ -692,3 +692,5 @@ O desenvolvimento do **SGP Católica** cumpriu com excelência a totalidade dos 
 <div align="center">
   <sub>Centro Universitário Católica de Santa Catarina — Engenharia de Software 2026</sub>
 </div>
+
+
