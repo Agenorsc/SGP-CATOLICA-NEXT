@@ -76,25 +76,24 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const savedSession = window.localStorage.getItem('sgp-user-session');
-    if (savedSession) {
-      try {
-        setSession(JSON.parse(savedSession));
-      } catch {
-        window.localStorage.removeItem('sgp-user-session');
-      }
-    }
-    setSessionLoaded(true);
+    fetch('/api/auth/me', { credentials: 'same-origin', cache: 'no-store' })
+      .then(async res => {
+        if (!res.ok) return null;
+        const profile = await res.json();
+        return { ...profile, name: profile.email } as UserSession;
+      })
+      .then(setSession)
+      .catch(() => setSession(null))
+      .finally(() => setSessionLoaded(true));
   }, []);
 
   const handleLogin = (userSession: UserSession) => {
-    window.localStorage.setItem('sgp-user-session', JSON.stringify(userSession));
     setSession(userSession);
   };
 
-  const handleLogout = () => {
-    window.localStorage.removeItem('sgp-user-session');
-    setSession(null);
+  const handleLogout = async () => {
+    try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }); }
+    finally { setSession(null); }
   };
 
   // Estados de Dados
