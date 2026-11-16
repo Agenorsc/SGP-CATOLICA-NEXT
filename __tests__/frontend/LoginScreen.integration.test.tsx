@@ -1,9 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { LoginScreen } from '@/components/auth/LoginScreen';
-import { AuthService } from '@/services/AuthService';
-
-jest.mock('@/services/AuthService', () => ({ AuthService: jest.fn().mockImplementation(() => ({ login: jest.fn().mockRejectedValue(new Error('Serviço indisponível')) })) }));
 
 describe('TSK-37 — integração do login com a API', () => {
   const onLogin = jest.fn();
@@ -11,7 +8,6 @@ describe('TSK-37 — integração do login com a API', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     global.fetch = fetchMock as typeof fetch;
-    (AuthService as jest.Mock).mockImplementation(() => ({ login: jest.fn().mockRejectedValue(new Error('Serviço indisponível')) }));
   });
 
   it('valida campos vazios sem chamar a API', async () => {
@@ -52,7 +48,7 @@ describe('TSK-37 — integração do login com a API', () => {
     fireEvent.change(screen.getByPlaceholderText('admin@admin.com'), { target: { value: 'usuario@catolica.edu.br' } });
     fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'senha' } });
     fireEvent.click(screen.getByRole('button', { name: /entrar no sistema/i }));
-    expect(await screen.findByText('Serviço indisponível')).toBeInTheDocument();
+    expect(await screen.findByText('Falha de conexão')).toBeInTheDocument();
     expect(onLogin).not.toHaveBeenCalled();
   });
 });
