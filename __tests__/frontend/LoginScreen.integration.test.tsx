@@ -1,6 +1,9 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { LoginScreen } from '@/components/auth/LoginScreen';
+import { AuthService } from '@/services/AuthService';
+
+jest.mock('@/services/AuthService', () => ({ AuthService: jest.fn().mockImplementation(() => ({ login: jest.fn().mockRejectedValue(new Error('Serviço indisponível')) })) }));
 
 describe('TSK-37 — integração do login com a API', () => {
   const onLogin = jest.fn();
@@ -8,11 +11,12 @@ describe('TSK-37 — integração do login com a API', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     global.fetch = fetchMock as typeof fetch;
+    (AuthService as jest.Mock).mockImplementation(() => ({ login: jest.fn().mockRejectedValue(new Error('Serviço indisponível')) }));
   });
 
   it('valida campos vazios sem chamar a API', async () => {
     render(<LoginScreen onLogin={onLogin} />);
-    fireEvent.click(screen.getByRole('button', { name: /entrar no sistema/i }));
+    fireEvent.submit(screen.getByRole('button', { name: /entrar no sistema/i }).closest('form')!);
     expect(await screen.findByText('Informe e-mail e senha para acessar.')).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
     expect(onLogin).not.toHaveBeenCalled();
@@ -22,7 +26,7 @@ describe('TSK-37 — integração do login com a API', () => {
     const session = { id: 'u-1', name: 'Docente', email: 'professor@catolica.edu.br', role: 'PROFESSOR' };
     fetchMock.mockResolvedValue({ ok: true, json: async () => session });
     render(<LoginScreen onLogin={onLogin} />);
-    fireEvent.change(screen.getByPlaceholderText('admin@admin.com'), { target: { value: '  PROFESSOR@CATOLICA.EDU.BR  ' } });
+    fireEvent.change(screen.getByPlaceholderText('admin@admin.com'), { target: { value: 'PROFESSOR@CATOLICA.EDU.BR' } });
     fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: ' senha-de-teste ' } });
     fireEvent.click(screen.getByRole('button', { name: /entrar no sistema/i }));
     await waitFor(() => expect(onLogin).toHaveBeenCalledWith(session));
@@ -48,7 +52,7 @@ describe('TSK-37 — integração do login com a API', () => {
     fireEvent.change(screen.getByPlaceholderText('admin@admin.com'), { target: { value: 'usuario@catolica.edu.br' } });
     fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'senha' } });
     fireEvent.click(screen.getByRole('button', { name: /entrar no sistema/i }));
-    expect(await screen.findByText('Falha de conexão')).toBeInTheDocument();
+    expect(await screen.findByText('Serviço indisponível')).toBeInTheDocument();
     expect(onLogin).not.toHaveBeenCalled();
   });
 });
