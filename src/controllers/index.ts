@@ -5,3 +5,5 @@ export * from './ExamController';
 export * from './OmrController';
 export * from './RelatorioController';
 export * from './QuestionStatisticsController';
+export * from './ResultadoController';
+export * from './CadernoController';

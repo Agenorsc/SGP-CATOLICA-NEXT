@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, 
   Download, 
@@ -16,7 +16,9 @@ import {
   ChevronRight,
   Eye,
   CheckCircle2,
-  Clock
+  Clock,
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 import { AlunoModel, TurmaModel } from '@/models';
 import { 
@@ -42,6 +44,7 @@ interface RelatoriosTabProps {
   alunosFiltradosRelatorio: AlunoModel[];
   onExportarCsv?: () => void;
   onExportarExcel?: (params?: { turmaId?: string; ciclo?: AvaliacaoCiclo | 'TODAS'; semestre?: string }) => void;
+  onExcluirNota?: (id: string) => Promise<void> | void;
 }
 
 export function RelatoriosTab({
@@ -53,12 +56,38 @@ export function RelatoriosTab({
   buscaRelatorio,
   setBuscaRelatorio,
   onExportarCsv,
-  onExportarExcel
+  onExportarExcel,
+  onExcluirNota
 }: RelatoriosTabProps) {
   // Filtros Dinâmicos de Escopo
   const [turmaFiltroId, setTurmaFiltroId] = useState<string>('TODAS');
   const [cicloFiltro, setCicloFiltro] = useState<AvaliacaoCiclo | 'TODAS'>('TODAS');
   const [semestreFiltro, setSemestreFiltro] = useState<string>('2026/2');
+
+  // Estado Local de Leituras e Alunos (para recálculo estatístico instantâneo após exclusão)
+  const [leiturasAtivas, setLeiturasAtivas] = useState<LeituraOMRRegistro[]>(leiturasOMR);
+  const [alunosAtivos, setAlunosAtivos] = useState<AlunoModel[]>(alunos);
+
+  useEffect(() => {
+    setLeiturasAtivas(leiturasOMR);
+  }, [leiturasOMR]);
+
+  useEffect(() => {
+    setAlunosAtivos(alunos);
+  }, [alunos]);
+
+  // Modal de Exclusão de Nota
+  const [modalExclusaoNota, setModalExclusaoNota] = useState<{
+    id: string;
+    alunoNome: string;
+    nota: number;
+    ra?: string;
+    stage?: string;
+  } | null>(null);
+  const [isDeletingNota, setIsDeletingNota] = useState(false);
+
+  // Sub-aba entre visão semestral e histórico detalhado de provas
+  const [visaoTabelaAtiva, setVisaoTabelaAtiva] = useState<'consolidado' | 'leituras'>('consolidado');
 
   // Estado do Drilldown / Modal Individual do Aluno
   const [alunoSelecionadoDetalhe, setAlunoSelecionadoDetalhe] = useState<RelatorioIndividualAluno | null>(null);
@@ -89,7 +118,7 @@ export function RelatoriosTab({
     if (cicloFiltro !== 'TODAS') {
       return `Avaliação ${cicloFiltro}`;
     }
-    const leiturasEscopo = leiturasOMR.filter(l => turmaFiltroId === 'TODAS' || l.turmaId === turmaFiltroId);
+    const leiturasEscopo = leiturasAtivas.filter(l => turmaFiltroId === 'TODAS' || l.turmaId === turmaFiltroId);
     if (leiturasEscopo.length > 0) {
       const contagem: Record<string, number> = {};
       leiturasEscopo.forEach(l => {
@@ -102,21 +131,79 @@ export function RelatoriosTab({
       }
     }
     return 'Ciclo Consolidado (N1, N2 e N3)';
-  }, [cicloFiltro, leiturasOMR, turmaFiltroId]);
+  }, [cicloFiltro, leiturasAtivas, turmaFiltroId]);
 
   // Execução do Pipeline de Agregação Estatística (RelatoriosService)
   const relatorioTurma = useMemo(() => {
     return RelatoriosService.gerarRelatorioTurma({
       turmaId: turmaFiltroId,
-      alunos,
+      alunos: alunosAtivos,
       turmas,
-      leiturasOMR,
+      leiturasOMR: leiturasAtivas,
       provasMontadas,
       bancoQuestoes,
       filtroCiclo: cicloFiltro,
       filtroSemestre: semestreFiltro
     });
-  }, [turmaFiltroId, alunos, turmas, leiturasOMR, provasMontadas, bancoQuestoes, cicloFiltro, semestreFiltro]);
+  }, [turmaFiltroId, alunosAtivos, turmas, leiturasAtivas, provasMontadas, bancoQuestoes, cicloFiltro, semestreFiltro]);
+
+  // Lista detalhada de folhas lidas para visualização e exclusão de notas
+  const leiturasDetalhadas = useMemo(() => {
+    return leiturasAtivas.filter(l => {
+      if (turmaFiltroId !== 'TODAS' && l.turmaId && l.turmaId !== turmaFiltroId) return false;
+      if (cicloFiltro !== 'TODAS' && l.stage && l.stage !== cicloFiltro) return false;
+      if (buscaRelatorio.trim()) {
+        const termo = buscaRelatorio.toLowerCase().trim();
+        const matchNome = l.alunoNome?.toLowerCase().includes(termo);
+        const matchRa = l.ra?.toLowerCase().includes(termo);
+        const matchTurma = l.turmaNome?.toLowerCase().includes(termo);
+        if (!matchNome && !matchRa && !matchTurma) return false;
+      }
+      return true;
+    });
+  }, [leiturasAtivas, turmaFiltroId, cicloFiltro, buscaRelatorio]);
+
+  const handleConfirmarExclusaoNota = async () => {
+    if (!modalExclusaoNota) return;
+
+    try {
+      setIsDeletingNota(true);
+
+      // Tenta chamar o endpoint de exclusão de resultado
+      try {
+        await fetch(`/api/resultados/${modalExclusaoNota.id}`, { method: 'DELETE' });
+      } catch (_) {}
+
+      if (onExcluirNota) {
+        await onExcluirNota(modalExclusaoNota.id);
+      }
+
+      // Atualização imediata do estado de leituras
+      setLeiturasAtivas(prev => prev.filter(l => l.id !== modalExclusaoNota.id));
+
+      // Se houver RA, zera a nota daquela etapa no cadastro do aluno
+      if (modalExclusaoNota.ra) {
+        setAlunosAtivos(prev => prev.map(a => {
+          if (a.ra === modalExclusaoNota.ra) {
+            const updated = new AlunoModel({
+              ...a,
+              n1: modalExclusaoNota.stage === 'N1' ? 0.0 : a.n1,
+              n2: modalExclusaoNota.stage === 'N2' || !modalExclusaoNota.stage ? 0.0 : a.n2,
+              n3: modalExclusaoNota.stage === 'N3' ? 0.0 : a.n3
+            });
+            return updated;
+          }
+          return a;
+        }));
+      }
+
+      setModalExclusaoNota(null);
+    } catch (err) {
+      console.error('Erro ao excluir nota:', err);
+    } finally {
+      setIsDeletingNota(false);
+    }
+  };
 
   // Alunos filtrados pela busca textual (Nome ou RA)
   const alunosExibicao = useMemo(() => {
@@ -384,99 +471,239 @@ export function RelatoriosTab({
         />
       )}
 
-      {/* 7. QUADRO CONSOLIDADO DE NOTAS (TABELA DA TURMA COM DRILLDOWN) */}
+      {/* 7. QUADRO CONSOLIDADO DE NOTAS & LANÇAMENTOS OMR */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-          <div>
-            <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-              <Award className="w-4 h-4 text-catolica-primary" />
-              Quadro Consolidado de Notas por Aluno (N1, N2 e N3)
-            </h3>
-            <p className="text-xs text-slate-500">
-              Clique em qualquer aluno da lista para abrir a <strong>Visão Individual (Evolução Temporal & Mapa de Calor)</strong>
-            </p>
+        {/* Toggle entre Quadro Geral e Lançamentos com Exclusão */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setVisaoTabelaAtiva('consolidado')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
+                visaoTabelaAtiva === 'consolidado'
+                  ? 'bg-catolica-primary text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <Award className="w-4 h-4" />
+              Quadro Consolidado (N1, N2 e N3)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setVisaoTabelaAtiva('leituras')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
+                visaoTabelaAtiva === 'leituras'
+                  ? 'bg-catolica-primary text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Lançamentos OMR & Exclusão de Notas ({leiturasDetalhadas.length})
+            </button>
           </div>
 
           <span className="text-xs text-slate-400 font-bold">
-            Total: {alunosExibicao.length} aluno(s)
+            {visaoTabelaAtiva === 'consolidado' 
+              ? `Total: ${alunosExibicao.length} aluno(s)` 
+              : `Total: ${leiturasDetalhadas.length} leitura(s) OMR`}
           </span>
         </div>
 
-        {alunosExibicao.length === 0 ? (
-          <div className="py-12 text-center text-slate-400">
-            <UserCheck className="w-12 h-12 mx-auto mb-2 text-slate-300" />
-            <p className="text-sm font-bold text-slate-600">Nenhum aluno encontrado para este filtro.</p>
-            <p className="text-xs text-slate-400">Tente buscar por outro termo ou selecione outra turma.</p>
-          </div>
-        ) : (
-          <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-            <table className="min-w-[760px] w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
-                  <th className="pb-3 pl-2">Estudante</th>
-                  <th className="pb-3">RA</th>
-                  <th className="pb-3">Turma</th>
-                  <th className="pb-3 text-center">Nota N1</th>
-                  <th className="pb-3 text-center">Nota N2</th>
-                  <th className="pb-3 text-center">Nota N3</th>
-                  <th className="pb-3 text-center">Média Final</th>
-                  <th className="pb-3 text-center">Desempenho</th>
-                  <th className="pb-3 text-center">Situação</th>
-                  <th className="pb-3 text-right pr-2">Ação</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {alunosExibicao.map((item) => (
-                  <tr
-                    key={item.alunoId}
-                    onClick={() => setAlunoSelecionadoDetalhe(item)}
-                    className="hover:bg-slate-50/80 transition cursor-pointer group"
-                  >
-                    <td className="py-3 pl-2">
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 font-bold text-slate-700 text-xs group-hover:bg-catolica-primary group-hover:text-white transition">
-                          {item.alunoNome.slice(0, 2).toUpperCase()}
-                        </div>
-                        <span className="font-bold text-slate-900 group-hover:text-catolica-primary transition">
-                          {item.alunoNome}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3 font-mono text-slate-600">{item.ra}</td>
-                    <td className="py-3 text-slate-500 max-w-[140px] truncate">{item.turmaNome}</td>
-                    <td className="py-3 text-center font-bold text-slate-700">{item.n1.toFixed(1)}</td>
-                    <td className="py-3 text-center font-bold text-slate-700">{item.n2.toFixed(1)}</td>
-                    <td className="py-3 text-center font-bold text-slate-700">{item.n3.toFixed(1)}</td>
-                    <td className="py-3 text-center font-black text-slate-900 text-sm">
-                      {item.mediaFinal.toFixed(1)}
-                    </td>
-                    <td className="py-3 text-center">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${item.deltaRelativoTurma >= 0 ? 'text-emerald-700 bg-emerald-50' : 'text-rose-700 bg-rose-50'}`}>
-                        {item.deltaRelativoTurma >= 0 ? `+${item.deltaRelativoTurma}%` : `${item.deltaRelativoTurma}%`}
-                      </span>
-                    </td>
-                    <td className="py-3 text-center">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${getStatusBadge(item.statusAprovacao)}`}>
-                        {item.statusAprovacao}
-                      </span>
-                    </td>
-                    <td className="py-3 text-right pr-2">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-700 group-hover:bg-catolica-primary group-hover:text-white transition"
-                      >
-                        <Eye className="w-3.5 h-3.5" /> Detalhes
-                      </button>
-                    </td>
+        {visaoTabelaAtiva === 'consolidado' ? (
+          /* TABELA 1: CONSOLIDADO GERAL POR ALUNO */
+          alunosExibicao.length === 0 ? (
+            <div className="py-12 text-center text-slate-400">
+              <UserCheck className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+              <p className="text-sm font-bold text-slate-600">Nenhum aluno encontrado para este filtro.</p>
+              <p className="text-xs text-slate-400">Tente buscar por outro termo ou selecione outra turma.</p>
+            </div>
+          ) : (
+            <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+              <table className="min-w-[760px] w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
+                    <th className="pb-3 pl-2">Estudante</th>
+                    <th className="pb-3">RA</th>
+                    <th className="pb-3">Turma</th>
+                    <th className="pb-3 text-center">Nota N1</th>
+                    <th className="pb-3 text-center">Nota N2</th>
+                    <th className="pb-3 text-center">Nota N3</th>
+                    <th className="pb-3 text-center">Média Final</th>
+                    <th className="pb-3 text-center">Desempenho</th>
+                    <th className="pb-3 text-center">Situação</th>
+                    <th className="pb-3 text-right pr-2">Ação</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {alunosExibicao.map((item) => (
+                    <tr
+                      key={item.alunoId}
+                      onClick={() => setAlunoSelecionadoDetalhe(item)}
+                      className="hover:bg-slate-50/80 transition cursor-pointer group"
+                    >
+                      <td className="py-3 pl-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 font-bold text-slate-700 text-xs group-hover:bg-catolica-primary group-hover:text-white transition">
+                            {item.alunoNome.slice(0, 2).toUpperCase()}
+                          </div>
+                          <span className="font-bold text-slate-900 group-hover:text-catolica-primary transition">
+                            {item.alunoNome}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 font-mono text-slate-600">{item.ra}</td>
+                      <td className="py-3 text-slate-500 max-w-[140px] truncate">{item.turmaNome}</td>
+                      <td className="py-3 text-center font-bold text-slate-700">{item.n1.toFixed(1)}</td>
+                      <td className="py-3 text-center font-bold text-slate-700">{item.n2.toFixed(1)}</td>
+                      <td className="py-3 text-center font-bold text-slate-700">{item.n3.toFixed(1)}</td>
+                      <td className="py-3 text-center font-black text-slate-900 text-sm">
+                        {item.mediaFinal.toFixed(1)}
+                      </td>
+                      <td className="py-3 text-center">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${item.deltaRelativoTurma >= 0 ? 'text-emerald-700 bg-emerald-50' : 'text-rose-700 bg-rose-50'}`}>
+                          {item.deltaRelativoTurma >= 0 ? `+${item.deltaRelativoTurma}%` : `${item.deltaRelativoTurma}%`}
+                        </span>
+                      </td>
+                      <td className="py-3 text-center">
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${getStatusBadge(item.statusAprovacao)}`}>
+                          {item.statusAprovacao}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right pr-2">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-700 group-hover:bg-catolica-primary group-hover:text-white transition"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Detalhes
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : (
+          /* TABELA 2: LANÇAMENTOS DETALHADOS OMR COM EXCLUSÃO E ESTORNO */
+          leiturasDetalhadas.length === 0 ? (
+            <div className="py-12 text-center text-slate-400">
+              <FileSpreadsheet className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+              <p className="text-sm font-bold text-slate-600">Nenhuma leitura OMR registrada para este filtro.</p>
+              <p className="text-xs text-slate-400">Escaneie provas no módulo de leitura para registrar notas.</p>
+            </div>
+          ) : (
+            <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+              <table className="min-w-[760px] w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
+                    <th className="pb-3 pl-2">Estudante</th>
+                    <th className="pb-3">RA</th>
+                    <th className="pb-3">Prova / Caderno</th>
+                    <th className="pb-3 text-center">Etapa</th>
+                    <th className="pb-3 text-center">Acertos</th>
+                    <th className="pb-3 text-center">Nota Final</th>
+                    <th className="pb-3">Data / Hora</th>
+                    <th className="pb-3 text-right pr-2">Ação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {leiturasDetalhadas.map((l) => (
+                    <tr key={l.id} className="hover:bg-slate-50/80 transition">
+                      <td className="py-3 pl-2 font-bold text-slate-900">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-catolica-primary/10 text-catolica-primary font-bold text-xs">
+                            {l.alunoNome ? l.alunoNome.slice(0, 2).toUpperCase() : 'AL'}
+                          </div>
+                          <span>{l.alunoNome || 'Estudante'}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 font-mono text-slate-600">{l.ra || 'N/A'}</td>
+                      <td className="py-3 text-slate-700">
+                        <span className="font-semibold">{l.materia || 'Prova'}</span>
+                        <span className="block text-[10px] text-slate-400 font-mono">
+                          {l.versao || 'Versão Padrão'}
+                        </span>
+                      </td>
+                      <td className="py-3 text-center font-bold text-catolica-primary">
+                        {l.stage || 'N2'}
+                      </td>
+                      <td className="py-3 text-center font-semibold text-slate-700">
+                        {l.acertos} / {l.totalQuestoes}
+                      </td>
+                      <td className="py-3 text-center font-black text-slate-900 text-sm">
+                        {l.notaCalculada.toFixed(1)} pts
+                      </td>
+                      <td className="py-3 text-slate-400 text-[11px] font-mono">
+                        {l.dataLeitura || 'Recentemente'}
+                      </td>
+                      <td className="py-3 text-right pr-2">
+                        <button
+                          type="button"
+                          onClick={() => setModalExclusaoNota({
+                            id: l.id,
+                            alunoNome: l.alunoNome,
+                            nota: l.notaCalculada,
+                            ra: l.ra,
+                            stage: l.stage
+                          })}
+                          className="inline-flex items-center gap-1 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 px-2.5 py-1 text-xs font-bold transition border border-rose-200"
+                          title="Excluir Nota"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Excluir Nota</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         )}
       </div>
 
-      {/* 5. MODAL INDIVIDUAL DO ALUNO (DRILLDOWN COM EVOLUÇÃO TEMPORAL E MAPA DE CALOR) */}
+      {/* 8. MODAL DE CONFIRMAÇÃO DE EXCLUSÃO DE NOTA */}
+      {modalExclusaoNota && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-slate-100 space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Excluir Nota do Aluno</h3>
+                <span className="text-xs text-slate-400">Confirmação de estorno estatístico</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+              Deseja realmente excluir a nota de <strong>{modalExclusaoNota.alunoNome}</strong> (Nota: <strong>{modalExclusaoNota.nota.toFixed(1)}</strong>)? Essa ação removerá o lançamento e recalculará imediatamente as estatísticas da turma. Você poderá escanear a folha novamente se desejar.
+            </p>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingNota}
+                onClick={() => setModalExclusaoNota(null)}
+                className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200 transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingNota}
+                onClick={handleConfirmarExclusaoNota}
+                className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-rose-700 transition"
+              >
+                {isDeletingNota ? 'Excluindo...' : 'Confirmar Exclusão'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 9. MODAL INDIVIDUAL DO ALUNO (DRILLDOWN COM EVOLUÇÃO TEMPORAL E MAPA DE CALOR) */}
       <ModalDetalheAluno
         aluno={alunoSelecionadoDetalhe}
         onClose={() => setAlunoSelecionadoDetalhe(null)}

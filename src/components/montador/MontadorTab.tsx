@@ -637,7 +637,7 @@ export function MontadorTab({
                 onClick={handleGerarCaderno}
                 className="w-full bg-catolica-primary hover:bg-catolica-dark text-white py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-lg shadow-catolica-primary/30 cursor-pointer"
               >
-                <Printer className="w-4 h-4" /> Salvar, Arquivar e Gerar Gabarito OMR
+                <Printer className="w-4 h-4" /> Salvar e Gerar Prova Montada
               </button>
             </div>
           </div>

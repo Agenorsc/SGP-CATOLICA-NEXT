@@ -10,3 +10,7 @@ export * from './prisma/PrismaQuestionRepository';
 export * from './prisma/PrismaOmrRepository';
 export * from './UsuarioRepository';
 export * from './prisma/PrismaUsuarioRepository';
+export * from './CadernoRepository';
+export * from './prisma/PrismaCadernoRepository';
+export * from './ResultadoRepository';
+export * from './prisma/PrismaResultadoRepository';

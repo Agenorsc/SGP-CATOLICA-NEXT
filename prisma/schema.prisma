@@ -23,6 +23,7 @@ model Usuario {
   questoes       Questao[]
   provasMontadas ProvaMontada[]
   leiturasOMR    LeituraOMR[]
+  resultados     ResultadoAvaliacao[]
 
   @@map("usuarios")
 }
@@ -120,17 +121,64 @@ model ProvaMontada {
   shuffleQuestoes     Boolean      @default(true)
   shuffleAlternativas Boolean      @default(true)
   nominalQrCode       Boolean      @default(true)
+  status              String       @default("PRONTA_PARA_APLICAR") // "RASCUNHO" | "PRONTA_PARA_APLICAR" | "FINALIZADA"
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
   turma               Turma        @relation(fields: [turmaId], references: [id], onDelete: Cascade)
   professor           Usuario?     @relation(fields: [professorId], references: [id], onDelete: SetNull)
   leiturasOMR         LeituraOMR[]
+  cadernos            CadernoProva[]
+  resultados          ResultadoAvaliacao[]
 
   @@index([turmaId])
   @@index([professorId])
   @@index([ciclo])
   @@map("provas_montadas")
+}
+
+model CadernoProva {
+  id                  String       @id @default(uuid())
+  provaMontadaId      String       @map("prova_montada_id")
+  codigoVersao        String       @map("codigo_versao") // 'CADERNO-A', 'CADERNO-B' ou RA/Nome
+  alunoNome           String?      @map("aluno_nome")
+  alunoRa             String?      @map("aluno_ra")
+  mapaQuestoesJson    Json         @map("mapa_questoes_json")
+  gabaritoOficialJson Json         @map("gabarito_oficial_json")
+  createdAt           DateTime     @default(now()) @map("created_at")
+
+  provaMontada        ProvaMontada @relation(fields: [provaMontadaId], references: [id], onDelete: Cascade)
+  resultados          ResultadoAvaliacao[]
+
+  @@index([provaMontadaId])
+  @@index([codigoVersao])
+  @@map("cadernos_prova")
+}
+
+model ResultadoAvaliacao {
+  id                    String        @id @default(uuid())
+  professorId           String        @map("professor_id")
+  provaMontadaId        String        @map("prova_montada_id")
+  cadernoProvaId        String?       @map("caderno_prova_id")
+  alunoNome             String        @map("aluno_nome")
+  alunoRa               String?       @map("aluno_ra")
+  respostasMarcadasJson Json          @map("respostas_marcadas_json")
+  acertos               Int
+  totalQuestoes         Int           @map("total_questoes")
+  notaFinal             Float         @map("nota_final")
+  lidoViaMobile         Boolean       @default(true) @map("lido_via_mobile")
+  createdAt             DateTime      @default(now()) @map("created_at")
+
+  professor             Usuario       @relation(fields: [professorId], references: [id], onDelete: Cascade)
+  provaMontada          ProvaMontada  @relation(fields: [provaMontadaId], references: [id], onDelete: Cascade)
+  cadernoProva          CadernoProva? @relation(fields: [cadernoProvaId], references: [id], onDelete: SetNull)
+
+  @@index([professorId])
+  @@index([provaMontadaId])
+  @@index([cadernoProvaId])
+  @@index([alunoRa])
+  @@index([createdAt])
+  @@map("resultados_avaliacao")
 }
 
 model LeituraOMR {

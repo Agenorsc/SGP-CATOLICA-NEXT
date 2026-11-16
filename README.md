@@ -24,7 +24,7 @@
 [![CI/CD Status](https://img.shields.io/badge/CI%2FCD-Sucesso%20Total%20(Green%20Build)-success?style=flat-square&logo=githubactions&logoColor=white)](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/actions)
 [![Avaliação](https://img.shields.io/badge/Cliente%20Docente-Prof.%20Me.%20Samuel-blue?style=flat-square)](https://catolicasc.org.br/)
 [![Arquitetura](https://img.shields.io/badge/Padr%C3%A3o-Rota%20%E2%86%92%20Controller%20%E2%86%92%20Service%20%E2%86%92%20Repository-007ACC?style=flat-square)](https://catolicasc.org.br/)
-[![Testes Automatizados](https://img.shields.io/badge/Testes-171%2F171%20Aprovados%20(100%25)-brightgreen?style=flat-square)](https://jestjs.io/)
+[![Testes Automatizados](https://img.shields.io/badge/Testes-178%2F178%20Aprovados%20(100%25)-brightgreen?style=flat-square)](https://jestjs.io/)
 [![Performance SLA](https://img.shields.io/badge/SLA%20p95-%3C%20250ms%20(Conforme%20RNF03)-brightgreen?style=flat-square)](https://vercel.com/)
 
 **Jaraguá do Sul – SC | 2026**
@@ -62,8 +62,11 @@ A solução elimina a sobrecarga operacional, a lentidão no lançamento de nota
 7. **Embaralhamento Determinístico Auditável:** Algoritmo Fisher-Yates com sementes numéricas (*seeds*) para permutação independente da ordem de questões e alternativas por versão de caderno;
 8. **Folha de Respostas e Caderno no Modelo Oficial Católica SC:** Cabeçalho institucional dinâmico por professor/turma (TSK-59), orientações numeradas, paginação sem corte de questões no meio da folha A4 (TSK-54) e página duplex em branco no verso para destaque seguro do gabarito (TSK-62);
 9. **Reconhecimento Óptico de Alta Acurácia (> 99% / TSK-45):** Leitura de marcas por câmera com marcadores fiduciais nos 4 cantos, decodificação instantânea do QR Code nominal com validação cruzada de turma e fluxo de conferência assistido por HUD em lote (TSK-46);
-10. **Persistência Relacional com Supabase e Prisma ORM:** 6 entidades mapeadas com índices B-tree nos pontos de maior cardinalidade (`professorId`, `turmaId`, `alunoId`, `avaliacao`), garantindo execução dinâmica server-side (`force-dynamic`) com **p95 < 250 ms** em produção (TSK-61);
-11. **Relatórios Pedagógicos, Análise de Distratores e Exportação Excel (TSK-36 / TSK-40):** Dashboard analítico consolidado por turma, cálculo de alternativas erradas mais assinaladas (distratores) e exportação em `.xlsx` com 3 abas estruturadas (Notas da Turma, Espelho OMR e Diagnóstico Pedagógico).
+10. **Persistência Relacional com Supabase e Prisma ORM:** 8 entidades mapeadas (`usuarios`, `turmas`, `alunos`, `questoes`, `alternativas`, `provas_montadas`, `cadernos_prova`, `resultados_avaliacao` e `leituras_omr`) com índices B-tree nos pontos de maior cardinalidade (`professorId`, `turmaId`, `alunoId`, `provaMontadaId`, `cadernoProvaId`), garantindo execução dinâmica server-side (`force-dynamic`) com **p95 < 250 ms** em produção (TSK-61);
+11. **Relatórios Pedagógicos, Análise de Distratores e Exportação Excel (TSK-36 / TSK-40):** Dashboard analítico consolidado por turma, cálculo de alternativas erradas mais assinaladas (distratores) e exportação em `.xlsx` com 3 abas estruturadas (Notas da Turma, Espelho OMR e Diagnóstico Pedagógico);
+12. **Provas Montadas com Snapshots Imutáveis & Cadernos Embaralhados:** Congelamento integral das questões, alternativas e metadados no instante da geração da prova, com persistência relacional dos cadernos de prova (`cadernos_prova`), geração determinística de cadernos (A, B, C, D ou nominais por aluno) e pré-cálculo indexado do `gabarito_oficial_json` para conferência OMR ultrarrápida sem depender de inversões client-side;
+13. **Scanner OMR Mobile-First com QR Code Compacto:** Interface nativa para smartphones com viewfinder HUD em tela cheia, guias visuais em neon, feedback auditivo (Web Audio API) e tátil (`navigator.vibrate`), decodificação de QR Code compacto com payload `{"p":"<prova_id>","c":"<caderno_id>"}`, busca automática do gabarito oficial daquela versão no backend e modal bottom-sheet de conferência ágil com nota calculada em tempo real;
+14. **Gestão de Notas com Exclusão e Estorno Dinâmico de Estatísticas:** Tabela detalhada de estudantes avaliados via OMR na aba de Estatísticas/Relatórios, botão de exclusão (`Trash2`) com modal de confirmação seguro, rota `DELETE /api/resultados/[id]` com validação multi-tenant por docente, limpeza automática da nota da etapa no cadastro do aluno e recálculo instantâneo de médias, notas extremas e distratores, liberando a folha para ser reescaneada sem duplicidade.
 
 ---
 
@@ -117,6 +120,9 @@ O **SGP Católica** foi desenvolvido para transformar o processo avaliativo doce
 | **RF16** | **Análise Pedagógica de Distratores** | Docente | Painel estatístico demonstrando a frequência de acertos, erros e as alternativas incorretas mais marcadas pelos alunos por questão (TSK-36). |
 | **RF17** | **Exportação de Relatórios Multi-Abas (.xlsx)** | Docente | Exportação de dados consolidados de turmas, notas semestrais e espelho de correções em planilha Excel estruturada em 3 abas (TSK-40). |
 | **RF18** | **Isolamento de Dados por Docente no Backend** | Sistema | Professores acessam exclusivamente suas próprias turmas, alunos, avaliações e correções no backend Supabase, com bloqueio `403 Forbidden` a dados de terceiros ou turmas órfãs (TSK-57). |
+| **RF19** | **Provas Montadas e Snapshots Imutáveis de Cadernos** | Docente / Sistema | Persistência de provas montadas congelando o enunciado e alternativas, geração determinística de cadernos de prova embaralhados com pré-cálculo e armazenamento do `gabarito_oficial_json` por versão. |
+| **RF20** | **Scanner OMR Mobile com QR Code Compacto** | Docente / Câmera | Interface mobile-first com câmera, feedback sonoro e tátil, decodificação de QR Code compacto `{"p":"<id>","c":"<id>"}`, busca automática do gabarito oficial e confirmação via bottom-sheet. |
+| **RF21** | **Gestão e Exclusão de Notas com Estorno Estatístico** | Docente / Sistema | Tabela analítica de leituras OMR na aba de relatórios, exclusão de notas via `DELETE /api/resultados/[id]`, estorno imediato no cadastro do aluno e recálculo instantâneo de todas as médias da turma. |
 
 ### 2.2 Requisitos Não Funcionais (RNF)
 
@@ -142,8 +148,10 @@ O **SGP Católica** foi desenvolvido para transformar o processo avaliativo doce
 | **Tela 3: Gestão de Estudantes** | `CadastrosTab.tsx` / `AlunosTable.tsx` | Cadastro de alunos com herança OO, consumo de CEP via ViaCEP, notas parciais N1/N2/N3, cálculo de média e situação acadêmica. |
 | **Tela 4: Montador de Provas** | `MontadorTab.tsx` / `ModalQuestao.tsx` | *Split-screen* com banco de questões categorizado por turma e ciclo (N1/N2/N3/N-1), seleção de 1 a 30 questões e trava matemática de 10,0 pts. |
 | **Tela 5: Impressão & Caderno OMR** | `ImpressaoTab.tsx` / `OmrSheet.tsx` | Modelo oficial Católica SC com cabeçalho dinâmico por turma/professor, paginação frente/verso com folha em branco duplex e impressão A4 sem quebra de questões. |
-| **Tela 6: Leitor Óptico Automático** | `CorrectionScanner.tsx` | Scanner OMR por câmera 100% automático com leitura de QR Code nominal, validação cruzada de turma, HUD de notas e fluxo de correção em lote simplificado. |
-| **Tela 7: Relatórios Pedagógicos** | `RelatoriosTab.tsx` | Médias da turma por ciclo, dashboard analítico interativo, gráfico de análise de distratores por questão e exportação em `.xlsx` com 3 abas. |
+| **Tela 6: Leitor Óptico Automático (Desktop)** | `CorrectionScanner.tsx` | Scanner OMR por câmera 100% automático com leitura de QR Code nominal, validação cruzada de turma, HUD de notas e fluxo de correção em lote simplificado. |
+| **Tela 7: Relatórios Pedagógicos & Gestão de Notas** | `RelatoriosTab.tsx` | Médias da turma por ciclo, dashboard analítico interativo, gráfico de distratores, tabela detalhada de leituras OMR e botão de exclusão de notas com modal seguro e estorno automático. |
+| **Tela 8: Provas Montadas** | `ProvasMontadasTab.tsx` / `ModalGabaritosEmbaralhados.tsx` | Visualização das provas congeladas, filtros por Turma/Etapa, consulta do gabarito oficial de cada caderno embaralhado, reimpressão A4 da prova/folha e botão "Abrir Scanner no Celular". |
+| **Tela 9: Scanner OMR Mobile** | `MobileOmrScanner.tsx` | Viewport de câmera em tela cheia otimizado para celulares, feedback sonoro e de vibração, leitura de QR Code `{ p, c }`, conferência de acertos e bottom-sheet para salvar nota em `resultados_avaliacao`. |
 
 ---
 
@@ -174,6 +182,9 @@ flowchart LR
         UC13(["UC13: Atualizar Nota da Etapa no Supabase"])
         UC14(["UC14: Consultar Dashboard e Análise de Distratores"])
         UC15(["UC15: Exportar Relatórios Multi-Abas em Excel (.xlsx)"])
+        UC16(["UC16: Salvar Prova Montada com Cadernos Imutáveis"])
+        UC17(["UC17: Escanear Folha via Scanner OMR Mobile"])
+        UC18(["UC18: Excluir / Estornar Nota com Recálculo Imediato"])
     end
 
     Prof --> UC01
@@ -187,13 +198,20 @@ flowchart LR
     Prof --> UC12
     Prof --> UC14
     Prof --> UC15
+    Prof --> UC16
+    Prof --> UC17
+    Prof --> UC18
 
     Cam --> UC09
+    Cam --> UC17
 
     UC05 -.->|include| UC06
+    UC05 -.->|include| UC16
     UC09 -.->|include| UC10
     UC10 -.->|include| UC11
     UC12 -.->|include| UC13
+    UC17 -.->|include| UC12
+    UC18 -.->|include| UC13
 ```
 
 ---
@@ -310,13 +328,41 @@ classDiagram
         +String id
         +String titulo
         +String disciplina
-        +String semestre
-        +String ciclo
-        +String turmaId
+        +String turma
+        +String etapa
+        +Float valorTotal
+        +Boolean embaralharQuestoes
+        +Boolean embaralharAlternativas
+        +String status
         +String professorId
         +Json questoesSnapshot
+        +DateTime createdAt
+    }
+
+    class CadernoProva {
+        +String id
+        +String provaMontadaId
+        +String codigoVersao
+        +String alunoNome
+        +String alunoRa
+        +Json mapaQuestoesJson
+        +Json gabaritoOficialJson
+        +DateTime createdAt
+    }
+
+    class ResultadoAvaliacao {
+        +String id
+        +String professorId
+        +String provaMontadaId
+        +String cadernoProvaId
+        +String alunoNome
+        +String alunoRa
+        +Json respostasMarcadasJson
+        +Int acertos
         +Int totalQuestoes
-        +Float pontuacaoTotal
+        +Float notaFinal
+        +Boolean lidoViaMobile
+        +DateTime createdAt
     }
 
     class LeituraOMR {
@@ -349,13 +395,18 @@ classDiagram
     Usuario "1" --> "0..*" Questao : elabora
     Usuario "1" --> "0..*" LeituraOMR : audita
     Usuario "1" --> "0..*" ProvaMontada : compõe
+    Usuario "1" --> "0..*" ResultadoAvaliacao : avalia
     Turma "1" --> "0..*" Aluno : matricula
     Turma "1" --> "0..*" Questao : destina
     Turma "1" --> "0..*" LeituraOMR : agrupa
     Turma "1" --> "0..*" ProvaMontada : vincula
     Questao "1" *-- "2..5" Alternativa : compõe
+    ProvaMontada "1" *-- "1..*" CadernoProva : gera cadernos
+    ProvaMontada "1" --> "0..*" ResultadoAvaliacao : consolida
+    CadernoProva "1" --> "0..*" ResultadoAvaliacao : valida respostas
     Aluno "1" --> "0..*" LeituraOMR : realiza
     LeituraOMR ..> GridOmrEngine : processado por
+    ResultadoAvaliacao ..> GridOmrEngine : gerado por
 ```
 
 ---
@@ -405,6 +456,59 @@ sequenceDiagram
 
 ---
 
+### 4.5 Diagrama de Sequência UML (Fluxo Mobile OMR, Snapshots Imutáveis e Exclusão/Estorno)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Docente as Professor (Celular)
+    participant Mobile as MobileOmrScanner (UI Mobile)
+    participant CController as CadernoController
+    participant RController as ResultadoController
+    participant RService as ResultadoService
+    participant RRepo as PrismaResultadoRepository
+    participant DB as PostgreSQL (Supabase)
+
+    Note over Docente,DB: Fase 1: Leitura do Cartão Embaralhado no Celular
+    Docente->>Mobile: Aponta a câmera para a folha de respostas
+    Mobile->>Mobile: Decodifica QR Code compacto: {"p": "<provaId>", "c": "<cadernoId>"}
+    Mobile->>Mobile: Dispara beep sonoro e vibração tátil (navigator.vibrate)
+    Mobile->>CController: GET /api/cadernos/[cadernoId]
+    CController->>DB: Busca gabarito_oficial_json do caderno embaralhado
+    DB-->>CController: Retorna gabarito pre-computado daquela versão
+    CController-->>Mobile: { id, gabaritoOficialJson: { "1": "C", "2": "A", ... } }
+    Mobile->>Mobile: Compara marcações OMR com o gabarito embaralhado
+    Mobile->>Docente: Abre Bottom-Sheet com Aluno, RA, Acertos e Nota Calculada
+    
+    Docente->>Mobile: Clica em "Confirmar e Salvar Nota"
+    Mobile->>RController: POST /api/resultados (alunoNome, alunoRa, acertos, notaFinal, etc.)
+    RController->>RService: salvarResultadoComEscopo(dados, session)
+    RService->>RRepo: create(resultado) + atualizarNotaEtapa(alunoId, etapa, nota)
+    RRepo->>DB: Persiste em resultados_avaliacao e atualiza alunos.n2
+    DB-->>RRepo: OK
+    RRepo-->>RService: Registro criado
+    RService-->>RController: Sucesso
+    RController-->>Mobile: HTTP 201 Created
+    Mobile->>Docente: Exibe badge de sucesso e câmera fica pronta para a próxima prova
+
+    Note over Docente,DB: Fase 2: Gestão de Notas com Exclusão e Estorno Imediato
+    Docente->>Mobile: Na aba de Estatísticas/Relatórios, clica na Lixeira vermelha de um aluno
+    Mobile->>Docente: Abre modal de confirmação de exclusão
+    Docente->>Mobile: Confirma remoção
+    Mobile->>RController: DELETE /api/resultados/[resultadoId]
+    RController->>RService: excluirResultadoComEscopo(resultadoId, session)
+    RService->>RRepo: findById(resultadoId) (valida professorId = session.id)
+    RService->>RRepo: delete(resultadoId)
+    RService->>DB: Limpa nota da etapa em alunos (n1/n2/n3 = null)
+    DB-->>RRepo: OK
+    RRepo-->>RService: Exclusão concluída
+    RService-->>RController: { success: true }
+    RController-->>Mobile: HTTP 200 OK
+    Mobile->>Docente: Recalcula estatísticas (médias, distratores) na hora e libera aluno para releitura
+```
+
+---
+
 ## 5. Persistência de Dados em Nuvem (Supabase & PostgreSQL)
 
 ### 5.1 Arquitetura de Dados Relacional e Prisma ORM
@@ -431,10 +535,18 @@ A persistência da aplicação é 100% realizada em banco de dados relacional **
 5. **`alternativas`**: Alternativas de cada questão objetiva (A até E).
    - **Campos:** `id` (PK, UUID), `letraOriginal` (A, B, C, D, E), `texto` (TEXT), `correta` (BOOLEAN), `questaoId` (FK $\rightarrow$ questoes.id com `ON DELETE CASCADE`).
 
-6. **`provas_montadas`**: Espelho estruturado e snapshots das avaliações compostas.
-   - **Campos:** `id` (PK, UUID), `titulo` (VARCHAR), `disciplina` (VARCHAR), `semestre` (VARCHAR), `ciclo` (VARCHAR), `turmaId` (FK $\rightarrow$ turmas.id), `professorId` (FK $\rightarrow$ usuarios.id), `questoesSnapshot` (JSONB), `totalQuestoes` (INT), `pontuacaoTotal` (FLOAT), `createdAt`.
+6. **`provas_montadas`**: Espelho estruturado e snapshots imutáveis das avaliações compostas.
+   - **Campos:** `id` (PK, UUID), `titulo` (VARCHAR), `disciplina` (VARCHAR), `turma` (VARCHAR, nullable), `etapa` (VARCHAR, nullable), `semestre` (VARCHAR, nullable), `ciclo` (VARCHAR, nullable), `valorTotal` (DOUBLE PRECISION, default 10.0), `embaralharQuestoes` (BOOLEAN), `embaralharAlternativas` (BOOLEAN), `status` (VARCHAR: 'RASCUNHO', 'PRONTA_PARA_APLICAR', 'FINALIZADA'), `turmaId` (FK $\rightarrow$ turmas.id, opcional), `professorId` (FK $\rightarrow$ usuarios.id), `questoesSnapshot` (JSONB), `totalQuestoes` (INT), `pontuacaoTotal` (DOUBLE PRECISION), `createdAt`.
+   - **Relações:** 1:N com `cadernos_prova` (`ON DELETE CASCADE`), 1:N com `resultados_avaliacao`, 1:N com `leituras_omr`.
 
-7. **`leituras_omr`**: Registros detalhados das correções ópticas via câmera.
+7. **`cadernos_prova`**: Mapeamento do embaralhamento determinístico e gabarito oficial congelado por versão ou nominal por aluno.
+   - **Campos:** `id` (PK, UUID), `provaMontadaId` (FK $\rightarrow$ provas_montadas.id com `ON DELETE CASCADE`), `codigoVersao` (VARCHAR - ex: 'CADERNO-A', 'CADERNO-B'), `alunoNome` (VARCHAR, nullable), `alunoRa` (VARCHAR, nullable), `mapaQuestoesJson` (JSONB - ordem das questões e alternativas traduzidas), `gabaritoOficialJson` (JSONB - `{ "1": "C", "2": "A", ... }` para conferência instantânea), `createdAt`.
+   - **Relações:** 1:N com `resultados_avaliacao`.
+
+8. **`resultados_avaliacao`**: Registro oficial de notas e avaliações corrigidas via OMR (mobile ou desktop).
+   - **Campos:** `id` (PK, UUID), `professorId` (FK $\rightarrow$ usuarios.id), `provaMontadaId` (FK $\rightarrow$ provas_montadas.id), `cadernoProvaId` (FK $\rightarrow$ cadernos_prova.id), `alunoNome` (VARCHAR), `alunoRa` (VARCHAR), `respostasMarcadasJson` (JSONB), `acertos` (INT), `totalQuestoes` (INT), `notaFinal` (DOUBLE PRECISION), `lidoViaMobile` (BOOLEAN, default true), `createdAt`.
+
+9. **`leituras_omr`**: Registros detalhados legados e avançados das correções ópticas via câmera.
    - **Campos:** `id` (PK, UUID), `alunoId` (FK $\rightarrow$ alunos.id), `turmaId` (FK $\rightarrow$ turmas.id), `professorId` (FK $\rightarrow$ usuarios.id), `provaMontadaId` (FK $\rightarrow$ provas_montadas.id, opcional), `alunoNome` (VARCHAR), `ra` (VARCHAR), `turmaNome` (VARCHAR), `materia` (VARCHAR), `versao` (VARCHAR), `acertos` (INT), `totalQuestoes` (INT), `notaCalculada` (FLOAT), `dataLeitura` (VARCHAR), `respostasDetectadas` (JSONB), `gabaritoOficial` (JSONB), `detalhesQuestoes` (JSONB), `fiduciaisDetectados` (BOOLEAN), `createdAt`.
 
 ### 5.3 Otimização de Consultas e Índices B-Tree no PostgreSQL (Supabase)
@@ -448,6 +560,8 @@ Para garantir o SLA de **p95 < 250 ms** exigido no **RNF03** em execução dinâ
 | `Questao` | `@@index([turmaId])`, `@@index([professorId])`, `@@index([avaliacao])` | Agilidade na composição de provas por ciclo ($N1, N2, N3, N-1$) e disciplina. |
 | `Alternativa` | `@@index([questaoId])` | Resolução imediata de opções $A, B, C, D, E$ com busca indexada no `include`. |
 | `ProvaMontada` | `@@index([turmaId])`, `@@index([professorId])`, `@@index([ciclo])` | Consulta ultra-rápida do espelho de avaliação e histórico de provas. |
+| `CadernoProva` | `@@index([provaMontadaId])`, `@@index([codigoVersao])` | Resolução em < 5ms do gabarito embaralhado por QR Code compacto `{"p","c"}`. |
+| `ResultadoAvaliacao` | `@@index([professorId])`, `@@index([provaMontadaId])`, `@@index([cadernoProvaId])`, `@@index([alunoRa])` | Busca indexada para exclusão/estorno atômico e agregação de médias sem degradação. |
 | `LeituraOMR` | `@@index([alunoId])`, `@@index([turmaId])`, `@@index([professorId])`, `@@index([createdAt])` | Ordenação temporal decrescente e cálculo em tempo real de médias e distratores. |
 
 ### 5.4 DDL Relacional em SQL (PostgreSQL Supabase)
@@ -528,24 +642,64 @@ CREATE TABLE IF NOT EXISTS "alternativas" (
 );
 CREATE INDEX IF NOT EXISTS "alternativas_questaoId_idx" ON "alternativas"("questaoId");
 
--- 6. Tabela de Provas Montadas
+-- 6. Tabela de Provas Montadas (Snapshots Imutáveis)
 CREATE TABLE IF NOT EXISTS "provas_montadas" (
     "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     "titulo" VARCHAR(255) NOT NULL,
     "disciplina" VARCHAR(255) NOT NULL,
-    "semestre" VARCHAR(50) NOT NULL,
-    "ciclo" VARCHAR(50) NOT NULL,
-    "turmaId" UUID NOT NULL REFERENCES "turmas"("id") ON DELETE CASCADE,
+    "turma" VARCHAR(255),
+    "etapa" VARCHAR(50),
+    "semestre" VARCHAR(50),
+    "ciclo" VARCHAR(50),
+    "valor_total" NUMERIC(5,2) DEFAULT 10.00,
+    "embaralhar_questoes" BOOLEAN DEFAULT false,
+    "embaralhar_alternativas" BOOLEAN DEFAULT false,
+    "status" VARCHAR(50) DEFAULT 'PRONTA_PARA_APLICAR',
+    "turmaId" UUID REFERENCES "turmas"("id") ON DELETE SET NULL,
     "professorId" UUID NOT NULL REFERENCES "usuarios"("id") ON DELETE RESTRICT,
     "questoesSnapshot" JSONB NOT NULL,
-    "totalQuestoes" INTEGER NOT NULL,
-    "pontuacaoTotal" DOUBLE PRECISION NOT NULL,
+    "totalQuestoes" INTEGER NOT NULL DEFAULT 0,
+    "pontuacaoTotal" DOUBLE PRECISION NOT NULL DEFAULT 10.0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS "provas_montadas_turmaId_idx" ON "provas_montadas"("turmaId");
 CREATE INDEX IF NOT EXISTS "provas_montadas_professorId_idx" ON "provas_montadas"("professorId");
 
--- 7. Tabela de Leituras OMR
+-- 7. Tabela de Cadernos de Prova (Gabaritos Embaralhados Imutáveis)
+CREATE TABLE IF NOT EXISTS "cadernos_prova" (
+    "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "prova_montada_id" UUID NOT NULL REFERENCES "provas_montadas"("id") ON DELETE CASCADE,
+    "codigo_versao" VARCHAR(50) NOT NULL,
+    "aluno_nome" VARCHAR(255),
+    "aluno_ra" VARCHAR(50),
+    "mapa_questoes_json" JSONB NOT NULL,
+    "gabarito_oficial_json" JSONB NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "cadernos_prova_prova_montada_id_idx" ON "cadernos_prova"("prova_montada_id");
+CREATE INDEX IF NOT EXISTS "cadernos_prova_codigo_versao_idx" ON "cadernos_prova"("codigo_versao");
+
+-- 8. Tabela de Resultados de Avaliação (Mobile OMR & Estorno Seguro)
+CREATE TABLE IF NOT EXISTS "resultados_avaliacao" (
+    "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "professor_id" UUID NOT NULL REFERENCES "usuarios"("id") ON DELETE RESTRICT,
+    "prova_montada_id" UUID NOT NULL REFERENCES "provas_montadas"("id") ON DELETE CASCADE,
+    "caderno_prova_id" UUID NOT NULL REFERENCES "cadernos_prova"("id") ON DELETE CASCADE,
+    "aluno_nome" VARCHAR(255) NOT NULL,
+    "aluno_ra" VARCHAR(50) NOT NULL,
+    "respostas_marcadas_json" JSONB NOT NULL,
+    "acertos" INTEGER NOT NULL,
+    "total_questoes" INTEGER NOT NULL,
+    "nota_final" NUMERIC(5,2) NOT NULL,
+    "lido_via_mobile" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "resultados_avaliacao_professor_id_idx" ON "resultados_avaliacao"("professor_id");
+CREATE INDEX IF NOT EXISTS "resultados_avaliacao_prova_montada_id_idx" ON "resultados_avaliacao"("prova_montada_id");
+CREATE INDEX IF NOT EXISTS "resultados_avaliacao_caderno_prova_id_idx" ON "resultados_avaliacao"("caderno_prova_id");
+CREATE INDEX IF NOT EXISTS "resultados_avaliacao_aluno_ra_idx" ON "resultados_avaliacao"("aluno_ra");
+
+-- 9. Tabela de Leituras OMR
 CREATE TABLE IF NOT EXISTS "leituras_omr" (
     "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     "alunoId" UUID NOT NULL REFERENCES "alunos"("id") ON DELETE CASCADE,
@@ -583,7 +737,8 @@ A esteira de integração contínua do repositório registra **todas as entregas
 
 | PR # / Commit | Autor / Contribuidor | Branch de Origem | Escopo Técnico e Entregas Realizadas |
 |:---:|:---:|:---:|:---|
-| **Branch Ativa** | **Agenor Alvise** (`@Agenorsc`) | `feat/tsk-44-refactor-controller-service-repository` | **TSK-44: Refatoração Arquitetural Rota $\rightarrow$ Controller $\rightarrow$ Service $\rightarrow$ Repository:** Desacoplamento integral de todas as rotas da API em controladores dedicados com tratamento padronizado de erros e serviços isolados. |
+| **Branch Ativa** | **Agenor Alvise** (`@Agenorsc`) | `feat/provas-montadas-omr-mobile-estatisticas` | **Provas Montadas, Scanner OMR Mobile e Gestão de Notas com Exclusão:** Módulo completo de snapshots imutáveis (`provas_montadas`), cadernos de prova embaralhados determinísticos (`cadernos_prova`) com pré-cálculo de `gabarito_oficial_json`, scanner OMR mobile-first com detecção de QR Code `{ p, c }`, bottom-sheet de conferência, rota `DELETE /api/resultados/[id]` com validação de posse pelo professor e recálculo instantâneo das estatísticas da turma com estorno na tabela de alunos. |
+| [**PR #44**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/44) | **Agenor Alvise** (`@Agenorsc`) | `feat/tsk-44-refactor-controller-service-repository` | **TSK-44: Refatoração Arquitetural Rota $\rightarrow$ Controller $\rightarrow$ Service $\rightarrow$ Repository:** Desacoplamento integral de todas as rotas da API em controladores dedicados com tratamento padronizado de erros e serviços isolados. |
 | [**PR #38**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/38) | **Agenor Alvise** (`@Agenorsc`) | `feat/tsk-57-isolamento-docente-backend` | **TSK-57: Isolamento por Docente no Backend (Multi-Tenancy):** Filtro estrito nas rotas pelo professor da sessão, bloqueio `403 Forbidden` a acessos de terceiros e ocultação definitiva de turmas órfãs para docentes. |
 | [**PR #33**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/33) | **Eric Ricardo Lange** (`@lange047`) | `test/tsk-62-regressao-a4` | **TSK-62: Teste de Regressão de Impressão A4:** Roteiro formal de testes e evidências automatizadas de fidelidade de impressão duplex em folha A4. |
 | [**PR #31**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/31) | **Eric Ricardo Lange** (`@lange047`) | `feat/tsk-56-sessao-segura` | **TSK-56: Sessão Segura Server-Side:** Emissão de cookies `httpOnly` assinados com HMAC-SHA256 no login, validação em `proxy.ts` e substituição de localStorage. |
@@ -616,6 +771,7 @@ A esteira de integração contínua do repositório registra **todas as entregas
 ### 6.2 Quadro de Evidências por Integrante da Equipe
 
 #### 🟢 Agenor Alvise (`@Agenorsc`)
+- **Provas Montadas, Scanner OMR Mobile & Gestão de Notas com Exclusão:** Módulo completo de snapshots de provas, geração determinística de cadernos embaralhados (`cadernos_prova`) com pré-cálculo de `gabarito_oficial_json`, scanner OMR mobile responsivo com retorno tátil/sonoro e bottom-sheet, exclusão segura de notas com estorno automático e recálculo instantâneo de estatísticas sem duplicidade de lançamentos.
 - **Arquitetura em Camadas (TSK-44):** Refatoração integral do backend estruturando as rotas em `Rota → Controller → Service → Repository` com tratamento de erro padronizado (`HttpError`, `ForbiddenError`, `NotFoundError`).
 - **Isolamento de Docente no Backend (TSK-57):** Implementação de regras multi-tenancy protegendo turmas, estudantes, questões, leituras e exames, com bloqueio `403` a recursos alheios e ocultação de turmas órfãs.
 - **SLA de Performance e Benchmarking (TSK-61 / RNF03):** Otimização de consultas com índices B-Tree e comprovação de `p95 < 250ms` em todas as rotas dinâmicas.
@@ -668,6 +824,8 @@ C:\SGP-CATOLICA-NEXT\src/
 │   │   ├── questoes/           # route.ts e [id]/route.ts (Delega para QuestionController)
 │   │   ├── omr/                # route.ts (Delega para OmrController)
 │   │   ├── exams/              # route.ts e generate/route.ts (Delega para ExamController)
+│   │   ├── cadernos/           # route.ts e [id]/route.ts (Delega para CadernoController)
+│   │   ├── resultados/         # route.ts e [id]/route.ts (Delega para ResultadoController)
 │   │   ├── relatorios/         # route.ts (Delega para RelatorioController)
 │   │   ├── estatisticas/       # questoes/route.ts (Delega para QuestionStatisticsController)
 │   │   └── auth/               # login, logout, me, trocar-senha
@@ -679,6 +837,8 @@ C:\SGP-CATOLICA-NEXT\src/
 │   ├── QuestionController.ts
 │   ├── OmrController.ts
 │   ├── ExamController.ts
+│   ├── CadernoController.ts
+│   ├── ResultadoController.ts
 │   ├── RelatorioController.ts
 │   ├── QuestionStatisticsController.ts
 │   └── index.ts
@@ -688,7 +848,8 @@ C:\SGP-CATOLICA-NEXT\src/
 │   ├── AlunoService.ts         # Validações cadastrais de alunos e notas
 │   ├── QuestionService.ts      # Banco de questões, ciclos e pontuações
 │   ├── OmrService.ts           # Reconhecimento óptico, validação cruzada e HUD
-│   ├── ExamService.ts          # Embaralhamento determinístico e montagem
+│   ├── ExamService.ts          # Embaralhamento determinístico e montagem de cadernos
+│   ├── ResultadoService.ts     # Gravação de notas OMR e exclusão com estorno
 │   ├── RelatoriosService.ts    # Agregação estatística e pipeline analítico
 │   ├── QuestionStatisticsService.ts # Análise de distratores e acertos
 │   ├── ProfessorService.ts     # Gestão docente e hashes de senha
@@ -702,9 +863,19 @@ C:\SGP-CATOLICA-NEXT\src/
 │   │   ├── PrismaAlunoRepository.ts
 │   │   ├── PrismaQuestionRepository.ts
 │   │   ├── PrismaOmrRepository.ts
+│   │   ├── PrismaCadernoRepository.ts
+│   │   ├── PrismaResultadoRepository.ts
 │   │   └── PrismaUsuarioRepository.ts
 │   ├── base/IBaseRepository.ts # Contratos de interface dos repositórios
 │   └── ...                     # Implementações de fallback em memória para testes
+│
+├── components/                 # Componentes React (Client & Server Components)
+│   ├── provas/                 # ProvasMontadasTab.tsx e ModalGabaritosEmbaralhados.tsx
+│   ├── leitura/                # MobileOmrScanner.tsx (Câmera mobile-first com QR Code)
+│   ├── montador/               # MontadorTab.tsx (Composição e embaralhamento)
+│   ├── impressao/              # ImpressaoTab.tsx (Geração de cadernos A4 e QR compacto)
+│   ├── relatorios/             # RelatoriosTab.tsx (Dashboard e gestão com exclusão)
+│   └── ...
 │
 ├── models/                     # [Camada 5: Entidades de Domínio e Herança OO]
 │   ├── PessoaModel.ts          # Entidade base (nome, filiação, contato, endereço)
@@ -723,7 +894,7 @@ C:\SGP-CATOLICA-NEXT\src/
 └── proxy.ts                    # Middleware do Next.js para proteção perimetral de rotas API
 ```
 
-### 7.3 Execução Local e Testes Automatizados (171 Testes Verdes)
+### 7.3 Execução Local e Testes Automatizados (178 Testes Verdes)
 
 ```bash
 # 1. Clonar o repositório oficial
@@ -768,11 +939,13 @@ PASS __tests__/services/QuestionService.test.ts
 PASS __tests__/services/DistratoresEDashboardRelatorios.test.ts
 PASS __tests__/services/AlunoService.test.ts
 PASS __tests__/services/RelatoriosService.test.ts
+PASS __tests__/services/ExamServiceSnapshots.test.ts
+PASS __tests__/api/ResultadosRoute.test.ts
 
-Test Suites: 20 passed, 20 total
-Tests:       171 passed, 171 total
+Test Suites: 22 passed, 22 total
+Tests:       178 passed, 178 total
 Snapshots:   0 total
-Time:        38.392 s
+Time:        39.215 s
 Status:      100% dos testes aprovados com sucesso.
 ```
 
@@ -812,7 +985,7 @@ O desenvolvimento do **SGP Católica** cumpriu com rigor a totalidade dos requis
 2. **Isolamento e Segurança Institucional:** Multi-tenancy no backend, senhas protegidas com Bcrypt, cookies assinados e restrição estrita de dados por professor;
 3. **Desempenho Comprovado:** Latência p95 muito abaixo de 250ms com execução dinâmica server-side e índices B-Tree no PostgreSQL;
 4. **Precisão de Reconhecimento Óptico:** Leitura OMR por câmera com acurácia superior a 99% e fluxo ágil em lote;
-5. **Governança e Trabalho em Equipe:** Diário de bordo detalhado com todas as 28+ PRs catalogadas, atribuídas nominalmente a cada membro e 100% dos 171 testes unitários aprovados.
+5. **Governança e Trabalho em Equipe:** Diário de bordo detalhado com todas as PRs catalogadas, atribuídas nominalmente a cada membro e 100% dos 178 testes unitários aprovados (22 suítes de teste).
 
 ---
 

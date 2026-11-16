@@ -179,8 +179,15 @@ export function ImpressaoTab({
     sementeGabarito(examId, raQr, versaoLetra)
   );
 
-  const qrPayload: CardPayload = {
+  const cadernoId = `cad_${examId}_${versaoLetra.toLowerCase()}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+  const qrPayload: any = {
+    p: examId,
+    c: cadernoId,
+    a: withId ? (alunoAtual?.nome || 'AGENOR ALVISE') : 'ANONIMO',
+    r: raQr,
     examId,
+    cadernoId,
     classId: turmaSelecionadaId || 't1',
     className: nomeTurma,
     teacherId: resolvedTeacherId,

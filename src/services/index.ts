@@ -7,4 +7,5 @@ export * from './ExportService';
 export * from './AuthService';
 export * from './ProfessorService';
 export * from './RelatoriosService';
+export * from './ResultadoService';
 
