@@ -17,4 +17,4 @@ npm run test:coverage -- --watch=false
 npm run build
 ```
 
-**Pendente:** testes integrados de Impressão e Relatórios, execução de testes e aferição de percentual de cobertura. Os testes da Leitura usam mock do scanner e não comprovam leitura OMR real. Não considerar TSK-37 concluída ou aprovada até cobrir esses itens e CI verde. Esta branch deve permanecer separada das TSK-56 e TSK-62.
+**Atualização:** adicionados testes RTL de Impressão e Relatórios, com mocks dos subcomponentes visuais. O teste de Login passou a isolar o fallback do AuthService. **Pendente:** execução real de todos os testes, build e aferição do percentual de cobertura; a aprovação depende do CI verde. Os testes da Leitura usam mock do scanner e não comprovam leitura OMR real. Não considerar TSK-37 concluída ou aprovada até cobrir esses itens e CI verde. Esta branch deve permanecer separada das TSK-56 e TSK-62.
