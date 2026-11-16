@@ -53,7 +53,7 @@ function readRows(file: ArrayBuffer | Uint8Array): Cell[][] {
   return XLSX.utils.sheet_to_json<Cell[]>(sheet, {
     header: 1,
     defval: '',
-    raw: true,
+    raw: false,
     blankrows: false
   });
 }
