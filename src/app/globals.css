@@ -46,6 +46,12 @@
     break-after: page;
   }
 
+  .sgp-exam-break {
+    min-height: 1mm;
+    break-after: page;
+    page-break-after: always;
+  }
+
   /* A questão só se divide quando não cabe inteira em uma página. */
   .sgp-print-question {
     page-break-inside: avoid;

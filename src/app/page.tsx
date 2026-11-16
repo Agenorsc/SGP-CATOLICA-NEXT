@@ -877,6 +877,9 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
             teacherId={session?.id}
             stage={cicloSelecionado === 'TODAS' ? 'N1' : cicloSelecionado}
             session={session}
+            questoesOriginais={questoesSelecionadas}
+            shuffleQ={shuffleQ}
+            shuffleAlt={shuffleAlt}
           />
         )}
 
