@@ -3,15 +3,30 @@ import { prisma } from '@/lib/prisma';
 import { RelatoriosService } from '@/services/RelatoriosService';
 import { AlunoModel, TurmaModel } from '@/models';
 import { LeituraOMRRegistro, Question, ProvaMontadaRegistro } from '@/types';
+import { sessionFromRequest } from '@/lib/session';
+import { PrismaTurmaRepository } from '@/repositories/prisma/PrismaTurmaRepository';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET(request: Request) {
+const turmaRepo = new PrismaTurmaRepository();
+
+export async function GET(request?: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const turmaId = searchParams.get('turmaId') || 'TODAS';
-    const ciclo = (searchParams.get('ciclo') || 'TODAS') as any;
+    const session = request ? sessionFromRequest(request) : null;
+    const url = request ? new URL(request.url) : null;
+    const turmaId = (url ? url.searchParams.get('turmaId') : null) || 'TODAS';
+    const ciclo = ((url ? url.searchParams.get('ciclo') : null) || 'TODAS') as any;
+
+    if (session?.role === 'PROFESSOR' && turmaId !== 'TODAS') {
+      const turma = await turmaRepo.findById(turmaId);
+      if (!turma || turma.professorId !== session.id) {
+        return NextResponse.json(
+          { error: 'Acesso negado a esta turma.' },
+          { status: 403 }
+        );
+      }
+    }
 
     let alunosRaw: any[] = [];
     let turmasRaw: any[] = [];
@@ -19,11 +34,50 @@ export async function GET(request: Request) {
     let provasRaw: any[] = [];
     let questoesRaw: any[] = [];
 
-    const whereAluno = turmaId !== 'TODAS' ? { turmaId } : undefined;
-    const whereLeitura = turmaId !== 'TODAS' ? { turmaId } : undefined;
-    const whereTurma = turmaId !== 'TODAS' ? { id: turmaId } : undefined;
-    const whereProva = turmaId !== 'TODAS' ? { turmaId } : undefined;
-    const whereQuestao = turmaId !== 'TODAS' ? { turmaId } : undefined;
+    let whereAluno: any = undefined;
+    let whereTurma: any = undefined;
+    let whereLeitura: any = undefined;
+    let whereProva: any = undefined;
+    let whereQuestao: any = undefined;
+
+    if (session?.role === 'PROFESSOR') {
+      if (turmaId !== 'TODAS') {
+        whereAluno = { turmaId };
+        whereTurma = { id: turmaId, professorId: session.id };
+        whereLeitura = { turmaId };
+        whereProva = { turmaId };
+        whereQuestao = { turmaId };
+      } else {
+        whereTurma = { professorId: session.id };
+        whereAluno = { turma: { professorId: session.id } };
+        whereLeitura = {
+          OR: [
+            { professorId: session.id },
+            { turma: { professorId: session.id } }
+          ]
+        };
+        whereProva = {
+          OR: [
+            { professorId: session.id },
+            { turma: { professorId: session.id } }
+          ]
+        };
+        whereQuestao = {
+          OR: [
+            { professorId: session.id },
+            { turma: { professorId: session.id } }
+          ]
+        };
+      }
+    } else {
+      if (turmaId !== 'TODAS') {
+        whereAluno = { turmaId };
+        whereTurma = { id: turmaId };
+        whereLeitura = { turmaId };
+        whereProva = { turmaId };
+        whereQuestao = { turmaId };
+      }
+    }
 
     try {
       [alunosRaw, turmasRaw, leiturasRaw, provasRaw, questoesRaw] = await Promise.all([

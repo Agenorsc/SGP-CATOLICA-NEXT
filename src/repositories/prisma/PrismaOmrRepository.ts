@@ -93,6 +93,39 @@ export class PrismaOmrRepository implements IBaseRepository<LeituraOMRRegistro> 
     }));
   }
 
+  async findByProfessorId(professorId: string): Promise<LeituraOMRRegistro[]> {
+    const records = await prisma.leituraOMR.findMany({
+      where: {
+        OR: [
+          { professorId: professorId },
+          { turma: { professorId: professorId } }
+        ]
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return records.map(r => ({
+      id: r.id,
+      alunoId: r.alunoId,
+      alunoNome: r.alunoNome,
+      ra: r.ra,
+      turmaId: r.turmaId ?? undefined,
+      professorId: r.professorId ?? undefined,
+      provaMontadaId: (r as any).provaMontadaId ?? undefined,
+      turmaNome: r.turmaNome,
+      materia: r.materia,
+      versao: r.versao,
+      acertos: r.acertos,
+      totalQuestoes: r.totalQuestoes,
+      notaCalculada: r.notaCalculada,
+      dataLeitura: r.dataLeitura,
+      respostasDetectadas: (r.respostasDetectadas as any) || {},
+      gabaritoOficial: (r.gabaritoOficial as any) || undefined,
+      detalhesQuestoes: (r.detalhesQuestoes as any) || undefined,
+      fiduciaisDetectados: r.fiduciaisDetectados ?? undefined
+    }));
+  }
+
   /**
    * Persiste a Leitura OMR e atualiza a nota do Aluno (N1, N2, N3 ou N-1)
    * em uma única transação atômica via Prisma ($transaction).

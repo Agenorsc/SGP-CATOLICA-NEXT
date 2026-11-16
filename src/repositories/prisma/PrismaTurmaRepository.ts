@@ -3,8 +3,29 @@ import { TurmaModel } from '@/models/TurmaModel';
 import { IBaseRepository } from '@/repositories/base/IBaseRepository';
 
 export class PrismaTurmaRepository implements IBaseRepository<TurmaModel> {
-  async findAll(): Promise<TurmaModel[]> {
+  async findAll(options?: { professorId?: string }): Promise<TurmaModel[]> {
+    const where = options?.professorId ? { professorId: options.professorId } : undefined;
     const records = await prisma.turma.findMany({
+      where,
+      include: {
+        professor: true
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+    return records.map(r => new TurmaModel({
+      id: r.id,
+      nome: r.nome,
+      curso: r.curso,
+      semestre: r.semestre,
+      codigoConvite: r.codigoConvite,
+      professorId: r.professorId || undefined,
+      professorNome: r.professor?.nome || undefined
+    }));
+  }
+
+  async findByProfessorId(professorId: string): Promise<TurmaModel[]> {
+    const records = await prisma.turma.findMany({
+      where: { professorId },
       include: {
         professor: true
       },
@@ -68,7 +89,7 @@ export class PrismaTurmaRepository implements IBaseRepository<TurmaModel> {
       semestre: saved.semestre,
       codigoConvite: saved.codigoConvite,
       professorId: saved.professorId || undefined,
-      professorNome: saved.professor?.nome || undefined
+      professorNome: saved.professor?.nome || (saved as any).professorNome || undefined
     });
   }
 

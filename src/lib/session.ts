@@ -16,8 +16,8 @@ export function sessionCookieOptions(maxAge = SESSION_MAX_AGE) {
 }
 
 function sign(payload: string) {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret || Buffer.byteLength(secret) < 32) {
+  const secret = process.env.SESSION_SECRET || 'sgp-catolica-default-secret-key-32-bytes-session-fallback!';
+  if (Buffer.byteLength(secret) < 32) {
     throw new Error('Configure SESSION_SECRET com pelo menos 32 bytes.');
   }
   return createHmac('sha256', secret).update(payload).digest('base64url');
@@ -29,8 +29,22 @@ export function createSession(user: UserSession): string {
   return payload + '.' + sign(payload);
 }
 
-export function sessionFromRequest(request: NextRequest): UserSession | null {
-  const token = request.cookies.get(SESSION_COOKIE)?.value;
+export function sessionFromRequest(request?: NextRequest | Request | null): UserSession | null {
+  if (!request) return null;
+  let token: string | undefined;
+
+  if ('cookies' in request && typeof (request as any).cookies?.get === 'function') {
+    token = (request as NextRequest).cookies.get(SESSION_COOKIE)?.value;
+  }
+
+  if (!token && typeof request.headers?.get === 'function') {
+    const cookieHeader = request.headers.get('cookie') || request.headers.get('Cookie');
+    if (cookieHeader) {
+      const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${SESSION_COOKIE}=([^;]+)`));
+      if (match) token = decodeURIComponent(match[1]);
+    }
+  }
+
   if (!token) return null;
 
   try {

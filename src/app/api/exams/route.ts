@@ -1,30 +1,67 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ProvaMontadaRegistro } from '@/types';
+import { sessionFromRequest } from '@/lib/session';
+import { PrismaTurmaRepository } from '@/repositories/prisma/PrismaTurmaRepository';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+const turmaRepo = new PrismaTurmaRepository();
+
 // Cache em memória para desenvolvimento e fallback caso o banco Postgres não responda
 let fallbackProvasMemoria: ProvaMontadaRegistro[] = [];
 
-export async function GET(request: Request) {
+export async function GET(request?: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const turmaId = searchParams.get('turmaId');
+    const session = request ? sessionFromRequest(request) : null;
+    const url = request ? new URL(request.url) : null;
+    const turmaId = url ? url.searchParams.get('turmaId') : null;
+
+    if (session?.role === 'PROFESSOR') {
+      if (turmaId && turmaId !== 'TODAS') {
+        const turma = await turmaRepo.findById(turmaId);
+        if (!turma || turma.professorId !== session.id) {
+          return NextResponse.json(
+            { error: 'Acesso negado a esta turma.' },
+            { status: 403 }
+          );
+        }
+      }
+    }
 
     try {
-      const where: any = {};
-      if (turmaId && turmaId !== 'TODAS') {
-        where.turmaId = turmaId;
+      let where: any = {};
+      if (session?.role === 'PROFESSOR') {
+        if (turmaId && turmaId !== 'TODAS') {
+          where = {
+            turmaId,
+            OR: [
+              { professorId: session.id },
+              { turma: { professorId: session.id } }
+            ]
+          };
+        } else {
+          where = {
+            OR: [
+              { professorId: session.id },
+              { turma: { professorId: session.id } }
+            ]
+          };
+        }
+      } else {
+        if (turmaId && turmaId !== 'TODAS') {
+          where.turmaId = turmaId;
+        }
       }
+
       const records = await (prisma as any).provaMontada?.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         include: { turma: true }
       });
 
-      if (records && records.length > 0) {
+      if (records) {
         return NextResponse.json(records.map((r: any) => ({
           id: r.id,
           titulo: r.titulo,
@@ -49,6 +86,9 @@ export async function GET(request: Request) {
 
     // Fallback gracioso
     let res = fallbackProvasMemoria;
+    if (session?.role === 'PROFESSOR') {
+      res = res.filter(p => p.professorId === session.id);
+    }
     if (turmaId && turmaId !== 'TODAS') {
       res = res.filter(p => p.turmaId === turmaId);
     }
@@ -61,7 +101,21 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const session = request ? sessionFromRequest(request) : null;
     const body: ProvaMontadaRegistro = await request.json();
+
+    if (session?.role === 'PROFESSOR') {
+      body.professorId = session.id;
+      if (body.turmaId) {
+        const turma = await turmaRepo.findById(body.turmaId);
+        if (!turma || turma.professorId !== session.id) {
+          return NextResponse.json(
+            { error: 'Acesso negado. A turma informada não pertence ao professor.' },
+            { status: 403 }
+          );
+        }
+      }
+    }
 
     const novaProva: ProvaMontadaRegistro = {
       ...body,
@@ -104,9 +158,25 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const session = request ? sessionFromRequest(request) : null;
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 });
+
+    if (session?.role === 'PROFESSOR') {
+      const prova = await (prisma as any).provaMontada?.findUnique({
+        where: { id },
+        include: { turma: true }
+      });
+      if (prova) {
+        if (prova.professorId !== session.id && prova.turma?.professorId !== session.id) {
+          return NextResponse.json(
+            { error: 'Acesso negado. Você só pode excluir suas próprias provas.' },
+            { status: 403 }
+          );
+        }
+      }
+    }
 
     try {
       await (prisma as any).provaMontada?.delete({ where: { id } });
