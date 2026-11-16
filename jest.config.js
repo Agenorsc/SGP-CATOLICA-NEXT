@@ -17,7 +17,16 @@ const customJestConfig = {
   ],
   coverageReporters: ['text', 'lcov', 'json-summary'],
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@/(.*)
+  },
+};
+
+module.exports = createJestConfig(customJestConfig);: '<rootDir>/src/$1',
+    '^lucide-react
+  },
+};
+
+module.exports = createJestConfig(customJestConfig);: '<rootDir>/__mocks__/lucide-react.js',
   },
 };
 
