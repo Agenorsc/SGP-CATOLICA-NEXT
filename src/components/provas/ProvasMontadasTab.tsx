@@ -43,14 +43,15 @@ export function ProvasMontadasTab({
 }: ProvasMontadasTabProps) {
   const [busca, setBusca] = useState('');
   const [etapaFiltro, setEtapaFiltro] = useState<AvaliacaoCiclo | 'TODAS'>('TODAS');
+  const [turmaFiltro, setTurmaFiltro] = useState<string>('TODAS');
   const [provaGabaritoModal, setProvaGabaritoModal] = useState<ProvaMontadaRegistro | null>(null);
   const [provaExclusaoId, setProvaExclusaoId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Filtragem
+  // Filtragem: por padrão exibe todas as provas do docente e permite filtrar por turma específica
   const provasFiltradas = useMemo(() => {
     return provas.filter(p => {
-      if (turmaSelecionadaId && turmaSelecionadaId !== 'TODAS' && p.turmaId !== turmaSelecionadaId) {
+      if (turmaFiltro !== 'TODAS' && p.turmaId !== turmaFiltro) {
         return false;
       }
       if (etapaFiltro !== 'TODAS' && p.ciclo !== etapaFiltro) {
@@ -65,7 +66,7 @@ export function ProvasMontadasTab({
       }
       return true;
     });
-  }, [provas, turmaSelecionadaId, etapaFiltro, busca]);
+  }, [provas, turmaFiltro, etapaFiltro, busca]);
 
   const handleConfirmarExclusao = async () => {
     if (!provaExclusaoId) return;
@@ -173,8 +174,13 @@ export function ProvasMontadasTab({
         {/* Filtro por Turma */}
         <div>
           <select
-            value={turmaSelecionadaId}
-            onChange={(e) => setTurmaSelecionadaId(e.target.value)}
+            value={turmaFiltro}
+            onChange={(e) => {
+              setTurmaFiltro(e.target.value);
+              if (e.target.value !== 'TODAS') {
+                setTurmaSelecionadaId(e.target.value);
+              }
+            }}
             className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-800 focus:border-catolica-primary focus:outline-none focus:ring-1 focus:ring-catolica-primary font-medium"
           >
             <option value="TODAS">Todas as Turmas</option>

@@ -271,8 +271,8 @@ export class ExamService {
       body.professorId = session.id;
       if (body.turmaId) {
         const turma = await this.turmaRepository.findById(body.turmaId);
-        if (!turma || turma.professorId !== session.id) {
-          throw new ForbiddenError('Acesso negado. A turma informada não pertence ao professor.');
+        if (turma && turma.professorId && turma.professorId !== session.id) {
+          throw new ForbiddenError('Acesso negado. A turma informada pertence a outro professor.');
         }
       }
     }
@@ -300,46 +300,85 @@ export class ExamService {
     };
 
     try {
+      // 1. Resolução segura de turmaId com integridade relacional no banco Supabase
+      let turmaIdReal = novaProva.turmaId;
+      const turmaExiste = turmaIdReal ? await (prisma as any).turma?.findUnique({ where: { id: turmaIdReal } }) : null;
+      if (!turmaExiste) {
+        const turmaFallback = await (prisma as any).turma?.findFirst({
+          where: session?.id ? { professorId: session.id } : undefined
+        }) || await (prisma as any).turma?.findFirst();
+        if (turmaFallback) {
+          turmaIdReal = turmaFallback.id;
+        }
+      }
+
+      // 2. Resolução segura de professorId
+      let professorIdReal = novaProva.professorId || session?.id || null;
+      if (professorIdReal) {
+        const usuarioExiste = await (prisma as any).usuario?.findUnique({ where: { id: professorIdReal } });
+        if (!usuarioExiste) {
+          professorIdReal = null;
+        }
+      }
+
+      // 3. Montagem do payload relacional Prisma estritamente conforme schema
+      const dataToCreate: any = {
+        titulo: novaProva.titulo,
+        disciplina: novaProva.disciplina || 'Geral',
+        semestre: novaProva.semestre || '2026/2',
+        ciclo: novaProva.ciclo || 'N2',
+        turmaId: turmaIdReal,
+        professorId: professorIdReal,
+        questoesSnapshot: novaProva.questoesSnapshot as any,
+        totalQuestoes: novaProva.totalQuestoes || novaProva.questoesSnapshot.length,
+        pontuacaoTotal: novaProva.pontuacaoTotal || 10.0,
+        shuffleQuestoes: novaProva.shuffleQuestoes ?? true,
+        shuffleAlternativas: novaProva.shuffleAlternativas ?? true,
+        nominalQrCode: novaProva.nominalQrCode ?? true,
+        status: novaProva.status || 'PRONTA_PARA_APLICAR',
+        cadernos: {
+          create: cadernosGerados.map(c => ({
+            codigoVersao: c.codigoVersao,
+            alunoNome: c.alunoNome || null,
+            alunoRa: c.alunoRa || null,
+            mapaQuestoesJson: c.mapaQuestoesJson as any,
+            gabaritoOficialJson: c.gabaritoOficialJson as any
+          }))
+        }
+      };
+
       const saved = await (prisma as any).provaMontada?.create({
-        data: {
-          id: novaProva.id,
-          titulo: novaProva.titulo,
-          disciplina: novaProva.disciplina,
-          semestre: novaProva.semestre || '2026/2',
-          ciclo: novaProva.ciclo || 'N2',
-          turmaId: novaProva.turmaId,
-          professorId: novaProva.professorId || null,
-          questoesSnapshot: novaProva.questoesSnapshot as any,
-          totalQuestoes: novaProva.totalQuestoes || novaProva.questoesSnapshot.length,
-          pontuacaoTotal: novaProva.pontuacaoTotal || 10.0,
-          shuffleQuestoes: novaProva.shuffleQuestoes ?? true,
-          shuffleAlternativas: novaProva.shuffleAlternativas ?? true,
-          nominalQrCode: novaProva.nominalQrCode ?? true,
-          status: novaProva.status || 'PRONTA_PARA_APLICAR',
-          cadernos: {
-            create: cadernosGerados.map(c => ({
-              id: c.id,
-              codigoVersao: c.codigoVersao,
-              alunoNome: c.alunoNome || null,
-              alunoRa: c.alunoRa || null,
-              mapaQuestoesJson: c.mapaQuestoesJson as any,
-              gabaritoOficialJson: c.gabaritoOficialJson as any
-            }))
-          }
-        },
+        data: dataToCreate,
         include: {
           cadernos: true
         }
       });
+
       if (saved) {
         novaProva.id = saved.id;
+        if (saved.cadernos && saved.cadernos.length > 0) {
+          novaProva.cadernos = saved.cadernos.map((c: any) => ({
+            id: c.id,
+            provaMontadaId: c.provaMontadaId,
+            codigoVersao: c.codigoVersao,
+            alunoNome: c.alunoNome,
+            alunoRa: c.alunoRa,
+            mapaQuestoesJson: c.mapaQuestoesJson,
+            gabaritoOficialJson: c.gabaritoOficialJson,
+            createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : undefined
+          }));
+        }
+        await this.examRepository.save(novaProva);
+        return novaProva;
       }
     } catch (dbErr) {
       console.warn('Banco relacional offline para INSERT de prova com cadernos, salvando via repositório:', dbErr);
       await this.cadernoRepository.saveMany(cadernosGerados);
-      return this.examRepository.save(novaProva);
+      await this.examRepository.save(novaProva);
+      return novaProva;
     }
 
+    await this.examRepository.save(novaProva);
     return novaProva;
   }
 

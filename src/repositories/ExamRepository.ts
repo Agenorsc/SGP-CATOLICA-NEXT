@@ -68,23 +68,41 @@ export class ExamRepository implements IBaseRepository<ProvaMontadaRegistro> {
   }
 
   async findAll(): Promise<ProvaMontadaRegistro[]> {
+    let localSaved: ProvaMontadaRegistro[] = [];
     if (typeof window !== 'undefined') {
-      try {
-        const res = await fetch('/api/exams', { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          this.fallbackProvas = data;
-          return this.fallbackProvas;
-        }
-      } catch (err) {
-        console.warn('Falha ao buscar provas da API, usando armazenamento local:', err);
-      }
       try {
         const saved = window.localStorage.getItem('sgp-provas-montadas');
         if (saved) {
-          this.fallbackProvas = JSON.parse(saved);
+          localSaved = JSON.parse(saved);
         }
       } catch (_) {}
+
+      try {
+        const res = await fetch('/api/exams', { cache: 'no-store' });
+        if (res.ok) {
+          const apiData: ProvaMontadaRegistro[] = await res.json();
+          // Mescla segura: preserva tanto os dados vindos do backend quanto provas salvas localmente
+          const map = new Map<string, ProvaMontadaRegistro>();
+          (apiData || []).forEach(p => {
+            if (p.id) map.set(p.id, p);
+          });
+          localSaved.forEach(p => {
+            if (p.id && !map.has(p.id)) {
+              map.set(p.id, p);
+            }
+          });
+          this.fallbackProvas = Array.from(map.values());
+          this.persistLocalStorage();
+          return [...this.fallbackProvas];
+        }
+      } catch (err) {
+        console.warn('Falha ao buscar provas da API, utilizando armazenamento local persistente:', err);
+      }
+
+      if (localSaved.length > 0) {
+        this.fallbackProvas = localSaved;
+        return [...this.fallbackProvas];
+      }
     }
     return [...this.fallbackProvas];
   }
@@ -100,6 +118,16 @@ export class ExamRepository implements IBaseRepository<ProvaMontadaRegistro> {
   }
 
   async save(prova: ProvaMontadaRegistro): Promise<ProvaMontadaRegistro> {
+    // 1. Persistência imediata e síncrona no armazenamento local do navegador
+    const idx = this.fallbackProvas.findIndex(p => p.id === prova.id);
+    if (idx >= 0) {
+      this.fallbackProvas[idx] = prova;
+    } else {
+      this.fallbackProvas.unshift(prova);
+    }
+    this.persistLocalStorage();
+
+    // 2. Sincronização com o endpoint da API / banco de dados relacional
     if (typeof window !== 'undefined') {
       try {
         const res = await fetch('/api/exams', {
@@ -109,22 +137,20 @@ export class ExamRepository implements IBaseRepository<ProvaMontadaRegistro> {
         });
         if (res.ok) {
           const savedData = await res.json();
-          this.fallbackProvas = [savedData, ...this.fallbackProvas.filter(p => p.id !== savedData.id)];
+          const serverIdx = this.fallbackProvas.findIndex(p => p.id === prova.id || p.id === savedData.id);
+          if (serverIdx >= 0) {
+            this.fallbackProvas[serverIdx] = savedData;
+          } else {
+            this.fallbackProvas.unshift(savedData);
+          }
           this.persistLocalStorage();
           return savedData;
         }
       } catch (err) {
-        console.warn('Falha ao salvar prova na API, persistindo localmente:', err);
+        console.warn('Falha ao salvar prova na API, mantida cópia local íntegra:', err);
       }
     }
 
-    const idx = this.fallbackProvas.findIndex(p => p.id === prova.id);
-    if (idx >= 0) {
-      this.fallbackProvas[idx] = prova;
-    } else {
-      this.fallbackProvas.unshift(prova);
-    }
-    this.persistLocalStorage();
     return prova;
   }
 
