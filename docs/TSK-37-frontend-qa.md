@@ -1,20 +1,25 @@
-# TSK-37 — QA integrado do frontend (RNF07)
+# TSK-37 — Testes integrados de frontend (RNF07)
 
-Fonte: Backlog N3, linha TSK-37 (responsável Eric Eduardo, prazo 17/11/2026).
-Escopo exigido: Login, Montador, Impressão, Leitura, Relatórios, `collectCoverageFrom` e cobertura.
+Fonte: Planner Backlog N3, TSK-37. Escopo: Login, Montador, Impressão, Leitura, Relatórios e cobertura Jest/React Testing Library.
 
-## Implementado nesta etapa
-- `jest.config.js`: coleta de cobertura de componentes, serviços e rotas; relatórios text, lcov e json-summary.
-- `__tests__/frontend/LoginScreen.integration.test.tsx`: validação vazia, sucesso com normalização, erro 401 e falha de rede.
-- `__tests__/frontend/MontadorTab.integration.test.tsx`: estado vazio e acionamento do cadastro de questão.
-- `__tests__/frontend/LeituraTab.integration.test.tsx`: integração da aba com o scanner mockado.
+## Entrega refeita
 
-## Validação obrigatória antes de abrir PR para merge
+- `jest.config.js`: `collectCoverageFrom` para frontend, serviços e rotas; relatórios text, lcov e json-summary.
+- `__tests__/frontend/LoginScreen.integration.test.tsx`: validação de formulário, autenticação, erro 401 e indisponibilidade com fallback isolado.
+- `__tests__/frontend/MontadorTab.integration.test.tsx`: estado vazio e abertura de cadastro; fixture alinhada a `ContagemCiclos`.
+- `__tests__/frontend/ImpressaoTab.integration.test.tsx`: renderização do cartão de impressão com dados mínimos.
+- `__tests__/frontend/LeituraTab.integration.test.tsx`: passagem de contexto ao scanner com mock.
+- `__tests__/frontend/RelatoriosTab.integration.test.tsx`: renderização de indicadores sem dados e ausência de exportação indevida.
+
+## Comandos de validação
+
 ```bash
 npm ci
-npm test -- --runTestsByPath __tests__/frontend/LoginScreen.integration.test.tsx __tests__/frontend/MontadorTab.integration.test.tsx __tests__/frontend/LeituraTab.integration.test.tsx
+npm test -- --runTestsByPath __tests__/frontend/LoginScreen.integration.test.tsx __tests__/frontend/MontadorTab.integration.test.tsx __tests__/frontend/ImpressaoTab.integration.test.tsx __tests__/frontend/LeituraTab.integration.test.tsx __tests__/frontend/RelatoriosTab.integration.test.tsx
 npm run test:coverage -- --watch=false
 npm run build
 ```
 
-**Atualização:** adicionados testes RTL de Impressão e Relatórios, com mocks dos subcomponentes visuais. O teste de Login passou a isolar o fallback do AuthService. **Pendente:** execução real de todos os testes, build e aferição do percentual de cobertura; a aprovação depende do CI verde. Os testes da Leitura usam mock do scanner e não comprovam leitura OMR real. Não considerar TSK-37 concluída ou aprovada até cobrir esses itens e CI verde. Esta branch deve permanecer separada das TSK-56 e TSK-62.
+## Evidências e limites
+
+Os testes verificam comportamento de componentes com mocks para serviços externos, não testes end-to-end. A cobertura deve ser medida com `npm run test:coverage`, e seu percentual não foi medido nesta edição. **O ambiente de edição não executou npm/Jest/build:** o CI deve passar antes de solicitar merge. Se algum teste falhar, revisar o log e corrigir na mesma branch. Esta PR não altera TSK-56 ou TSK-62.
