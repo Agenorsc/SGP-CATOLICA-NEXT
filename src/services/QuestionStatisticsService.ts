@@ -1,4 +1,8 @@
 import { LeituraOMRRegistro, OMRQuestionResult, EvaluationStage } from '@/types';
+import { prisma } from '@/lib/prisma';
+import { UserSession } from '@/lib/session';
+import { PrismaTurmaRepository } from '@/repositories/prisma/PrismaTurmaRepository';
+import { ForbiddenError } from '@/lib/errors';
 
 export interface ContagemAlternativa { alternativa: string; quantidade: number; percentual: number; }
 export interface DistratorMaisMarcado { alternativa: string; quantidade: number; percentual: number; }
@@ -66,5 +70,72 @@ export class QuestionStatisticsService {
       };
     });
     return { totalLeituras: leiturasFiltradas.length, questoes };
+  }
+
+  static async gerarComEscopo(options: {
+    turmaId?: string;
+    provaMontadaId?: string;
+    session?: UserSession | null;
+    turmaRepo?: PrismaTurmaRepository;
+  }): Promise<EstatisticasQuestoesResponse> {
+    const { turmaId, provaMontadaId, session } = options;
+    const turmaRepo = options.turmaRepo || new PrismaTurmaRepository();
+
+    if (session?.role === 'PROFESSOR' && turmaId) {
+      const turma = await turmaRepo.findById(turmaId);
+      if (!turma || turma.professorId !== session.id) {
+        throw new ForbiddenError('Acesso negado a esta turma.');
+      }
+    }
+
+    let where: any = {};
+    if (session?.role === 'PROFESSOR') {
+      if (turmaId) {
+        where = { turmaId };
+      } else {
+        where = {
+          OR: [
+            { professorId: session.id },
+            { turma: { professorId: session.id } }
+          ]
+        };
+      }
+    } else {
+      if (turmaId) {
+        where = { turmaId };
+      }
+    }
+
+    if (provaMontadaId) {
+      where.provaMontadaId = provaMontadaId;
+    }
+
+    const leiturasRaw = await prisma.leituraOMR.findMany({
+      where,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const leituras: LeituraOMRRegistro[] = leiturasRaw.map((leitura: any) => ({
+      id: leitura.id,
+      alunoId: leitura.alunoId,
+      alunoNome: leitura.alunoNome,
+      ra: leitura.ra,
+      turmaId: leitura.turmaId ?? undefined,
+      professorId: leitura.professorId ?? undefined,
+      provaMontadaId: leitura.provaMontadaId ?? undefined,
+      turmaNome: leitura.turmaNome,
+      materia: leitura.materia,
+      versao: leitura.versao,
+      acertos: leitura.acertos,
+      totalQuestoes: leitura.totalQuestoes,
+      notaCalculada: leitura.notaCalculada,
+      dataLeitura: leitura.dataLeitura,
+      respostasDetectadas: (leitura.respostasDetectadas as Record<number, string | null>) || {},
+      gabaritoOficial: (leitura.gabaritoOficial as Record<number, string>) || undefined,
+      detalhesQuestoes: (leitura.detalhesQuestoes as any) || undefined,
+      fiduciaisDetectados: leitura.fiduciaisDetectados ?? undefined
+    }));
+
+    return QuestionStatisticsService.gerar(leituras, { turmaId, provaMontadaId });
   }
 }

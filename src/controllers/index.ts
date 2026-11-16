@@ -3,3 +3,5 @@ export * from './TurmaController';
 export * from './QuestionController';
 export * from './ExamController';
 export * from './OmrController';
+export * from './RelatorioController';
+export * from './QuestionStatisticsController';
