@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { ImpressaoTab } from '@/components/impressao/ImpressaoTab';
 
 jest.mock('@/components/common/QRCodeWrapper', () => ({
@@ -8,7 +8,7 @@ jest.mock('@/components/common/QRCodeWrapper', () => ({
 
 describe('TSK-37 — integração da impressão', () => {
   it('renderiza o painel de impressão sem alunos e sem questões', () => {
-    render(<ImpressaoTab
+    const { container } = render(<ImpressaoTab
       alunosDaTurmaSelecionada={[]}
       selectedVersionIdx={0}
       setSelectedVersionIdx={jest.fn()}
@@ -18,6 +18,6 @@ describe('TSK-37 — integração da impressão', () => {
       withId={false}
       questoesEmbaralhadas={[]}
     />);
-    expect(screen.getByText(/impressão/i)).toBeInTheDocument();
+    expect(container.querySelector('.sgp-answer-sheet')).toBeInTheDocument();
   });
 });
