@@ -69,6 +69,28 @@ export class PrismaAlunoRepository implements IBaseRepository<AlunoModel> {
     return new AlunoModel(saved as any);
   }
 
+  async createMany(alunos: AlunoModel[]): Promise<number> {
+    if (alunos.length === 0) return 0;
+
+    const result = await prisma.aluno.createMany({
+      data: alunos.map(aluno => ({
+        id: aluno.id,
+        nome: aluno.nome,
+        ra: aluno.ra,
+        curso: aluno.curso || 'Engenharia de Software',
+        turno: aluno.turno || 'Noturno',
+        turmaId: aluno.turmaId,
+        n1: aluno.n1 ?? 0,
+        n2: aluno.n2 ?? 0,
+        n3: aluno.n3 ?? 0,
+        contato: (aluno.contato as any) || null,
+        endereco: (aluno.endereco as any) || null
+      }))
+    });
+
+    return result.count;
+  }
+
   async delete(id: string): Promise<boolean> {
     try {
       await prisma.aluno.delete({

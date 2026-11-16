@@ -6,6 +6,7 @@ import { AlunoModel } from '@/models/AlunoModel';
 import { TurmaModel } from '@/models/TurmaModel';
 import { AlunosTable } from './AlunosTable';
 import { TurmasGrid } from './TurmasGrid';
+import { ImportarAlunos } from './ImportarAlunos';
 
 interface CadastrosTabProps {
   alunos: AlunoModel[];
@@ -14,6 +15,7 @@ interface CadastrosTabProps {
   onOpenNovaTurma: () => void;
   onEditAluno: (aluno: AlunoModel) => void;
   onDeleteAluno: (id: string) => void;
+  onImportComplete: () => Promise<void> | void;
   onEditTurma: (turma: TurmaModel) => void;
   onDeleteTurma: (id: string) => void;
 }
@@ -25,6 +27,7 @@ export function CadastrosTab({
   onOpenNovaTurma,
   onEditAluno,
   onDeleteAluno,
+  onImportComplete,
   onEditTurma,
   onDeleteTurma
 }: CadastrosTabProps) {
@@ -45,6 +48,7 @@ export function CadastrosTab({
           >
             <UserPlus className="w-4 h-4" /> Cadastrar Aluno
           </button>
+          <ImportarAlunos alunos={alunos} turmas={turmas} onImportComplete={onImportComplete} />
           <button
             onClick={onOpenNovaTurma}
             className="bg-slate-900 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition shadow-md"

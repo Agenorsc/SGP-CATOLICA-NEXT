@@ -978,6 +978,7 @@ O sistema garante que docentes nunca acessem dados de colegas ou turmas sem prof
 
 ---
 
+
 ## 8. Considerações Finais
 
 O desenvolvimento do **SGP Católica** cumpriu com rigor a totalidade dos requisitos didático-pedagógicos e arquiteturais estabelecidos para o projeto:
@@ -992,3 +993,29 @@ O desenvolvimento do **SGP Católica** cumpriu com rigor a totalidade dos requis
 <div align="center">
   <sub>Centro Universitário Católica de Santa Catarina — Engenharia de Software 2026</sub>
 </div>
+
+
+### Configuração do `.env` para usar o banco localmente
+
+Para executar a aplicação local conectada ao PostgreSQL do Supabase, crie um arquivo chamado `.env` na raiz do projeto. Esse arquivo é ignorado pelo Git e não deve ser commitado, pois contém credenciais.
+
+No painel do Supabase, acesse **Project Settings → Database → Connect** e copie as strings de conexão do PostgreSQL:
+
+```env
+DATABASE_URL="postgresql://postgres:[SENHA]@[HOST-POOLER]:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://postgres:[SENHA]@[HOST-DIRETO]:5432/postgres"
+SESSION_SECRET="troque-por-um-segredo-local-longo-e-aleatorio"
+```
+
+Substitua os placeholders pelos valores reais do projeto. Não compartilhe o arquivo `.env`.
+
+Valide a configuração com:
+
+```bash
+npx prisma validate
+npx prisma migrate status
+npx prisma generate
+npm run dev
+```
+
+Em banco compartilhado ou de produção, não execute `prisma migrate dev` nem comandos de reset. Novas migrações devem passar pelo fluxo de PR do projeto.

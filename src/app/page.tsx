@@ -785,6 +785,7 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
             onOpenNovaTurma={abrirModalNovaTurma}
             onEditAluno={abrirModalEditarAluno}
             onDeleteAluno={excluirAluno}
+            onImportComplete={async () => setAlunos(await alunoService.listarAlunos())}
             onEditTurma={abrirModalEditarTurma}
             onDeleteTurma={excluirTurma}
           />
