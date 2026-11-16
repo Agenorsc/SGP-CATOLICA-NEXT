@@ -188,8 +188,9 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
     if (session.role === 'ADMIN') return provasMontadas;
     const idsTurmas = new Set(turmasVisiveis.map(t => t.id));
     return provasMontadas.filter(p => 
+      (p.professorId && p.professorId === session.id) ||
       (p.turmaId && idsTurmas.has(p.turmaId)) ||
-      (p.professorId && p.professorId === session.id)
+      !p.professorId
     );
   }, [session, provasMontadas, turmasVisiveis]);
 

@@ -271,8 +271,8 @@ export class ExamService {
       body.professorId = session.id;
       if (body.turmaId) {
         const turma = await this.turmaRepository.findById(body.turmaId);
-        if (!turma || turma.professorId !== session.id) {
-          throw new ForbiddenError('Acesso negado. A turma informada não pertence ao professor.');
+        if (turma && turma.professorId && turma.professorId !== session.id) {
+          throw new ForbiddenError('Acesso negado. A turma informada pertence a outro professor.');
         }
       }
     }
@@ -299,34 +299,49 @@ export class ExamService {
       createdAt: body.createdAt || new Date().toISOString()
     };
 
+    const isUuid = (str?: string | null) => !!str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
     try {
+      const dataToCreate: any = {
+        titulo: novaProva.titulo,
+        disciplina: novaProva.disciplina,
+        semestre: novaProva.semestre || '2026/2',
+        ciclo: novaProva.ciclo || 'N2',
+        turma: novaProva.turmaNome || 'Turma',
+        etapa: novaProva.ciclo || 'N2',
+        questoesSnapshot: novaProva.questoesSnapshot as any,
+        totalQuestoes: novaProva.totalQuestoes || novaProva.questoesSnapshot.length,
+        pontuacaoTotal: novaProva.pontuacaoTotal || 10.0,
+        shuffleQuestoes: novaProva.shuffleQuestoes ?? true,
+        shuffleAlternativas: novaProva.shuffleAlternativas ?? true,
+        nominalQrCode: novaProva.nominalQrCode ?? true,
+        status: novaProva.status || 'PRONTA_PARA_APLICAR',
+        cadernos: {
+          create: cadernosGerados.map(c => ({
+            ...(isUuid(c.id) ? { id: c.id } : {}),
+            codigoVersao: c.codigoVersao,
+            alunoNome: c.alunoNome || null,
+            alunoRa: c.alunoRa || null,
+            mapaQuestoesJson: c.mapaQuestoesJson as any,
+            gabaritoOficialJson: c.gabaritoOficialJson as any
+          }))
+        }
+      };
+
+      if (isUuid(novaProva.id)) {
+        dataToCreate.id = novaProva.id;
+      }
+      if (isUuid(novaProva.turmaId)) {
+        dataToCreate.turmaId = novaProva.turmaId;
+      }
+      if (isUuid(novaProva.professorId)) {
+        dataToCreate.professorId = novaProva.professorId;
+      } else if (session?.id && isUuid(session.id)) {
+        dataToCreate.professorId = session.id;
+      }
+
       const saved = await (prisma as any).provaMontada?.create({
-        data: {
-          id: novaProva.id,
-          titulo: novaProva.titulo,
-          disciplina: novaProva.disciplina,
-          semestre: novaProva.semestre || '2026/2',
-          ciclo: novaProva.ciclo || 'N2',
-          turmaId: novaProva.turmaId,
-          professorId: novaProva.professorId || null,
-          questoesSnapshot: novaProva.questoesSnapshot as any,
-          totalQuestoes: novaProva.totalQuestoes || novaProva.questoesSnapshot.length,
-          pontuacaoTotal: novaProva.pontuacaoTotal || 10.0,
-          shuffleQuestoes: novaProva.shuffleQuestoes ?? true,
-          shuffleAlternativas: novaProva.shuffleAlternativas ?? true,
-          nominalQrCode: novaProva.nominalQrCode ?? true,
-          status: novaProva.status || 'PRONTA_PARA_APLICAR',
-          cadernos: {
-            create: cadernosGerados.map(c => ({
-              id: c.id,
-              codigoVersao: c.codigoVersao,
-              alunoNome: c.alunoNome || null,
-              alunoRa: c.alunoRa || null,
-              mapaQuestoesJson: c.mapaQuestoesJson as any,
-              gabaritoOficialJson: c.gabaritoOficialJson as any
-            }))
-          }
-        },
+        data: dataToCreate,
         include: {
           cadernos: true
         }
@@ -336,10 +351,10 @@ export class ExamService {
       }
     } catch (dbErr) {
       console.warn('Banco relacional offline para INSERT de prova com cadernos, salvando via repositório:', dbErr);
-      await this.cadernoRepository.saveMany(cadernosGerados);
-      return this.examRepository.save(novaProva);
     }
 
+    await this.cadernoRepository.saveMany(cadernosGerados);
+    await this.examRepository.save(novaProva);
     return novaProva;
   }
 
