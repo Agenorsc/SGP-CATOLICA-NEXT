@@ -32,6 +32,18 @@ export class PrismaAlunoRepository implements IBaseRepository<AlunoModel> {
     return records.map(r => new AlunoModel(r as any));
   }
 
+  async findByProfessorId(professorId: string): Promise<AlunoModel[]> {
+    const records = await prisma.aluno.findMany({
+      where: {
+        turma: {
+          professorId
+        }
+      },
+      orderBy: { nome: 'asc' }
+    });
+    return records.map(r => new AlunoModel(r as any));
+  }
+
   async save(aluno: AlunoModel): Promise<AlunoModel> {
     const dataToSave = {
       nome: aluno.nome,

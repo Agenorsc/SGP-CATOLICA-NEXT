@@ -79,6 +79,21 @@ export class PrismaQuestionRepository implements IBaseRepository<Question> {
     return records.map(q => this.mapQuestion(q));
   }
 
+  async findByProfessorId(professorId: string): Promise<Question[]> {
+    const records = await prisma.questao.findMany({
+      where: {
+        OR: [
+          { professorId: professorId },
+          { turma: { professorId: professorId } }
+        ]
+      },
+      include: { alternativas: true },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    return records.map(q => this.mapQuestion(q));
+  }
+
   async save(question: Question): Promise<Question> {
     await prisma.questao.upsert({
       where: { id: question.id },

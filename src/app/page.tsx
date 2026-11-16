@@ -129,11 +129,11 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
   }, [turmaService, alunoService, questionService, professorService, examService]);
 
   // 1. ISOLAMENTO TOTAL POR PROFESSOR (MULTI-TENANCY / ESCOPO DE USUÁRIO)
-  // Turmas do Professor: apenas onde professorId === session.id
+  // Turmas do Professor: apenas onde professorId === session.id (turmas sem professor são exclusivas do ADMIN)
   const turmasVisiveis = useMemo(() => {
     if (!session) return turmas;
     if (session.role === 'ADMIN') return turmas;
-    return turmas.filter(t => t.professorId === session.id || !t.professorId);
+    return turmas.filter(t => t.professorId === session.id);
   }, [session, turmas]);
 
   // Alunos do Professor: apenas matriculados nas turmas do professor
@@ -151,8 +151,7 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
     const turmasIds = new Set(turmasVisiveis.map(t => t.id));
     return bancoQuestoes.filter(q => 
       (q.teacherId && q.teacherId === session.id) ||
-      (q.turmaId && turmasIds.has(q.turmaId)) ||
-      (!q.teacherId && !q.turmaId)
+      (q.turmaId && turmasIds.has(q.turmaId))
     );
   }, [session, bancoQuestoes, turmasVisiveis]);
 
