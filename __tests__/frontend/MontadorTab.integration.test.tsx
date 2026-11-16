@@ -15,7 +15,7 @@ describe('TSK-37 — integração do Montador', () => {
     buscaQuestao: '', setBuscaQuestao: jest.fn(),
     cicloSelecionado: 'TODAS' as const, setCicloSelecionado: jest.fn(),
     filtroApenasTurma: false, setFiltroApenasTurma: jest.fn(),
-    contagemCiclos: { N1: 0, N2: 0, N3: 0, 'N-1': 0, GERAL: 0 },
+    contagemCiclos: { todas: 0, n1: 0, n2: 0, n3: 0, exame: 0, geral: 0 },
     shuffleQ: false, setShuffleQ: jest.fn(), shuffleAlt: false, setShuffleAlt: jest.fn(),
     withId: false, setWithId: jest.fn(), pontuacaoTotal: 0,
     onOpenNovaQuestao, onEditQuestao: jest.fn(), onDeleteQuestao: jest.fn(),
