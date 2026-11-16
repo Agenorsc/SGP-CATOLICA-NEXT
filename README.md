@@ -198,17 +198,380 @@ flowchart LR
 
 ---
 
+### 4.2 Diagrama de Atividades com Raias (Swimlanes)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor P as Professor
+    participant UI as Interface SGP (Next.js 16)
+    participant OMR as Motor OMR & Visão (GridOmrEngine)
+    participant DB as Banco PostgreSQL (Supabase / Prisma)
+
+    Note over P,DB: Fase 1: Composição e Impressão da Avaliação
+    P->>UI: Seleciona Turma e Ciclo Avaliativo (N1, N2, N3 ou N-1)
+    UI->>DB: Consulta banco de questões da turma e ciclo (com isolamento docente)
+    DB-->>UI: Retorna questões do professor logado
+    P->>UI: Seleciona de 1 a 30 questões (validação estrita de 10.0 pts)
+    P->>UI: Personaliza cabeçalho institucional, orientações e clica em Imprimir
+    UI-->>P: Renderiza Folha OMR + Verso em Branco + Caderno A4 (TSK-54 / TSK-62)
+
+    Note over P,DB: Fase 2: Aplicação Presencial e Reconhecimento Automático
+    P->>UI: Posiciona o cartão-resposta na frente da câmera
+    UI->>OMR: Captura quadros do fluxo de vídeo em tempo real
+    OMR->>OMR: Decodifica QR Code nominal (Turma, Ciclo, Aluno, Versão)
+    OMR->>UI: Executa Validação Cruzada com a aba de turma ativa
+    
+    alt Cartão de Turma Inconsistente com a Aba Ativa
+        UI-->>P: Alerta de Inconsistência de Turma (Pausa Leitura e previne erro)
+    else Cartão Válido e Compatível
+        OMR->>OMR: Localiza gabarito oficial da versão e afere marcações das bolhas
+        OMR->>UI: Retorna cálculo da nota, acertos e distratores questão por questão
+        UI-->>P: Exibe HUD de Conferência (Estado ANALYZED)
+        P->>UI: Confere o resultado e clica em "Validar Nota"
+        UI->>DB: Persiste LeituraOMR e atualiza nota da etapa do aluno atomicamente
+        DB-->>UI: Confirmação de persistência realizada com sucesso
+        UI-->>P: Exibe feedback visual (Estado VALIDATED) e libera próximo estudante
+    end
+```
+
+---
+
+### 4.3 Diagrama de Classes de Domínio e Arquitetura
+
+```mermaid
+classDiagram
+    direction TB
+
+    class Usuario {
+        +String id
+        +String nome
+        +String email
+        +String senha
+        +String role
+        +String disciplina
+        +String campus
+        +DateTime createdAt
+        +autenticar(email, senha) bool
+    }
+
+    class Turma {
+        +String id
+        +String nome
+        +String curso
+        +String semestre
+        +String codigoConvite
+        +String professorId
+        +gerarCodigoConvite() String
+    }
+
+    class PessoaModel {
+        <<abstract>>
+        +String id
+        +String nome
+        +Object contato
+        +Object endereco
+    }
+
+    class Aluno {
+        +String ra
+        +String curso
+        +String turno
+        +Float n1
+        +Float n2
+        +Float n3
+        +String turmaId
+        +calcularMedia() Float
+        +obterStatus() String
+        +atualizarNotaEtapa(etapa, nota) void
+    }
+
+    class Questao {
+        +String id
+        +String tipo
+        +String enunciado
+        +Float pontuacao
+        +String[] tags
+        +String turmaId
+        +String professorId
+        +String avaliacao
+        +validarPontuacao() bool
+    }
+
+    class Alternativa {
+        +String id
+        +String letraOriginal
+        +String texto
+        +Boolean correta
+        +String questaoId
+    }
+
+    class ProvaMontada {
+        +String id
+        +String titulo
+        +String disciplina
+        +String semestre
+        +String ciclo
+        +String turmaId
+        +String professorId
+        +Json questoesSnapshot
+        +Int totalQuestoes
+        +Float pontuacaoTotal
+    }
+
+    class LeituraOMR {
+        +String id
+        +String alunoId
+        +String alunoNome
+        +String ra
+        +String turmaId
+        +String professorId
+        +String materia
+        +String versao
+        +Int acertos
+        +Int totalQuestoes
+        +Float notaCalculada
+        +String dataLeitura
+        +Json respostasDetectadas
+        +Json gabaritoOficial
+        +Json detalhesQuestoes
+    }
+
+    class GridOmrEngine {
+        +scan(imageData, options) ScanResult
+        -detectFiducials() Point[]
+        -alignGrid() Matrix
+        -sampleBubbles() BubbleScore[]
+    }
+
+    PessoaModel <|-- Aluno
+    Usuario "1" --> "0..*" Turma : administra
+    Usuario "1" --> "0..*" Questao : elabora
+    Usuario "1" --> "0..*" LeituraOMR : audita
+    Usuario "1" --> "0..*" ProvaMontada : compõe
+    Turma "1" --> "0..*" Aluno : matricula
+    Turma "1" --> "0..*" Questao : destina
+    Turma "1" --> "0..*" LeituraOMR : agrupa
+    Turma "1" --> "0..*" ProvaMontada : vincula
+    Questao "1" *-- "2..5" Alternativa : compõe
+    Aluno "1" --> "0..*" LeituraOMR : realiza
+    LeituraOMR ..> GridOmrEngine : processado por
+```
+
+---
+
+### 4.4 Diagrama de Sequência UML (Fluxo OMR e Validação Cruzada)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Docente as Professor
+    participant Scanner as CorrectionScanner (UI)
+    participant Controller as OmrController
+    participant Service as OmrService (GridOmrEngine)
+    participant Repo as PrismaOmrRepository
+    participant DB as Supabase PostgreSQL
+
+    Docente->>Scanner: Inicia câmera do dispositivo
+    Scanner->>Scanner: Inicializa MediaStream (HTMLVideoElement)
+    loop Varredura Contínua (RequestAnimationFrame)
+        Scanner->>Service: Captura frame e tenta decodificar QR Code
+        Service-->>Scanner: Retorna payload do QR Code ou nulo
+    end
+    Scanner->>Scanner: Validação cruzada do QR Code com a aba de turma ativa
+    alt Turma do cartão diferente da aba ativa
+        Scanner->>Docente: Dispara alerta visual de proteção cruzada e pausa
+    else Turma válida e compatível
+        Scanner->>Service: Processa grade de bolhas (GridOmrEngine)
+        Service-->>Scanner: Retorna gabarito, acertos e nota calculada
+        Scanner->>Docente: Congela vídeo e projeta Painel HUD (Estado ANALYZED)
+        alt Docente clica em "Corrigir Novamente"
+            Docente->>Scanner: Clica no botão secundário
+            Scanner->>Scanner: Descarta resultado e reativa a câmera
+        else Docente clica em "Validar Nota"
+            Docente->>Scanner: Confirma nota
+            Scanner->>Controller: POST /api/omr (Payload com leitura e escopo)
+            Controller->>Service: salvarLeituraComTransacao(dados, session)
+            Service->>Repo: create(leitura) e atualizarNotaEtapa(alunoId, etapa, nota)
+            Repo->>DB: Transação atômica no PostgreSQL
+            DB-->>Repo: Sucesso na transação
+            Repo-->>Service: Leitura persistida
+            Service-->>Controller: DTO de confirmação
+            Controller-->>Scanner: HTTP 201 Created
+            Scanner->>Docente: Estado VALIDATED com feedback e libera próximo aluno
+        end
+    end
+```
+
+---
+
 ## 5. Persistência de Dados em Nuvem (Supabase & PostgreSQL)
 
-O banco relacional opera no **Supabase (PostgreSQL 16)** conectado via **Prisma ORM (v5.22.0)**. O catálogo de tabelas é normalizado e possui índices B-Tree para alta velocidade:
+### 5.1 Arquitetura de Dados Relacional e Prisma ORM
+A persistência da aplicação é 100% realizada em banco de dados relacional **PostgreSQL 16 hospedado no Supabase**, gerenciado pelo **Prisma ORM (v5.22.0)**. O banco opera com isolamento rigoroso por docente (TSK-57), integridade referencial com chaves estrangeiras tipadas e remoção em cascata (`ON DELETE CASCADE`).
 
-1. **`usuarios`**: Entidade de autenticação docente e administrativa (campos `id`, `nome`, `email`, `senha` com hash Bcrypt, `role`, `disciplina`, `campus`).
-2. **`turmas`**: Turmas acadêmicas gerenciadas pelo professor (`id`, `nome`, `curso`, `semestre`, `codigoConvite`, `professorId`).
-3. **`alunos`**: Estudantes matriculados com notas parciais e endereço (`id`, `nome`, `ra`, `curso`, `turno`, `n1`, `n2`, `n3`, `contato`, `endereco`, `turmaId`).
-4. **`questoes`**: Banco de questões individualizado por turma e ciclo avaliativo (`id`, `tipo`, `enunciado`, `pontuacao`, `tags`, `avaliacao`, `turmaId`, `professorId`).
-5. **`alternativas`**: Alternativas de cada questão objetiva (`id`, `letraOriginal`, `texto`, `correta`, `questaoId` com `ON DELETE CASCADE`).
-6. **`provas_montadas`**: Espelho estruturado e snapshots das avaliações compostas (`id`, `titulo`, `disciplina`, `semestre`, `ciclo`, `turmaId`, `professorId`, `questoesSnapshot`, `totalQuestoes`, `pontuacaoTotal`).
-7. **`leituras_omr`**: Registros detalhados das correções ópticas (`id`, `alunoId`, `turmaId`, `professorId`, `provaMontadaId`, `alunoNome`, `ra`, `turmaNome`, `materia`, `versao`, `acertos`, `totalQuestoes`, `notaCalculada`, `dataLeitura`, `respostasDetectadas`, `gabaritoOficial`, `detalhesQuestoes`, `fiduciaisDetectados`).
+### 5.2 Catálogo Detalhado das Tabelas e Relações do Banco
+
+1. **`usuarios`**: Entidade de autenticação docente e administrativa.
+   - **Campos:** `id` (PK, UUID), `nome` (VARCHAR), `email` (VARCHAR, UNIQUE), `senha` (VARCHAR, Hash Bcrypt custo 10), `role` (ADMIN | PROFESSOR), `disciplina` (VARCHAR), `campus` (VARCHAR), `createdAt`, `updatedAt`.
+   - **Relações:** 1:N com `turmas`, 1:N com `questoes`, 1:N com `provas_montadas`, 1:N com `leituras_omr`.
+
+2. **`turmas`**: Turmas acadêmicas gerenciadas pelo professor.
+   - **Campos:** `id` (PK, UUID), `nome` (VARCHAR), `curso` (VARCHAR), `semestre` (VARCHAR), `codigoConvite` (VARCHAR, UNIQUE), `professorId` (FK $\rightarrow$ usuarios.id), `createdAt`, `updatedAt`.
+   - **Relações:** 1:N com `alunos`, 1:N com `questoes`, 1:N com `provas_montadas`, 1:N com `leituras_omr`.
+
+3. **`alunos`**: Estudantes matriculados com notas parciais e endereço.
+   - **Campos:** `id` (PK, UUID), `nome` (VARCHAR), `ra` (VARCHAR, UNIQUE), `curso` (VARCHAR), `turno` (VARCHAR), `n1` (FLOAT), `n2` (FLOAT), `n3` (FLOAT), `contato` (JSONB), `endereco` (JSONB), `turmaId` (FK $\rightarrow$ turmas.id), `createdAt`, `updatedAt`.
+   - **Relações:** 1:N com `leituras_omr`.
+
+4. **`questoes`**: Banco de questões individualizado por turma e ciclo avaliativo.
+   - **Campos:** `id` (PK, UUID), `tipo` (objetiva | discursiva), `enunciado` (TEXT), `pontuacao` (FLOAT), `tags` (TEXT[]), `avaliacao` (N1 | N2 | N3 | N-1 | GERAL), `turmaId` (FK $\rightarrow$ turmas.id), `professorId` (FK $\rightarrow$ usuarios.id), `createdAt`, `updatedAt`.
+   - **Relações:** 1:N com `alternativas` (`ON DELETE CASCADE`).
+
+5. **`alternativas`**: Alternativas de cada questão objetiva (A até E).
+   - **Campos:** `id` (PK, UUID), `letraOriginal` (A, B, C, D, E), `texto` (TEXT), `correta` (BOOLEAN), `questaoId` (FK $\rightarrow$ questoes.id com `ON DELETE CASCADE`).
+
+6. **`provas_montadas`**: Espelho estruturado e snapshots das avaliações compostas.
+   - **Campos:** `id` (PK, UUID), `titulo` (VARCHAR), `disciplina` (VARCHAR), `semestre` (VARCHAR), `ciclo` (VARCHAR), `turmaId` (FK $\rightarrow$ turmas.id), `professorId` (FK $\rightarrow$ usuarios.id), `questoesSnapshot` (JSONB), `totalQuestoes` (INT), `pontuacaoTotal` (FLOAT), `createdAt`.
+
+7. **`leituras_omr`**: Registros detalhados das correções ópticas via câmera.
+   - **Campos:** `id` (PK, UUID), `alunoId` (FK $\rightarrow$ alunos.id), `turmaId` (FK $\rightarrow$ turmas.id), `professorId` (FK $\rightarrow$ usuarios.id), `provaMontadaId` (FK $\rightarrow$ provas_montadas.id, opcional), `alunoNome` (VARCHAR), `ra` (VARCHAR), `turmaNome` (VARCHAR), `materia` (VARCHAR), `versao` (VARCHAR), `acertos` (INT), `totalQuestoes` (INT), `notaCalculada` (FLOAT), `dataLeitura` (VARCHAR), `respostasDetectadas` (JSONB), `gabaritoOficial` (JSONB), `detalhesQuestoes` (JSONB), `fiduciaisDetectados` (BOOLEAN), `createdAt`.
+
+### 5.3 Otimização de Consultas e Índices B-Tree no PostgreSQL (Supabase)
+
+Para garantir o SLA de **p95 < 250 ms** exigido no **RNF03** em execução dinâmica server-side, foram implementados índices B-tree nos pontos de maior cardinalidade (`prisma/schema.prisma`):
+
+| Modelo Prisma | Campos Indexados (B-Tree) | Finalidade Técnica e Impacto de Performance |
+|---|---|---|
+| `Turma` | `@@index([professorId])`, `@@index([semestre])` | Isolamento imediato das turmas do docente logado (TSK-57) sem *full table scan*. |
+| `Aluno` | `@@index([turmaId])` | Busca instantânea de estudantes por turma em `/api/alunos?turmaId=...`. |
+| `Questao` | `@@index([turmaId])`, `@@index([professorId])`, `@@index([avaliacao])` | Agilidade na composição de provas por ciclo ($N1, N2, N3, N-1$) e disciplina. |
+| `Alternativa` | `@@index([questaoId])` | Resolução imediata de opções $A, B, C, D, E$ com busca indexada no `include`. |
+| `ProvaMontada` | `@@index([turmaId])`, `@@index([professorId])`, `@@index([ciclo])` | Consulta ultra-rápida do espelho de avaliação e histórico de provas. |
+| `LeituraOMR` | `@@index([alunoId])`, `@@index([turmaId])`, `@@index([professorId])`, `@@index([createdAt])` | Ordenação temporal decrescente e cálculo em tempo real de médias e distratores. |
+
+### 5.4 DDL Relacional em SQL (PostgreSQL Supabase)
+
+```sql
+-- Habilitar extensão UUID
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 1. Tabela de Usuários (Docentes e Administradores)
+CREATE TABLE IF NOT EXISTS "usuarios" (
+    "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "nome" VARCHAR(255) NOT NULL,
+    "email" VARCHAR(255) UNIQUE NOT NULL,
+    "senha" VARCHAR(255) NOT NULL,
+    "role" VARCHAR(50) NOT NULL DEFAULT 'PROFESSOR',
+    "disciplina" VARCHAR(255),
+    "campus" VARCHAR(255),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Tabela de Turmas
+CREATE TABLE IF NOT EXISTS "turmas" (
+    "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "nome" VARCHAR(255) NOT NULL,
+    "curso" VARCHAR(255) NOT NULL,
+    "semestre" VARCHAR(50) NOT NULL,
+    "codigoConvite" VARCHAR(50) UNIQUE NOT NULL,
+    "professorId" UUID NOT NULL REFERENCES "usuarios"("id") ON DELETE RESTRICT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "turmas_professorId_idx" ON "turmas"("professorId");
+CREATE INDEX IF NOT EXISTS "turmas_semestre_idx" ON "turmas"("semestre");
+
+-- 3. Tabela de Alunos
+CREATE TABLE IF NOT EXISTS "alunos" (
+    "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "nome" VARCHAR(255) NOT NULL,
+    "ra" VARCHAR(50) UNIQUE NOT NULL,
+    "curso" VARCHAR(255) NOT NULL,
+    "turno" VARCHAR(50) NOT NULL,
+    "n1" DOUBLE PRECISION,
+    "n2" DOUBLE PRECISION,
+    "n3" DOUBLE PRECISION,
+    "contato" JSONB,
+    "endereco" JSONB,
+    "turmaId" UUID NOT NULL REFERENCES "turmas"("id") ON DELETE CASCADE,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "alunos_turmaId_idx" ON "alunos"("turmaId");
+
+-- 4. Tabela de Questões
+CREATE TABLE IF NOT EXISTS "questoes" (
+    "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "tipo" VARCHAR(50) NOT NULL,
+    "enunciado" TEXT NOT NULL,
+    "pontuacao" DOUBLE PRECISION NOT NULL,
+    "tags" TEXT[],
+    "avaliacao" VARCHAR(50) NOT NULL,
+    "turmaId" UUID NOT NULL REFERENCES "turmas"("id") ON DELETE CASCADE,
+    "professorId" UUID NOT NULL REFERENCES "usuarios"("id") ON DELETE RESTRICT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "questoes_turmaId_idx" ON "questoes"("turmaId");
+CREATE INDEX IF NOT EXISTS "questoes_professorId_idx" ON "questoes"("professorId");
+CREATE INDEX IF NOT EXISTS "questoes_avaliacao_idx" ON "questoes"("avaliacao");
+
+-- 5. Tabela de Alternativas
+CREATE TABLE IF NOT EXISTS "alternativas" (
+    "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "letraOriginal" VARCHAR(5) NOT NULL,
+    "texto" TEXT NOT NULL,
+    "correta" BOOLEAN NOT NULL DEFAULT false,
+    "questaoId" UUID NOT NULL REFERENCES "questoes"("id") ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS "alternativas_questaoId_idx" ON "alternativas"("questaoId");
+
+-- 6. Tabela de Provas Montadas
+CREATE TABLE IF NOT EXISTS "provas_montadas" (
+    "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "titulo" VARCHAR(255) NOT NULL,
+    "disciplina" VARCHAR(255) NOT NULL,
+    "semestre" VARCHAR(50) NOT NULL,
+    "ciclo" VARCHAR(50) NOT NULL,
+    "turmaId" UUID NOT NULL REFERENCES "turmas"("id") ON DELETE CASCADE,
+    "professorId" UUID NOT NULL REFERENCES "usuarios"("id") ON DELETE RESTRICT,
+    "questoesSnapshot" JSONB NOT NULL,
+    "totalQuestoes" INTEGER NOT NULL,
+    "pontuacaoTotal" DOUBLE PRECISION NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "provas_montadas_turmaId_idx" ON "provas_montadas"("turmaId");
+CREATE INDEX IF NOT EXISTS "provas_montadas_professorId_idx" ON "provas_montadas"("professorId");
+
+-- 7. Tabela de Leituras OMR
+CREATE TABLE IF NOT EXISTS "leituras_omr" (
+    "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "alunoId" UUID NOT NULL REFERENCES "alunos"("id") ON DELETE CASCADE,
+    "turmaId" UUID NOT NULL REFERENCES "turmas"("id") ON DELETE CASCADE,
+    "professorId" UUID NOT NULL REFERENCES "usuarios"("id") ON DELETE RESTRICT,
+    "provaMontadaId" UUID REFERENCES "provas_montadas"("id") ON DELETE SET NULL,
+    "alunoNome" VARCHAR(255) NOT NULL,
+    "ra" VARCHAR(50) NOT NULL,
+    "turmaNome" VARCHAR(255) NOT NULL,
+    "materia" VARCHAR(255) NOT NULL,
+    "versao" VARCHAR(10) NOT NULL,
+    "acertos" INTEGER NOT NULL,
+    "totalQuestoes" INTEGER NOT NULL,
+    "notaCalculada" DOUBLE PRECISION NOT NULL,
+    "dataLeitura" VARCHAR(50) NOT NULL,
+    "respostasDetectadas" JSONB NOT NULL,
+    "gabaritoOficial" JSONB NOT NULL,
+    "detalhesQuestoes" JSONB NOT NULL,
+    "fiduciaisDetectados" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "leituras_omr_alunoId_idx" ON "leituras_omr"("alunoId");
+CREATE INDEX IF NOT EXISTS "leituras_omr_turmaId_idx" ON "leituras_omr"("turmaId");
+CREATE INDEX IF NOT EXISTS "leituras_omr_professorId_idx" ON "leituras_omr"("professorId");
+CREATE INDEX IF NOT EXISTS "leituras_omr_createdAt_idx" ON "leituras_omr"("createdAt");
+```
 
 ---
 
