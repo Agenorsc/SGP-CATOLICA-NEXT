@@ -2,6 +2,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { NextRequest } from 'next/server';
 import type { UserSession } from '@/types';
 
+export type { UserSession } from '@/types';
+
 export const SESSION_COOKIE = 'sgp_session';
 const SESSION_MAX_AGE = 8 * 60 * 60;
 

@@ -1,33 +1,54 @@
+import { NextResponse } from 'next/server';
 import { AlunoService } from '@/services/AlunoService';
-import { AlunoModel } from '@/models/AlunoModel';
+import { sessionFromRequest } from '@/lib/session';
+import { HttpError } from '@/lib/errors';
 
 export class AlunoController {
   constructor(private alunoService: AlunoService = new AlunoService()) {}
 
-  async getAlunos() {
+  async getAlunos(request?: Request): Promise<NextResponse> {
     try {
-      const data = await this.alunoService.listarAlunos();
-      return { status: 200, data };
+      const session = request ? sessionFromRequest(request) : null;
+      const url = request ? new URL(request.url) : null;
+      const turmaId = url ? url.searchParams.get('turmaId') : null;
+
+      const data = await this.alunoService.listarAlunos({ turmaId, session });
+      return NextResponse.json(data, { status: 200 });
     } catch (error: any) {
-      return { status: 500, data: { error: error.message } };
+      return this.handleError(error);
     }
   }
 
-  async saveAluno(alunoData: Partial<AlunoModel>) {
+  async saveAluno(request: Request): Promise<NextResponse> {
     try {
-      const saved = await this.alunoService.salvarAluno(alunoData);
-      return { status: 200, data: saved };
+      const session = request ? sessionFromRequest(request) : null;
+      const body = await request.json();
+      const saved = await this.alunoService.salvarAluno(body, session);
+      return NextResponse.json(saved, { status: 201 });
     } catch (error: any) {
-      return { status: 500, data: { error: error.message } };
+      return this.handleError(error);
     }
   }
 
-  async deleteAluno(id: string) {
+  async deleteAluno(
+    request: Request,
+    context: { params: Promise<{ id: string }> }
+  ): Promise<NextResponse> {
     try {
-      const success = await this.alunoService.excluirAluno(id);
-      return { status: 200, data: { success } };
+      const session = request ? sessionFromRequest(request) : null;
+      const { id } = await context.params;
+      const success = await this.alunoService.excluirAluno(id, session);
+      return NextResponse.json({ success }, { status: 200 });
     } catch (error: any) {
-      return { status: 500, data: { error: error.message } };
+      return this.handleError(error);
     }
+  }
+
+  private handleError(error: any): NextResponse {
+    console.error('AlunoController Error:', error);
+    if (error instanceof HttpError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: error?.message || 'Erro interno do servidor.' }, { status: 500 });
   }
 }

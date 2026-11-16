@@ -1,6 +1,11 @@
 import { OmrRepository } from '@/repositories/OmrRepository';
+import { PrismaOmrRepository } from '@/repositories/prisma/PrismaOmrRepository';
+import { PrismaAlunoRepository } from '@/repositories/prisma/PrismaAlunoRepository';
+import { PrismaTurmaRepository } from '@/repositories/prisma/PrismaTurmaRepository';
 import { AlunoModel } from '@/models/AlunoModel';
 import { TurmaModel } from '@/models/TurmaModel';
+import { UserSession } from '@/lib/session';
+import { ForbiddenError, NotFoundError } from '@/lib/errors';
 import { 
   LeituraOMRRegistro, 
   Question, 
@@ -41,10 +46,56 @@ export interface QrCodeAnchor {
 }
 
 export class OmrService {
-  constructor(private omrRepository: OmrRepository = new OmrRepository()) {}
+  constructor(
+    private omrRepository: any = new PrismaOmrRepository(),
+    private alunoRepository: any = new PrismaAlunoRepository(),
+    private turmaRepository: any = new PrismaTurmaRepository()
+  ) {}
 
   async listarLeituras(): Promise<LeituraOMRRegistro[]> {
     return this.omrRepository.findAll();
+  }
+
+  async listarLeiturasComEscopo(options?: { alunoId?: string | null; session?: UserSession | null }): Promise<LeituraOMRRegistro[]> {
+    const { alunoId, session } = options || {};
+
+    if (alunoId) {
+      if (session?.role === 'PROFESSOR') {
+        const aluno = await this.alunoRepository.findById(alunoId);
+        if (!aluno) {
+          throw new NotFoundError('Aluno não encontrado.');
+        }
+        const turma = await this.turmaRepository.findById(aluno.turmaId);
+        if (!turma || turma.professorId !== session.id) {
+          throw new ForbiddenError('Acesso negado às leituras deste aluno.');
+        }
+      }
+      return this.omrRepository.findByAlunoId(alunoId);
+    }
+
+    if (session?.role === 'PROFESSOR') {
+      return this.omrRepository.findByProfessorId(session.id);
+    }
+
+    return this.omrRepository.findAll();
+  }
+
+  async salvarLeituraComTransacao(
+    registro: LeituraOMRRegistro,
+    stage?: EvaluationStage,
+    session?: UserSession | null
+  ) {
+    if (session?.role === 'PROFESSOR') {
+      registro.professorId = session.id;
+      if (registro.turmaId) {
+        const turma = await this.turmaRepository.findById(registro.turmaId);
+        if (turma && turma.professorId && turma.professorId !== session.id) {
+          throw new ForbiddenError('Acesso negado. A turma indicada pertence a outro professor.');
+        }
+      }
+    }
+
+    return this.omrRepository.saveWithTransaction(registro, stage);
   }
 
   // Algoritmo determinístico de shuffle compartilhado

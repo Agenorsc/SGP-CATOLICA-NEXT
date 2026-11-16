@@ -1,33 +1,51 @@
+import { NextResponse } from 'next/server';
 import { TurmaService } from '@/services/TurmaService';
-import { TurmaModel } from '@/models/TurmaModel';
+import { sessionFromRequest } from '@/lib/session';
+import { HttpError } from '@/lib/errors';
 
 export class TurmaController {
   constructor(private turmaService: TurmaService = new TurmaService()) {}
 
-  async getTurmas() {
+  async getTurmas(request?: Request): Promise<NextResponse> {
     try {
-      const data = await this.turmaService.listarTurmas();
-      return { status: 200, data };
+      const session = request ? sessionFromRequest(request) : null;
+      const turmas = await this.turmaService.listarTurmas(session);
+      return NextResponse.json(turmas, { status: 200 });
     } catch (error: any) {
-      return { status: 500, data: { error: error.message } };
+      return this.handleError(error);
     }
   }
 
-  async saveTurma(turmaData: Partial<TurmaModel>) {
+  async saveTurma(request: Request): Promise<NextResponse> {
     try {
-      const saved = await this.turmaService.salvarTurma(turmaData);
-      return { status: 200, data: saved };
+      const session = request ? sessionFromRequest(request) : null;
+      const body = await request.json();
+      const saved = await this.turmaService.salvarTurma(body, session);
+      return NextResponse.json(saved, { status: 201 });
     } catch (error: any) {
-      return { status: 500, data: { error: error.message } };
+      return this.handleError(error);
     }
   }
 
-  async deleteTurma(id: string) {
+  async deleteTurma(
+    request: Request,
+    context: { params: Promise<{ id: string }> }
+  ): Promise<NextResponse> {
     try {
-      const success = await this.turmaService.excluirTurma(id);
-      return { status: 200, data: { success } };
+      const session = request ? sessionFromRequest(request) : null;
+      const { id } = await context.params;
+      const success = await this.turmaService.excluirTurma(id, session);
+      return NextResponse.json({ success }, { status: 200 });
     } catch (error: any) {
-      return { status: 500, data: { error: error.message } };
+      return this.handleError(error);
     }
+  }
+
+  private handleError(error: any): NextResponse {
+    console.error('TurmaController Error:', error);
+    if (error instanceof HttpError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: error?.message || 'Erro interno do servidor.' }, { status: 500 });
   }
 }

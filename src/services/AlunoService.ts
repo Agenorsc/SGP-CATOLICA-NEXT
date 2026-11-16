@@ -1,10 +1,31 @@
-import { AlunoRepository } from '@/repositories/AlunoRepository';
+import { PrismaAlunoRepository } from '@/repositories/prisma/PrismaAlunoRepository';
+import { PrismaTurmaRepository } from '@/repositories/prisma/PrismaTurmaRepository';
 import { AlunoModel } from '@/models/AlunoModel';
+import { UserSession } from '@/lib/session';
+import { ForbiddenError, NotFoundError, ValidationError } from '@/lib/errors';
 
 export class AlunoService {
-  constructor(private alunoRepository: AlunoRepository = new AlunoRepository()) {}
+  constructor(
+    private alunoRepository: any = new PrismaAlunoRepository(),
+    private turmaRepository: any = new PrismaTurmaRepository()
+  ) {}
 
-  async listarAlunos(): Promise<AlunoModel[]> {
+  async listarAlunos(options?: { turmaId?: string | null; session?: UserSession | null }): Promise<AlunoModel[]> {
+    const { turmaId, session } = options || {};
+    if (turmaId) {
+      if (session?.role === 'PROFESSOR') {
+        const turma = await this.turmaRepository.findById(turmaId);
+        if (!turma || turma.professorId !== session.id) {
+          throw new ForbiddenError('Acesso negado a esta turma.');
+        }
+      }
+      return this.alunoRepository.findByTurmaId(turmaId);
+    }
+
+    if (session?.role === 'PROFESSOR') {
+      return this.alunoRepository.findByProfessorId(session.id);
+    }
+
     return this.alunoRepository.findAll();
   }
 
@@ -48,12 +69,35 @@ export class AlunoService {
     return { valido: true };
   }
 
-  async salvarAluno(dados: Partial<AlunoModel>): Promise<AlunoModel> {
+  async salvarAluno(dados: Partial<AlunoModel>, session?: UserSession | null): Promise<AlunoModel> {
+    if (!dados.turmaId) {
+      throw new ValidationError('turmaId é obrigatório.');
+    }
+
+    if (session?.role === 'PROFESSOR') {
+      const turma = await this.turmaRepository.findById(dados.turmaId);
+      if (!turma || turma.professorId !== session.id) {
+        throw new ForbiddenError('Acesso negado. Você só pode cadastrar alunos em suas próprias turmas.');
+      }
+    }
+
     const aluno = new AlunoModel(dados);
     return this.alunoRepository.save(aluno);
   }
 
-  async excluirAluno(id: string): Promise<boolean> {
+  async excluirAluno(id: string, session?: UserSession | null): Promise<boolean> {
+    const aluno = await this.alunoRepository.findById(id);
+    if (!aluno) {
+      throw new NotFoundError('Aluno não encontrado.');
+    }
+
+    if (session?.role === 'PROFESSOR') {
+      const turma = await this.turmaRepository.findById(aluno.turmaId);
+      if (!turma || turma.professorId !== session.id) {
+        throw new ForbiddenError('Acesso negado. Você só pode excluir alunos de suas próprias turmas.');
+      }
+    }
+
     return this.alunoRepository.delete(id);
   }
 

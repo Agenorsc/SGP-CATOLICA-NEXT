@@ -1,5 +1,8 @@
-import { QuestionRepository } from '@/repositories/QuestionRepository';
+import { PrismaQuestionRepository } from '@/repositories/prisma/PrismaQuestionRepository';
+import { PrismaTurmaRepository } from '@/repositories/prisma/PrismaTurmaRepository';
 import { Question, AvaliacaoCiclo } from '@/types';
+import { UserSession } from '@/lib/session';
+import { ForbiddenError, NotFoundError } from '@/lib/errors';
 
 export const LIMITE_MAXIMO_QUESTOES = 30;
 
@@ -13,9 +16,19 @@ export interface ContagemCiclos {
 }
 
 export class QuestionService {
-  constructor(private questionRepository: QuestionRepository = new QuestionRepository()) {}
+  constructor(
+    private questionRepository: any = new PrismaQuestionRepository(),
+    private turmaRepository: any = new PrismaTurmaRepository()
+  ) {}
 
   async listarQuestoes(): Promise<Question[]> {
+    return this.questionRepository.findAll();
+  }
+
+  async listarQuestoesComEscopo(session?: UserSession | null): Promise<Question[]> {
+    if (session?.role === 'PROFESSOR') {
+      return this.questionRepository.findByProfessorId(session.id);
+    }
     return this.questionRepository.findAll();
   }
 
@@ -27,7 +40,45 @@ export class QuestionService {
     return this.questionRepository.save(questao);
   }
 
+  async salvarQuestaoComEscopo(dados: Question, session?: UserSession | null): Promise<Question> {
+    if (session?.role === 'PROFESSOR') {
+      dados.teacherId = session.id;
+      const targetTurmaId = dados.turmaId || dados.classId;
+      if (targetTurmaId) {
+        const turma = await this.turmaRepository.findById(targetTurmaId);
+        if (!turma || turma.professorId !== session.id) {
+          throw new ForbiddenError('Acesso negado. A turma informada não pertence ao professor.');
+        }
+      }
+    }
+    return this.questionRepository.save(dados);
+  }
+
   async excluirQuestao(id: string): Promise<boolean> {
+    return this.questionRepository.delete(id);
+  }
+
+  async excluirQuestaoComEscopo(id: string, session?: UserSession | null): Promise<boolean> {
+    const question = await this.questionRepository.findById(id);
+    if (!question) {
+      throw new NotFoundError('Questão não encontrada.');
+    }
+
+    if (session?.role === 'PROFESSOR') {
+      const isOwner = question.teacherId === session.id;
+      let turmaOwner = false;
+      if (question.turmaId) {
+        const turma = await this.turmaRepository.findById(question.turmaId);
+        if (turma && turma.professorId === session.id) {
+          turmaOwner = true;
+        }
+      }
+
+      if (!isOwner && !turmaOwner) {
+        throw new ForbiddenError('Acesso negado. Você só pode excluir suas próprias questões.');
+      }
+    }
+
     return this.questionRepository.delete(id);
   }
 

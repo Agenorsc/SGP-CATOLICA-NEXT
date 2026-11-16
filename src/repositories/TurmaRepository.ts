@@ -44,6 +44,11 @@ export class TurmaRepository implements IBaseRepository<TurmaModel> {
     return list.find(t => t.id === id);
   }
 
+  async findByProfessorId(professorId: string): Promise<TurmaModel[]> {
+    const list = await this.findAll();
+    return list.filter(t => t.professorId === professorId);
+  }
+
   async save(turma: TurmaModel): Promise<TurmaModel> {
     if (typeof window !== 'undefined') {
       try {
