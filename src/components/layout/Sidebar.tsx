@@ -10,11 +10,12 @@ import {
   X, 
   LogOut,
   GraduationCap,
-  KeyRound
+  KeyRound,
+  Layers
 } from 'lucide-react';
 import { UserSession } from '@/types';
 
-export type TabType = 'cadastros' | 'professores' | 'montador' | 'impressao' | 'leitura' | 'relatorios';
+export type TabType = 'cadastros' | 'professores' | 'montador' | 'provas-montadas' | 'impressao' | 'leitura' | 'relatorios';
 
 interface SidebarProps {
   currentTab: TabType;
@@ -30,6 +31,7 @@ const navItems: { id: TabType; label: string; icon: React.ElementType; adminOnly
   { id: 'cadastros', label: 'Cadastros (Aluno/Turma)', icon: UserPlus },
   { id: 'professores', label: 'Professores & Disciplinas', icon: GraduationCap, adminOnly: true },
   { id: 'montador', label: 'Montador de Provas', icon: BookOpen },
+  { id: 'provas-montadas', label: 'Provas Montadas', icon: Layers },
   { id: 'impressao', label: 'Caderno & Gabarito', icon: Printer },
   { id: 'leitura', label: 'Leitura & Correção', icon: Scan },
   { id: 'relatorios', label: 'Relatórios & Histórico', icon: BarChart3 },

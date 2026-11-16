@@ -145,6 +145,13 @@ export interface AlternativaCadastro {
   correta: boolean;
 }
 
+export interface CompactMobileQrPayload {
+  p: string; // prova_montada_id
+  c: string; // caderno_prova_id
+  a?: string; // aluno_nome
+  r?: string; // aluno_ra
+}
+
 export interface CardPayload {
   examId: string;
   classId: string;
@@ -240,6 +247,36 @@ export interface LeituraOMRRegistro {
   fiduciaisDetectados?: boolean;
 }
 
+export interface CadernoProvaRegistro {
+  id: string;
+  provaMontadaId: string;
+  codigoVersao: string; // Ex: 'CADERNO-A', 'CADERNO-B' ou RA
+  alunoNome?: string | null;
+  alunoRa?: string | null;
+  mapaQuestoesJson: Question[];
+  gabaritoOficialJson: Record<string, string>; // { "1": "C", "2": "A", ... }
+  createdAt?: string;
+}
+
+export interface ResultadoAvaliacaoRegistro {
+  id: string;
+  professorId: string;
+  provaMontadaId: string;
+  cadernoProvaId?: string | null;
+  alunoNome: string;
+  alunoRa?: string | null;
+  respostasMarcadasJson: Record<string, string | null>;
+  acertos: number;
+  totalQuestoes: number;
+  notaFinal: number;
+  lidoViaMobile: boolean;
+  createdAt: string;
+  // Metadados enriquecidos para exibição em tabelas
+  provaTitulo?: string;
+  turmaNome?: string;
+  codigoVersao?: string;
+}
+
 export interface ProvaMontadaRegistro {
   id: string;
   titulo: string;
@@ -255,8 +292,11 @@ export interface ProvaMontadaRegistro {
   shuffleQuestoes: boolean;
   shuffleAlternativas: boolean;
   nominalQrCode: boolean;
+  status?: 'RASCUNHO' | 'PRONTA_PARA_APLICAR' | 'FINALIZADA';
   createdAt: string;
   updatedAt?: string;
+  cadernos?: CadernoProvaRegistro[];
+  resultados?: ResultadoAvaliacaoRegistro[];
 }
 
 export interface DistratorFrequencia {

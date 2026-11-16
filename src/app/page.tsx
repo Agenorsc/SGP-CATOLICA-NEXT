@@ -50,8 +50,10 @@ import { AlertaModal } from '@/components/common/AlertaModal';
 import { shuffleArray } from '@/lib/shuffle';
 import { MontadorTab } from '@/components/montador/MontadorTab';
 import { ModalQuestao } from '@/components/montador/ModalQuestao';
+import { ProvasMontadasTab } from '@/components/provas/ProvasMontadasTab';
 import { ImpressaoTab } from '@/components/impressao/ImpressaoTab';
 import { LeituraTab } from '@/components/leitura/LeituraTab';
+import { MobileOmrScanner } from '@/components/leitura/MobileOmrScanner';
 import { RelatoriosTab } from '@/components/relatorios/RelatoriosTab';
 
 export default function Home() {
@@ -97,6 +99,8 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
   const [currentTab, setCurrentTab] = useState<TabType>('cadastros');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [modalTrocarSenhaAberto, setModalTrocarSenhaAberto] = useState(false);
+  const [mobileScannerAberto, setMobileScannerAberto] = useState(false);
+  const [provaParaScannerMobile, setProvaParaScannerMobile] = useState<ProvaMontadaRegistro | undefined>(undefined);
 
   const handleLogout = async () => {
     try {
@@ -837,6 +841,26 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
           />
         )}
 
+        {/* 3.1 ABA PROVAS MONTADAS (SNAPSHOTS IMUTÁVEIS & GABARITOS EMBARALHADOS) */}
+        {currentTab === 'provas-montadas' && (
+          <ProvasMontadasTab
+            provas={provasMontadasVisiveis}
+            turmas={turmasVisiveis}
+            turmaSelecionadaId={turmaSelecionadaId}
+            setTurmaSelecionadaId={setTurmaSelecionadaId}
+            onReimprimirProva={(prova) => {
+              handleCarregarProvaParaReimpressao(prova);
+              setCurrentTab('impressao');
+            }}
+            onAbrirScannerMobile={(prova) => {
+              setProvaParaScannerMobile(prova);
+              setMobileScannerAberto(true);
+            }}
+            onExcluirProva={handleExcluirProva}
+            onNovaProva={() => setCurrentTab('montador')}
+          />
+        )}
+
         {/* 4. ABA IMPRESSÃO (CADERNO & GABARITO) */}
         {currentTab === 'impressao' && (
           <ImpressaoTab
@@ -903,6 +927,35 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
             alunosFiltradosRelatorio={alunosFiltradosRelatorio}
             onExportarCsv={exportarCSV}
             onExportarExcel={exportarExcel}
+            onExcluirNota={async (id) => {
+              setLeiturasOMR(prev => prev.filter(l => l.id !== id));
+            }}
+          />
+        )}
+
+        {/* 7. SCANNER OMR MOBILE-FIRST (EMBARALHADO COM GABARITO AUTOMÁTICO) */}
+        {mobileScannerAberto && (
+          <MobileOmrScanner
+            provasMontadas={provasMontadasVisiveis}
+            alunos={alunosVisiveis}
+            onVoltar={() => {
+              setMobileScannerAberto(false);
+              setProvaParaScannerMobile(undefined);
+            }}
+            onNotaSalva={(resultado) => {
+              if (resultado.alunoRa) {
+                setAlunos(prev => prev.map(a => {
+                  if (a.ra === resultado.alunoRa) {
+                    return new AlunoModel({
+                      ...a,
+                      n2: resultado.notaFinal
+                    });
+                  }
+                  return a;
+                }));
+              }
+              examService.listarProvas().then(setProvasMontadas);
+            }}
           />
         )}
 
