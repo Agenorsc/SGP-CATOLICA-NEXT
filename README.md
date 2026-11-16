@@ -21,10 +21,11 @@
 [![Prisma ORM](https://img.shields.io/badge/Prisma-5.22-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io/)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 
-[![CI/CD Status](https://img.shields.io/badge/CI%2FCD-61%20Pipelines%20Executados-success?style=flat-square&logo=githubactions&logoColor=white)](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/actions)
+[![CI/CD Status](https://img.shields.io/badge/CI%2FCD-Sucesso%20Total%20(Green%20Build)-success?style=flat-square&logo=githubactions&logoColor=white)](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/actions)
 [![Avaliação](https://img.shields.io/badge/Cliente%20Docente-Prof.%20Me.%20Samuel-blue?style=flat-square)](https://catolicasc.org.br/)
-[![Arquitetura](https://img.shields.io/badge/Padr%C3%A3o-5%20Camadas%20Desacopladas-007ACC?style=flat-square)](https://catolicasc.org.br/)
-[![Testes Unitários](https://img.shields.io/badge/Testes-55%2F55%20Aprovados%20(100%25)-brightgreen?style=flat-square)](https://jestjs.io/)
+[![Arquitetura](https://img.shields.io/badge/Padr%C3%A3o-Rota%20%E2%86%92%20Controller%20%E2%86%92%20Service%20%E2%86%92%20Repository-007ACC?style=flat-square)](https://catolicasc.org.br/)
+[![Testes Automatizados](https://img.shields.io/badge/Testes-171%2F171%20Aprovados%20(100%25)-brightgreen?style=flat-square)](https://jestjs.io/)
+[![Performance SLA](https://img.shields.io/badge/SLA%20p95-%3C%20250ms%20(Conforme%20RNF03)-brightgreen?style=flat-square)](https://vercel.com/)
 
 **Jaraguá do Sul – SC | 2026**
 
@@ -36,11 +37,11 @@
 
 | Integrante | GitHub | Papel / Especialidade Principal | Escopo Técnico Central no Repositório |
 |---|---|---|---|
-| **Agenor Alvise** | [@Agenorsc](https://github.com/Agenorsc) | Front-end Lead & Arquitetura | Diagramação para impressão frente/verso, gabaritos OMR em A4, testes unitários com Jest, pipeline de CI/CD, persistência real no Supabase/Prisma, reconhecimento 100% automático com validação cruzada e HUD visual em tempo real. |
-| **Johnatan Vargas da Fonseca** | [@FonsecaJohnatan](https://github.com/FonsecaJohnatan) | Engenheiro Full-Stack | Gestão de turmas com código institucional, banco de questões individualizado por turma e ciclos (N1, N2, N3, N-1), navegação responsiva e inspeção de espelhos OMR. |
-| **Eric Ricardo Lange** | [@lange047](https://github.com/lange047) | Modelagem Orientada a Objetos | Entidades de domínio (`PessoaModel` $\rightarrow$ `AlunoModel`), montador por ciclos avaliativos, consumo da API ViaCEP, validação cadastral e correção de quebra de página física frente e verso. |
-| **Erick Andreas Pontecelli** | [@Erick-Andreas-Ponticelli](https://github.com/Erick-Andreas-Ponticelli) | Algoritmos & Autenticação | Autenticação real com isolamento de professores (`admin@admin.com` e docentes), algoritmos determinísticos de embaralhamento com sementes (*seeds*), matrizes OMR e decodificação QR Code. |
-| **Edinei Junio Machado** | [@edineiJM](https://github.com/edineiJM) | Engenharia de Requisitos & Dados | Levantamento com o docente Samuel, suporte a até 30 questões no gabarito, editor de cabeçalho e orientações da prova, remoção de simulação de bancada, modelagem UML e DDL relacional SQL. |
+| **Agenor Alvise** | [@Agenorsc](https://github.com/Agenorsc) | Front-end Lead & Arquitetura | Arquitetura Rota $\rightarrow$ Controller $\rightarrow$ Service $\rightarrow$ Repository, persistência no Supabase via Prisma, isolamento por docente no backend (TSK-57), benchmark de latência p95 < 250ms (TSK-61), dashboard de distratores (TSK-36), exportação Excel multi-abas (TSK-40), diagramação A4 duplex e motor OMR. |
+| **Johnatan Vargas da Fonseca** | [@FonsecaJohnatan](https://github.com/FonsecaJohnatan) | Engenheiro Full-Stack | Gestão de turmas com código institucional, banco de questões individualizado por turma e ciclos (N1, N2, N3, N-1), endpoint de estatísticas por questão (PR #15), navegação responsiva e inspeção de espelhos OMR. |
+| **Eric Ricardo Lange** | [@lange047](https://github.com/lange047) | Modelagem Orientada a Objetos | Entidades de domínio (`PessoaModel` $\rightarrow$ `AlunoModel`), infraestrutura de sessão segura por cookies assinados no servidor (TSK-56 / PR #31), paginação A4 sem quebra de questões (TSK-54 / PR #24), suíte de regressão de impressão física (TSK-62 / PR #33) e integração ViaCEP. |
+| **Erick Andreas Pontecelli** | [@Erick-Andreas-Ponticelli](https://github.com/Erick-Andreas-Ponticelli) | Algoritmos & Autenticação | Segurança criptográfica de credenciais com Hashing Bcrypt (PR #23), migração de seed eliminando senhas fracas, módulo de troca de senha com validação de força, algoritmos determinísticos de embaralhamento com sementes (*seeds*), matrizes OMR e decodificação QR Code. |
+| **Edinei Junio Machado** | [@edineiJM](https://github.com/edineiJM) | Engenharia de Requisitos & Dados | Validação de acurácia OMR com 36 cenários e taxa > 99% (TSK-45 / RNF04 / PR #16), cabeçalho dinâmico por professor/turma e gabarito de até 30 questões (TSK-59 / PR #28), simplificação de UX de correção em lote (TSK-46 / PR #26), modelagem UML e DDL SQL. |
 
 * **Docente Avaliador / Cliente:** Prof. Me. Samuel  
 * **Orientação Pedagógica:** Centro Universitário Católica de Santa Catarina (Católica SC) — Câmpus Jaraguá do Sul
@@ -49,78 +50,46 @@
 
 ## 📖 Resumo Executivo
 
-O presente documento técnico-acadêmico consolida a concepção, os requisitos, o modelo arquitetural em 5 camadas, a persistência relacional normalizada e a modelagem formal em Linguagem de Modelagem Unificada (UML 2.5) do **Sistema de Geração e Correção de Provas (SGP)**. Desenvolvido para atender às demandas didático-pedagógicas do Centro Universitário Católica de Santa Catarina, o projeto moderniza e automatiza a rotina avaliativa docente diante de ciclos com **200 a 400 estudantes simultâneos por semestre letivo**.
+O **Sistema de Geração e Correção de Provas (SGP)** é uma plataforma web full-stack de alto desempenho desenvolvida para transformar a rotina avaliativa docente diante de ciclos com **200 a 400 estudantes simultâneos por semestre letivo** no Centro Universitário Católica de Santa Catarina.
 
-A solução elimina a vulnerabilidade de fraudes acadêmicas e a sobrecarga operacional através de:
-1. **Montador Flexível de Avaliações (1 a 30 questões):** Composição dinâmica em *split-screen*, admitindo desde provas rápidas até exames semestrais de 25 questões (com 0,4 pts cada) ou 30 questões, com validação matemática estrita da nota máxima de **10,0 pontos** e pontuações fracionadas a partir de 0,05 pts;
-2. **Organização por Turma e Ciclos Avaliativos:** Banco de questões categorizado por Turma e Etapas: **N1** (1ª Etapa), **N2** (Prova Integrada OMR), **N3** (Projetos/Práticas) e **N-1** (Exame Semestral cumulativo que agrega questões de todas as etapas);
-3. **Embaralhamento Determinístico Auditável:** Algoritmo Fisher-Yates com sementes numéricas (*seeds*) para permutação independente da ordem de questões e alternativas por versão de caderno;
-4. **Folha de Respostas e Caderno no Modelo Oficial Católica SC:** Diagramação fiel com cabeçalho institucional personalizável, 10 orientações numeradas à esquerda com injeção automática de variáveis `{pontos}` e `{duracao}`, grade óptica de respostas com marcadores fiduciais nos 4 cantos, QR Code nominal padronizado e página duplex em branco no verso;
-5. **Reconhecimento 100% Automático via Câmera com Validação Cruzada:** Leitura óptica instantânea do QR Code no topo da folha que identifica automaticamente **Turma**, **Ciclo (N1, N2, N3, N-1)** e **Aluno (Nome e RA)**, com alerta de segurança caso o professor esteja com uma aba de turma diferente selecionada;
-6. **Painel HUD de Conferência e Máquina de Estados:** Frame congelado na tela com badge colorido por ciclo, comparativo linha a linha das respostas e fluxo de controle com os botões **"Validar Nota"**, **"Corrigir Novamente"** e **"Corrigir Próximo Aluno"**;
-7. **Persistência Relacional em Produção com Supabase (PostgreSQL) e Prisma ORM:** Banco de dados relacional em nuvem com 6 tabelas normalizadas (`usuarios`, `turmas`, `alunos`, `questoes`, `alternativas`, `leituras_omr`), políticas de proteção e sincronização em tempo real;
-8. **Relatórios Pedagógicos e Diagnóstico de Distratores:** Compilação estatística imediata com média da turma, frequência de alternativas assinaladas e exportação em CSV/Excel.
-
-**Palavras-chave:** Engenharia de Software. Reconhecimento Óptico de Marcas (OMR). Visão Computacional. Modelagem UML. Next.js 16. Prisma ORM. Supabase. PostgreSQL. Gestão Docente.
+A solução elimina a sobrecarga operacional, a lentidão no lançamento de notas e o risco de fraudes acadêmicas através dos seguintes pilares:
+1. **Padrão Arquitetural em 4 Camadas (TSK-44):** Rotas HTTP desacopladas operando estritamente no fluxo **Rota (`route.ts`) $\rightarrow$ Controller $\rightarrow$ Service $\rightarrow$ Repository**, garantindo separação absoluta entre transporte de rede, regras de negócio e persistência relacional;
+2. **Isolamento Completo por Docente no Backend (TSK-57):** Multi-tenancy rigoroso em nível de sessão. Professores acessam exclusivamente suas próprias turmas, estudantes, questões, leituras OMR, avaliações e relatórios. Turmas e questões sem professor atribuído (órfãs) são ocultadas e protegidas contra acesso docente, ficando restritas ao papel `ADMIN`. Qualquer tentativa de acesso cruzado resulta em `403 Forbidden`;
+3. **Sessão Segura Server-Side com Cookies Assinados (TSK-56):** Autenticação protegida por cookies `httpOnly`, assinados com HMAC-SHA256 no servidor via `proxy.ts`, substituindo o armazenamento frágil em localStorage;
+4. **Segurança de Credenciais com Bcrypt (PR #23):** Hashes criptográficos com fator de custo 10, eliminação da senha padrão legada `admin`, validação de complexidade e endpoint autenticado `/api/auth/trocar-senha`;
+5. **Montador Flexível de Avaliações (1 a 30 questões):** Diagramação dinâmica em *split-screen*, admitindo desde provas rápidas até exames semestrais de 25 questões (com 0,4 pts cada) ou 30 questões, com validação matemática estrita da nota máxima de **10,0 pontos** e pontuações fracionadas a partir de 0,05 pts;
+6. **Organização por Turma e Ciclos Avaliativos:** Banco de questões categorizado por Turma e Etapas: **N1** (1ª Etapa), **N2** (Prova Integrada OMR), **N3** (Projetos/Práticas) e **N-1** (Exame Semestral cumulativo que agrega questões de todas as etapas);
+7. **Embaralhamento Determinístico Auditável:** Algoritmo Fisher-Yates com sementes numéricas (*seeds*) para permutação independente da ordem de questões e alternativas por versão de caderno;
+8. **Folha de Respostas e Caderno no Modelo Oficial Católica SC:** Cabeçalho institucional dinâmico por professor/turma (TSK-59), orientações numeradas, paginação sem corte de questões no meio da folha A4 (TSK-54) e página duplex em branco no verso para destaque seguro do gabarito (TSK-62);
+9. **Reconhecimento Óptico de Alta Acurácia (> 99% / TSK-45):** Leitura de marcas por câmera com marcadores fiduciais nos 4 cantos, decodificação instantânea do QR Code nominal com validação cruzada de turma e fluxo de conferência assistido por HUD em lote (TSK-46);
+10. **Persistência Relacional com Supabase e Prisma ORM:** 6 entidades mapeadas com índices B-tree nos pontos de maior cardinalidade (`professorId`, `turmaId`, `alunoId`, `avaliacao`), garantindo execução dinâmica server-side (`force-dynamic`) com **p95 < 250 ms** em produção (TSK-61);
+11. **Relatórios Pedagógicos, Análise de Distratores e Exportação Excel (TSK-36 / TSK-40):** Dashboard analítico consolidado por turma, cálculo de alternativas erradas mais assinaladas (distratores) e exportação em `.xlsx` com 3 abas estruturadas (Notas da Turma, Espelho OMR e Diagnóstico Pedagógico).
 
 ---
 
 ## 📑 Sumário
 
 - [1. Introdução](#1-introdução)
-  - [1.1 Contexto e Justificativa Institucional](#11-contexto-e-justificativa-institucional)
-  - [1.2 Delimitação do Problema](#12-delimitação-do-problema)
-  - [1.3 Objetivos Geral e Específicos](#13-objetivos-geral-e-específicos)
 - [2. Engenharia de Requisitos do Sistema](#2-engenharia-de-requisitos-do-sistema)
-  - [2.1 Requisitos Funcionais (RF01 a RF18)](#21-requisitos-funcionais-rf)
-  - [2.2 Requisitos Não Funcionais (RNF01 a RNF08)](#22-requisitos-não-funcionais-rnf)
-- [3. Especificação de Telas e Interfaces do Sistema](#3-especificação-de-telas-e-interfaces-do-sistema)
-  - [3.1 Mapeamento Detalhado dos Componentes](#31-mapeamento-detalhado-dos-componentes)
-  - [3.2 Detalhamento Operacional das Interfaces](#32-detalhamento-operacional-das-interfaces)
-- [4. Modelagem Formal UML (Passo a Passo Padrão Católica SC)](#4-modelagem-formal-uml)
-  - [4.1 Diagrama de Casos de Uso](#41-diagrama-de-casos-de-uso)
-  - [4.2 Diagrama de Atividades com Raias (Swimlanes)](#42-diagrama-de-atividades-com-raias)
-  - [4.3 Diagrama de Classes de Domínio](#43-diagrama-de-classes-de-domínio)
-  - [4.4 Diagrama de Sequência UML (Fluxo OMR e Validação)](#44-diagrama-de-sequência-uml)
+- [3. Especificação de Telas e Interfaces](#3-especificação-de-telas-e-interfaces)
+- [4. Modelagem Formal UML](#4-modelagem-formal-uml)
 - [5. Persistência de Dados em Nuvem (Supabase & PostgreSQL)](#5-persistência-de-dados-em-nuvem-supabase--postgresql)
-  - [5.1 Arquitetura de Dados Relacional e Prisma ORM](#51-arquitetura-de-dados-relacional-e-prisma-orm)
-  - [5.2 Evidência Visual do Esquema no Supabase (Schema Visualizer)](#52-evidência-visual-do-esquema-no-supabase)
-  - [5.3 Catálogo das Tabelas e Relações do Banco](#53-catálogo-das-tabelas-e-relações-do-banco)
-- [6. Planner de Entregas, Backlog e Evidências dos Contribuidores](#6-planner-de-entregas-backlog-e-evidências-dos-contribuidores)
-  - [6.1 Tabela Geral de PRs e Histórico de CI/CD (Sem Falhas)](#61-tabela-geral-de-prs-e-histórico-de-cicd)
+- [6. Planner de Entregas e Matriz Geral de Pull Requests](#6-planner-de-entregas-e-matriz-geral-de-pull-requests)
+  - [6.1 Tabela Consolidada de Todas as PRs e Contribuidores](#61-tabela-consolidada-de-todas-as-prs-e-contribuidores)
   - [6.2 Quadro de Evidências por Integrante da Equipe](#62-quadro-de-evidências-por-integrante-da-equipe)
-- [7. Arquitetura de Software em 5 Camadas Desacopladas](#7-arquitetura-de-software-em-5-camadas-desacopladas)
-  - [7.1 Estrutura de Diretórios](#71-estrutura-de-diretórios)
-  - [7.2 Execução Local e Testes Automatizados](#72-execução-local-e-testes-automatizados)
+- [7. Arquitetura em Camadas Desacopladas (TSK-44)](#7-arquitetura-em-camadas-desacopladas-tsk-44)
+  - [7.1 Fluxo Rota → Controller → Service → Repository](#71-fluxo-rota--controller--service--repository)
+  - [7.2 Estrutura de Diretórios](#72-estrutura-de-diretórios)
+  - [7.3 Execução Local e Testes Automatizados (171 Testes Verdes)](#73-execução-local-e-testes-automatizados-171-testes-verdes)
+  - [7.4 Benchmark de Latência (p95 < 250 ms / TSK-61)](#74-benchmark-de-latência-p95--250-ms--tsk-61)
+  - [7.5 Isolamento Multi-Tenancy por Docente no Backend (TSK-57)](#75-isolamento-multi-tenancy-por-docente-no-backend-tsk-57)
 - [8. Considerações Finais](#8-considerações-finais)
 
 ---
 
 ## 1. Introdução
 
-### 1.1 Contexto e Justificativa Institucional
-No contexto acadêmico do Centro Universitário Católica de Santa Catarina (Católica SC), os docentes gerenciam simultaneamente múltiplos módulos acadêmicos com contingentes que chegam a centenas de discentes por ciclo avaliativo. A execução manual de todo o processo — elaboração, montagem de cadernos, diagramação para impressão, aplicação presencial, correção de gabaritos a caneta e transcrição de notas no portal acadêmico — gera sobrecarga severa, lentidão no feedback pedagógico e riscos inerentes de erro humano ou fraude.
-
-O **SGP Católica** foi desenvolvido para transformar esse cenário em um ecossistema digital inteligente, eliminando retrabalhos manuais e conferindo segurança, auditabilidade matemática e agilidade sem precedentes ao corpo docente.
-
-### 1.2 Delimitação do Problema
-O desafio central consistiu em integrar de forma coesa:
-1. Um banco de questões dinâmico individualizado por professor, turma e ciclo avaliativo (**N1, N2, N3 e N-1**);
-2. Um montador flexível com suporte para até **30 questões por prova**, balanceamento de notas com pontuações fracionadas (ex: 25 questões de 0,4 pts);
-3. Diagramação exata para impressão em folha A4 com destaque de gabarito e página em branco automática duplex;
-4. Reconhecimento óptico por câmera com detecção instantânea do QR Code estruturado, comparação gabarito/aluno e validação com trava de segurança;
-5. Banco de dados relacional em nuvem no Supabase via Prisma com proteção RLS.
-
-### 1.3 Objetivos Geral e Específicos
-
-#### 1.3.1 Objetivo Geral
-Implementar e validar uma plataforma web full-stack de alto desempenho para gestão e automação integral do ciclo de avaliações acadêmicas da Católica SC, orientada à arquitetura em camadas e boas práticas de Engenharia de Software.
-
-#### 1.3.2 Objetivos Específicos
-- Catalogar os Requisitos Funcionais e Não Funcionais consolidados;
-- Estruturar a modelagem formal UML (Casos de Uso, Atividades, Classes e Sequência) no padrão pedagógico institucional;
-- Evidenciar a modelagem do banco de dados relacional PostgreSQL implementado no Supabase com diagramas e tabelas;
-- Disponibilizar um Planner transparente de entregas por Pull Requests e Pipelines de CI/CD para compor o diário de bordo individual de cada membro da equipe.
+O **SGP Católica** foi desenvolvido para transformar o processo avaliativo docente do Centro Universitário Católica de Santa Catarina (Católica SC), eliminando retrabalhos manuais e conferindo segurança, auditabilidade matemática e agilidade sem precedentes ao corpo docente diante de centenas de estudantes por semestre letivo.
 
 ---
 
@@ -130,53 +99,51 @@ Implementar e validar uma plataforma web full-stack de alto desempenho para gest
 
 | Código | Requisito Funcional | Ator Principal | Descrição Detalhada |
 |---|---|---|---|
-| **RF01** | **Autenticação Docente com Papéis** | Docente / Admin | Login seguro com e-mail institucional (`admin@admin.com` ou docente), controle de acesso por papel (RBAC) e persistência de sessão. |
+| **RF01** | **Autenticação Docente com Sessão Segura** | Docente / Admin | Login seguro com senhas Bcrypt (custo 10), sessão assinada via cookie HTTP-only (`proxy.ts`), controle RBAC e endpoint de troca de senha. |
 | **RF02** | **Banco de Questões por Turma e Ciclo** | Docente | Cadastro de questões objetivas (2 a 5 alternativas) e discursivas, vinculadas à turma do professor e ao ciclo avaliativo (**N1, N2, N3 ou Geral**). |
 | **RF03** | **Gestão de Turmas Acadêmicas** | Docente | Criação e administração de turmas com nome, curso, semestre letivo e código de convite único institucional. |
 | **RF04** | **Cadastro Discente com Herança OO** | Docente | Gestão de alunos aplicando herança (`PessoaModel` $\rightarrow$ `AlunoModel`), filiação, busca automática de endereço via CEP (ViaCEP) e acompanhamento de notas N1/N2/N3. |
 | **RF05** | **Montador de Provas Flexível (1 a 30 questões)** | Docente | Interface *split-screen* permitindo selecionar de 1 a 30 questões, com pontuações fracionadas livres a partir de 0,05 pts (ex: 25 questões $\times$ 0,4 pts) e trava estrita de 10,0 pts no somatório final. |
 | **RF06** | **Agrupamento Automático no Exame N-1** | Sistema | Ao selecionar o ciclo N-1 no montador, o sistema agrega automaticamente todas as questões já cadastradas nas etapas N1, N2 e N3 para compor a prova de recuperação semestral. |
 | **RF07** | **Embaralhamento Determinístico Auditável** | Sistema | Permutação independente de questões e alternativas por versão de caderno (A, B, C, D) baseada no algoritmo Fisher-Yates com sementes (*seeds*) reproduzíveis. |
-| **RF08** | **Diagramação Oficial Católica SC** | Sistema | Geração de gabarito e caderno de questões seguindo a identidade visual oficial da instituição, com cabeçalho institucional, caixa de nota, identificação do discente e código da avaliação. |
-| **RF09** | **Paginação Duplex com Verso em Branco** | Sistema | Inserção automática de página em branco no verso da folha de respostas para permitir que o aluno destaque o gabarito sem rasgar o caderno de questões no verso. |
-| **RF10** | **Personalização de Cabeçalho e Orientações** | Docente | Painel de configuração para editar a instituição, curso, disciplina, subtítulo, as 10 orientações numeradas (com tags dinâmicas `{pontos}` e `{duracao}`), regras do gabarito e link do portal. |
+| **RF08** | **Diagramação Oficial Católica SC** | Sistema | Geração de gabarito e caderno de questões com cabeçalho institucional dinâmico por turma/professor, orientações da prova e identificação nominal. |
+| **RF09** | **Paginação Duplex com Verso em Branco** | Sistema | Inserção automática de página em branco no verso da folha de respostas e prevenção de corte de questões entre folhas A4 (TSK-54 / TSK-62). |
+| **RF10** | **Personalização de Cabeçalho e Orientações** | Docente | Painel de configuração para editar cabeçalho institucional, as orientações numeradas (com tags dinâmicas `{pontos}` e `{duracao}`), regras e links do portal. |
 | **RF11** | **QR Code Nominal Estruturado em JSON** | Sistema | Cada folha de respostas possui no topo um QR Code contendo `examId`, `classId`, `className`, `teacherId`, `studentId`, `studentName`, `studentRa`, `stage` e versão da prova. |
 | **RF12** | **Reconhecimento 100% Automático por Câmera** | Docente / Scanner | Leitura em tempo real via câmera/webcam sem necessidade de seleção manual de aluno ou ciclo: o sistema decodifica o QR Code e processa a folha instantaneamente. |
 | **RF13** | **Validação Cruzada de Turma** | Sistema | Se o professor estiver com a aba de uma turma específica aberta e o cartão escaneado pertencer a outra turma, a leitura é pausada e um alerta visual de segurança é disparado. |
 | **RF14** | **Painel HUD e Máquina de Estados de Correção** | Docente / Sistema | Exibição em tempo real do frame congelado, badge colorido do ciclo avaliativo, nota calculada, comparativo questão por questão e botões **"Validar Nota"** e **"Corrigir Novamente"**. |
 | **RF15** | **Gravação Atômica de Notas** | Sistema | Ao acionar "Validar Nota", o sistema persiste o registro OMR no banco de dados e atualiza atomicamente a nota da respectiva etapa (**N1, N2, N3 ou N-1**) no cadastro do aluno. |
-| **RF16** | **Análise Pedagógica de Distratores** | Docente | Painel estatístico demonstrando a frequência de acertos, erros e as alternativas incorretas mais marcadas pelos alunos por questão. |
-| **RF17** | **Exportação de Relatórios (CSV/Excel)** | Docente | Exportação de dados consolidados de turmas, notas semestrais e espelho de correções em formatos compatíveis com planilhas eletrônicas. |
-| **RF18** | **Isolamento de Dados por Docente** | Sistema | Professores acessam exclusivamente suas próprias turmas, alunos, avaliações e correções no banco de dados Supabase, assegurando privacidade e sigilo acadêmico. |
+| **RF16** | **Análise Pedagógica de Distratores** | Docente | Painel estatístico demonstrando a frequência de acertos, erros e as alternativas incorretas mais marcadas pelos alunos por questão (TSK-36). |
+| **RF17** | **Exportação de Relatórios Multi-Abas (.xlsx)** | Docente | Exportação de dados consolidados de turmas, notas semestrais e espelho de correções em planilha Excel estruturada em 3 abas (TSK-40). |
+| **RF18** | **Isolamento de Dados por Docente no Backend** | Sistema | Professores acessam exclusivamente suas próprias turmas, alunos, avaliações e correções no backend Supabase, com bloqueio `403 Forbidden` a dados de terceiros ou turmas órfãs (TSK-57). |
 
 ### 2.2 Requisitos Não Funcionais (RNF)
 
 | Código | Categoria | Especificação Técnica |
 |---|---|---|
-| **RNF01** | **Arquitetura em 5 Camadas** | Aplicação estritamente desacoplada em: `Rota (Route) → Controle (Controller) → Serviço (Service) → Repositório (Repository) → Modelo (Model)`. |
+| **RNF01** | **Arquitetura em Camadas Desacopladas** | Aplicação organizada estritamente em: `Rota (Route) → Controle (Controller) → Serviço (Service) → Repositório (Repository) → Modelo (Model)`. |
 | **RNF02** | **Persistência em Nuvem** | Banco de dados relacional PostgreSQL hospedado no Supabase, gerenciado por Prisma ORM com schemas tipados e pooling de conexões transacionais. |
-| **RNF03** | **Performance e Tempo de Resposta** | Execução Dinâmica Server-Side (`force-dynamic`) no Next.js 16 (Turbopack) com tempo de resposta p95 < 250 ms em produção (Vercel + Supabase PgBouncer com índices B-tree nas chaves estrangeiras). |
-| **RNF04** | **Confiabilidade da Visão Computacional** | Taxa de acerto OMR > 99% através de 4 marcadores de calibração fiducial nos cantos da grade de bolhas e processamento via Canvas nativo. |
-| **RNF05** | **Fidelidade de Impressão A4** | Folhas e cadernos diagramados via regras CSS `@media print`, eliminando barras de navegação, painéis e elementos de tela na impressão física. |
-| **RNF06** | **Segurança e Proteção de Dados (LGPD)** | Criptografia de senhas, validação rigorosa de payloads QR Code contra injeção e isolamento multilocatário por docente. |
-| **RNF07** | **Qualidade de Código e CI/CD** | Esteira automatizada no GitHub Actions com execução de linting TypeScript, compilação de produção e suíte de 55 testes unitários Jest. |
+| **RNF03** | **Performance e Tempo de Resposta** | Execução Dinâmica Server-Side (`force-dynamic`) no Next.js 16 (Turbopack) com tempo de resposta p95 < 250 ms em produção comprovado em benchmark. |
+| **RNF04** | **Confiabilidade da Visão Computacional** | Taxa de acerto OMR > 99% comprovada em suíte com 36 cenários de estresse (caneta, luz, ângulo, resolução e integridade). |
+| **RNF05** | **Fidelidade de Impressão A4** | Folhas e cadernos diagramados via regras CSS `@media print`, eliminando barras de navegação e garantindo verso em branco para destaque físico seguro. |
+| **RNF06** | **Segurança e Proteção de Dados (LGPD)** | Criptografia Bcrypt para senhas, sessão em cookie assinado via HMAC-SHA256 e validação rigorosa de payloads QR Code contra injeção. |
+| **RNF07** | **Qualidade de Código e CI/CD** | Esteira automatizada no GitHub Actions com execução de linting TypeScript, compilação de produção e suíte de 171 testes automatizados em Jest. |
 | **RNF08** | **Design Responsivo e Acessibilidade** | Interface intuitiva construída com Tailwind CSS e Lucide Icons, adaptável a computadores de mesa, laptops e bancadas de correção docente. |
 
 ---
 
-## 3. Especificação de Telas e Interfaces do Sistema
-
-### 3.1 Mapeamento Detalhado dos Componentes
+## 3. Especificação de Telas e Interfaces
 
 | Identificador | Rota / Componente | Função Principal |
 |---|---|---|
-| **Tela 1: Autenticação** | `LoginScreen.tsx` | Entrada institucional com credenciais de professor ou administrador, validação de acesso e controle de sessão. |
-| **Tela 2: Gestão de Turmas** | `CadastrosTab.tsx` / `TurmasGrid.tsx` | Cadastro de turmas, atribuição de curso/semestre, geração de código de convite e contagem de discentes. |
+| **Tela 1: Autenticação & Troca de Senha** | `LoginScreen.tsx` / `ModalTrocarSenha.tsx` | Entrada institucional com credenciais de professor ou administrador, proteção por cookies assinados e modal de atualização de senha com validação de força. |
+| **Tela 2: Gestão de Turmas** | `CadastrosTab.tsx` / `TurmasGrid.tsx` | Cadastro de turmas, atribuição de curso/semestre, geração de código de convite e contagem de discentes com isolamento por docente autenticado. |
 | **Tela 3: Gestão de Estudantes** | `CadastrosTab.tsx` / `AlunosTable.tsx` | Cadastro de alunos com herança OO, consumo de CEP via ViaCEP, notas parciais N1/N2/N3, cálculo de média e situação acadêmica. |
-| **Tela 4: Montador de Provas** | `MontadorTab.tsx` / `ModalQuestao.tsx` | *Split-screen* com banco de questões categorizado por turma e ciclo (N1/N2/N3/N-1), seleção de 1 a 30 questões e trava de 10,0 pts. |
-| **Tela 5: Impressão & Caderno OMR** | `ImpressaoTab.tsx` / `OmrSheet.tsx` | Modelo oficial Católica SC, cabeçalho e orientações editáveis, paginação frente/verso com folha em branco duplex e impressão A4. |
-| **Tela 6: Leitor Óptico Automático** | `CorrectionScanner.tsx` | Scanner OMR por câmera 100% automático com leitura de QR Code nominal, validação cruzada de turma, HUD de notas e máquina de estados. |
-| **Tela 7: Relatórios Pedagógicos** | `RelatoriosTab.tsx` | Médias semestrais da turma, análise estatística de distratores, tabela de notas gerais e exportação de planilhas CSV/Excel. |
+| **Tela 4: Montador de Provas** | `MontadorTab.tsx` / `ModalQuestao.tsx` | *Split-screen* com banco de questões categorizado por turma e ciclo (N1/N2/N3/N-1), seleção de 1 a 30 questões e trava matemática de 10,0 pts. |
+| **Tela 5: Impressão & Caderno OMR** | `ImpressaoTab.tsx` / `OmrSheet.tsx` | Modelo oficial Católica SC com cabeçalho dinâmico por turma/professor, paginação frente/verso com folha em branco duplex e impressão A4 sem quebra de questões. |
+| **Tela 6: Leitor Óptico Automático** | `CorrectionScanner.tsx` | Scanner OMR por câmera 100% automático com leitura de QR Code nominal, validação cruzada de turma, HUD de notas e fluxo de correção em lote simplificado. |
+| **Tela 7: Relatórios Pedagógicos** | `RelatoriosTab.tsx` | Médias da turma por ciclo, dashboard analítico interativo, gráfico de análise de distratores por questão e exportação em `.xlsx` com 3 abas. |
 
 ---
 
@@ -192,21 +159,21 @@ flowchart LR
     end
 
     subgraph SGP["Sistema de Geração e Correção de Provas (SGP Católica)"]
-        UC01(["UC01: Autenticar no Sistema"])
-        UC02(["UC02: Gerenciar Turmas e Disciplinas"])
+        UC01(["UC01: Autenticar e Gerenciar Senha"])
+        UC02(["UC02: Gerenciar Turmas (Isolamento por Docente)"])
         UC03(["UC03: Gerenciar Alunos e Notas (N1, N2, N3)"])
         UC04(["UC04: Manter Banco de Questões por Ciclo"])
         UC05(["UC05: Montar Avaliação (1 a 30 questões)"])
         UC06(["UC06: Configurar Embaralhamento Determinístico"])
         UC07(["UC07: Personalizar Cabeçalho e Orientações"])
-        UC08(["UC08: Gerar Caderno e Gabarito Oficial A4"])
+        UC08(["UC08: Gerar Caderno e Gabarito Oficial A4 Duplex"])
         UC09(["UC09: Escanear Cartão OMR via Câmera"])
         UC10(["UC10: Validar QR Code e Identificar Turma/Aluno"])
         UC11(["UC11: Executar Validação Cruzada de Turma"])
         UC12(["UC12: Corrigir Prova e Validar Nota"])
         UC13(["UC13: Atualizar Nota da Etapa no Supabase"])
-        UC14(["UC14: Consultar Relatórios e Distratores"])
-        UC15(["UC15: Exportar Relatórios em CSV/Excel"])
+        UC14(["UC14: Consultar Dashboard e Análise de Distratores"])
+        UC15(["UC15: Exportar Relatórios Multi-Abas em Excel (.xlsx)"])
     end
 
     Prof --> UC01
@@ -231,466 +198,261 @@ flowchart LR
 
 ---
 
-### 4.2 Diagrama de Atividades com Raias (Swimlanes)
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor P as Professor
-    participant UI as Interface SGP (Next.js)
-    participant OMR as Motor OMR & Visão
-    participant DB as Banco PostgreSQL (Supabase)
-
-    Note over P,DB: Fase 1: Composição e Impressão da Avaliação
-    P->>UI: Seleciona Turma e Ciclo Avaliativo (N1, N2, N3 ou N-1)
-    UI->>DB: Consulta banco de questões da turma e ciclo
-    DB-->>UI: Retorna questões disponíveis
-    P->>UI: Seleciona até 30 questões (soma exata de 10.0 pts)
-    P->>UI: Personaliza cabeçalho, orientações e clica em Imprimir
-    UI-->>P: Renderiza Folha OMR + Verso em Branco + Caderno A4
-
-    Note over P,DB: Fase 2: Aplicação Presencial e Reconhecimento Automático
-    P->>UI: Posiciona o cartão-resposta na frente da câmera
-    UI->>OMR: Captura quadros do fluxo de vídeo em tempo real
-    OMR->>OMR: Decodifica QR Code nominal (Turma, Ciclo, Aluno, Versão)
-    OMR->>UI: Executa Validação Cruzada com a aba ativa
-    
-    alt Cartão de Turma Inconsistente com a Aba Ativa
-        UI-->>P: Alerta de Inconsistência de Turma (Pausa Leitura)
-    else Cartão Válido e Compatível
-        OMR->>OMR: Localiza gabarito oficial da versão e lê marcações das bolhas
-        OMR->>UI: Retorna cálculo da nota e acertos linha a linha
-        UI-->>P: Exibe HUD de Conferência (Estado ANALYZED)
-        P->>UI: Confere o resultado e clica em "Validar Nota"
-        UI->>DB: Persiste LeituraOMR e atualiza nota da etapa do aluno
-        DB-->>UI: Confirmação de persistência realizada com sucesso
-        UI-->>P: Exibe mensagem de sucesso (Estado VALIDATED) e libera "Próximo Aluno"
-    end
-```
-
----
-
-### 4.3 Diagrama de Classes de Domínio
-
-```mermaid
-classDiagram
-    direction TB
-
-    class Usuario {
-        +String id
-        +String nome
-        +String email
-        +String senha
-        +String role
-        +String disciplina
-        +String campus
-        +DateTime createdAt
-        +autenticar(email, senha) bool
-    }
-
-    class Turma {
-        +String id
-        +String nome
-        +String curso
-        +String semestre
-        +String codigoConvite
-        +String professorId
-        +gerarCodigoConvite() String
-    }
-
-    class PessoaModel {
-        <<abstract>>
-        +String id
-        +String nome
-        +Object contato
-        +Object endereco
-    }
-
-    class Aluno {
-        +String ra
-        +String curso
-        +String turno
-        +Float n1
-        +Float n2
-        +Float n3
-        +String turmaId
-        +calcularMedia() Float
-        +obterStatus() String
-        +atualizarNotaEtapa(etapa, nota) void
-    }
-
-    class Questao {
-        +String id
-        +String tipo
-        +String enunciado
-        +Float pontuacao
-        +String[] tags
-        +String turmaId
-        +String professorId
-        +String avaliacao
-        +validarPontuacao() bool
-    }
-
-    class Alternativa {
-        +String id
-        +String letraOriginal
-        +String texto
-        +Boolean correta
-        +String questaoId
-    }
-
-    class LeituraOMR {
-        +String id
-        +String alunoId
-        +String alunoNome
-        +String ra
-        +String turmaId
-        +String professorId
-        +String materia
-        +String versao
-        +Int acertos
-        +Int totalQuestoes
-        +Float notaCalculada
-        +String dataLeitura
-        +Json respostasDetectadas
-        +Json gabaritoOficial
-        +Json detalhesQuestoes
-    }
-
-    PessoaModel <|-- Aluno
-    Usuario "1" --> "0..*" Turma : administra
-    Usuario "1" --> "0..*" Questao : elabora
-    Usuario "1" --> "0..*" LeituraOMR : audita
-    Turma "1" --> "0..*" Aluno : matricula
-    Turma "1" --> "0..*" Questao : destina
-    Turma "1" --> "0..*" LeituraOMR : agrupa
-    Questao "1" *-- "2..5" Alternativa : compõe
-    Aluno "1" --> "0..*" LeituraOMR : realiza
-```
-
----
-
-### 4.4 Diagrama de Sequência UML (Fluxo OMR e Validação)
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Docente as Professor
-    participant Scanner as CorrectionScanner (UI)
-    participant Engine as GridOmrEngine & OMRService
-    participant Repo as Prisma / Supabase DB
-
-    Docente->>Scanner: Inicia câmera do computador
-    Scanner->>Scanner: Inicializa MediaStream (HTMLVideoElement)
-    loop Varredura Contínua (RequestAnimationFrame)
-        Scanner->>Engine: Captura frame e tenta decodificar QR Code
-        Engine-->>Scanner: Retorna QR Code decodificado ou nulo
-    end
-    Scanner->>Engine: Envia payload estruturado do QR Code
-    Engine->>Engine: Extrai Turma, Ciclo (N1/N2/N3/N-1), Aluno e Versão
-    Scanner->>Scanner: Validação cruzada com aba de turma ativa
-    Scanner->>Engine: Executa leitura das bolhas ópticas (GridOmrEngine)
-    Engine-->>Scanner: Retorna ScanResult com acertos, erros e nota total
-    Scanner->>Docente: Congela vídeo e projeta Painel HUD (Estado ANALYZED)
-    alt Docente clica em "Corrigir Novamente"
-        Docente->>Scanner: Clica no botão secundário
-        Scanner->>Scanner: Descarta resultado e reativa a câmera
-    else Docente clica em "Validar Nota"
-        Docente->>Scanner: Clica no botão primário institucional
-        Scanner->>Repo: Grava LeituraOMR e atualiza nota do aluno no Supabase
-        Repo-->>Scanner: Registro persistido com sucesso
-        Scanner->>Docente: Altera para Estado VALIDATED e libera "Corrigir Próximo Aluno"
-    end
-```
-
----
-
 ## 5. Persistência de Dados em Nuvem (Supabase & PostgreSQL)
 
-### 5.1 Arquitetura de Dados Relacional e Prisma ORM
-A persistência da aplicação foi totalmente migrada de simulações em memória para um banco relacional **PostgreSQL hospedado no Supabase**, conectado ao Next.js por meio do **Prisma ORM (v5.22.0)**. O banco de dados opera com **Row Level Security (RLS)** ativo, garantindo governança estrita e integridade referencial.
+O banco relacional opera no **Supabase (PostgreSQL 16)** conectado via **Prisma ORM (v5.22.0)**. O catálogo de tabelas é normalizado e possui índices B-Tree para alta velocidade:
 
-### 5.2 Evidência Visual do Esquema no Supabase
-
-Abaixo estão as capturas de tela comprovando a estrutura de tabelas, chaves e integridade no console do Supabase:
-
-<div align="center">
-
-#### Figura 5 – Schema Visualizer Oficial do Banco no Supabase (`schema public`)
-<img src="docs/telas/supabase-schema-visualizer.png" alt="Supabase Schema Visualizer" width="850" />
-<p><em>Relações de Chaves Primárias e Estrangeiras entre usuarios, turmas, alunos, questoes, alternativas e leituras_omr</em></p>
+1. **`usuarios`**: Entidade de autenticação docente e administrativa (campos `id`, `nome`, `email`, `senha` com hash Bcrypt, `role`, `disciplina`, `campus`).
+2. **`turmas`**: Turmas acadêmicas gerenciadas pelo professor (`id`, `nome`, `curso`, `semestre`, `codigoConvite`, `professorId`).
+3. **`alunos`**: Estudantes matriculados com notas parciais e endereço (`id`, `nome`, `ra`, `curso`, `turno`, `n1`, `n2`, `n3`, `contato`, `endereco`, `turmaId`).
+4. **`questoes`**: Banco de questões individualizado por turma e ciclo avaliativo (`id`, `tipo`, `enunciado`, `pontuacao`, `tags`, `avaliacao`, `turmaId`, `professorId`).
+5. **`alternativas`**: Alternativas de cada questão objetiva (`id`, `letraOriginal`, `texto`, `correta`, `questaoId` com `ON DELETE CASCADE`).
+6. **`provas_montadas`**: Espelho estruturado e snapshots das avaliações compostas (`id`, `titulo`, `disciplina`, `semestre`, `ciclo`, `turmaId`, `professorId`, `questoesSnapshot`, `totalQuestoes`, `pontuacaoTotal`).
+7. **`leituras_omr`**: Registros detalhados das correções ópticas (`id`, `alunoId`, `turmaId`, `professorId`, `provaMontadaId`, `alunoNome`, `ra`, `turmaNome`, `materia`, `versao`, `acertos`, `totalQuestoes`, `notaCalculada`, `dataLeitura`, `respostasDetectadas`, `gabaritoOficial`, `detalhesQuestoes`, `fiduciaisDetectados`).
 
 ---
 
-#### Figura 6 – Catálogo de Tabelas Relacionais em Produção no Supabase
-<img src="docs/telas/supabase-database-tables.png" alt="Supabase Database Tables" width="850" />
-<p><em>Visão do Database Tables com contagem de registros, colunas e armazenamento alocado</em></p>
+## 6. Planner de Entregas e Matriz Geral de Pull Requests
 
-</div>
+### 6.1 Tabela Consolidada de Todas as PRs e Contribuidores
 
-### 5.3 Catálogo das Tabelas e Relações do Banco
+A esteira de integração contínua do repositório registra **todas as entregas homologadas com 100% de sucesso (Green Build)**:
 
-1. **`usuarios`**: Entidade de autenticação docente e administrativa.
-   - Campos: `id` (PK, UUID), `nome`, `email` (UNIQUE), `senha`, `role` (ADMIN | PROFESSOR), `disciplina`, `campus`, `createdAt`, `updatedAt`.
-   - Relações: 1:N com `turmas`, 1:N com `questoes`, 1:N com `leituras_omr`.
-
-2. **`turmas`**: Turmas acadêmicas gerenciadas pelo professor.
-   - Campos: `id` (PK, UUID), `nome`, `curso`, `semestre`, `codigoConvite` (UNIQUE), `professorId` (FK $\rightarrow$ usuarios.id), `createdAt`, `updatedAt`.
-   - Relações: 1:N com `alunos`, 1:N com `questoes`, 1:N com `leituras_omr`.
-
-3. **`alunos`**: Estudantes matriculados com notas parciais e endereço.
-   - Campos: `id` (PK, UUID), `nome`, `ra` (UNIQUE), `curso`, `turno`, `n1`, `n2`, `n3`, `contato` (JSONB), `endereco` (JSONB), `turmaId` (FK $\rightarrow$ turmas.id), `createdAt`, `updatedAt`.
-   - Relações: 1:N com `leituras_omr`.
-
-4. **`questoes`**: Banco de questões individualizado por turma e ciclo avaliativo.
-   - Campos: `id` (PK, UUID), `tipo` (objetiva | discursiva), `enunciado`, `pontuacao` (FLOAT), `tags` (TEXT[]), `avaliacao` (N1 | N2 | N3 | N-1 | GERAL), `turmaId` (FK $\rightarrow$ turmas.id), `professorId` (FK $\rightarrow$ usuarios.id), `createdAt`, `updatedAt`.
-   - Relações: 1:N com `alternativas`.
-
-5. **`alternativas`**: Alternativas de cada questão objetiva (A até E).
-   - Campos: `id` (PK, UUID), `letraOriginal` (A, B, C, D, E), `texto`, `correta` (BOOLEAN), `questaoId` (FK $\rightarrow$ questoes.id com `ON DELETE CASCADE`).
-
-6. **`leituras_omr`**: Registros detalhados das correções ópticas realizadas via câmera.
-   - Campos: `id` (PK, UUID), `alunoId` (FK $\rightarrow$ alunos.id), `turmaId` (FK $\rightarrow$ turmas.id), `professorId` (FK $\rightarrow$ usuarios.id), `alunoNome`, `ra`, `turmaNome`, `materia`, `versao`, `acertos`, `totalQuestoes`, `notaCalculada`, `dataLeitura`, `respostasDetectadas` (JSONB), `gabaritoOficial` (JSONB), `detalhesQuestoes` (JSONB), `fiduciaisDetectados` (BOOLEAN), `createdAt`.
-
----
-
-## 6. Planner de Entregas, Backlog e Evidências dos Contribuidores
-
-### 6.1 Tabela Geral de PRs e Histórico de CI/CD (Sem Falhas)
-
-A esteira de integração contínua do GitHub Actions executou **61 pipelines**, com todas as entregas oficiais aprovadas com 100% de sucesso (*green build*). Conforme a diretriz de governança, foram desconsideradas as execuções com falha técnica intermediária.
-
-| CI/CD Job # | Commit / PR | Contribuidor Principal | Branch de Origem | Data de Entrega | Escopo Técnico e Evidência de Entrega |
-|:---:|:---:|:---:|:---:|:---:|:---|
-| **#61** | [`914cd09`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/914cd09e6243179c321a8cc4083c93bd3216f5a9) | **Agenor Alvise** | `main` | 23/10/2026 | **Melhorias no gabarito oficial e remoção da simulação sem câmera:** Ajustes de alta fidelidade visual no gabarito e foco exclusivo no sensor óptico via câmera. |
-| **#60** | [PR #14](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/14) | **Edinei Junio Machado** | `feat/remocao-simulacao-omr` | 22/10/2026 | **Remoção da simulação de bancada:** Limpeza de código e foco exclusivo no reconhecimento automático OMR em tempo real via câmera. |
-| **#59** | [`a37e49c`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/a37e49c237c1d1973bf352f3710de118eb74b6d5) | **Edinei Junio Machado** | `main` | 22/10/2026 | **Suporte a 30 questões e editor de orientações/cabeçalho:** Expansão de capacidade de questões e painel para personalização dos descritivos da avaliação. |
-| **#58** | [`e3e477b`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/e3e477b6f4f58ad899bb374f55acd688c1dcb289) | **Agenor Alvise** | `main` | 22/10/2026 | **Correção de duplicação de questões no Prisma:** Remoção atômica preventiva de alternativas antes de atualizar questões no Supabase. |
-| **#57** | [`ef050f7`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/ef050f79f2ea7b54d3a5c96a104d640c839bc8e5) | **Agenor Alvise** | `main` | 22/10/2026 | **Reconhecimento 100% automático com Validação Cruzada:** Identificação automática de Turma, Ciclo (N1/N2/N3/N-1) e Aluno via QR Code com painel HUD e trava de segurança. |
-| **#56** | [`16b319f`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/16b319f1e192ef7bd978641036806cd28a13f457) | **Agenor Alvise** | `main` | 22/10/2026 | **Trava estrita de 10.0 pts e validações de turma/RA:** Validação matemática no montador e gabarito dinâmico balanceado. |
-| **#55** | [`e6ba2d7`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/e6ba2d7ae639104483043df7651828c1a2188df8) | **Erick Andreas Pontecelli** | `main` | 21/10/2026 | **Autenticação real com isolamento de professores:** Acesso exclusivo com `admin@admin.com` e segregação de turmas/alunos por docente. |
-| **#54** | [`f782ce2`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/f782ce2f39f4281a85aa36fc4f2dc0aee0f26516) | **Erick Andreas Pontecelli** | `main` | 21/10/2026 | **Controle de acesso por papel (RBAC):** Proteção de rotas e segurança nas APIs de professores e administradores. |
-| **#53** | [PR #13](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/13) ([`8bd16b1`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/8bd16b1de4ebb7fcadbc025b406b8b08df728480)) | **Johnatan Vargas da Fonseca** | `feat/banco-questoes-por-turma-ciclos` | 21/10/2026 | **Banco de questões por turma e ciclos N1, N2, N3 e N-1:** Segmentação das questões por disciplina e agrupamento automático no exame N-1. |
-| **#51** | [PR #12](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/12) ([`fe500f6`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/fe500f6d6ca5bd5c1db68f17caee8ec4aaf127dd)) | **Eric Ricardo Lange** | `feat/montador-turma-ciclos` | 20/10/2026 | **Organização do montador por turma e ciclos:** Interface visual adaptada com contadores em tempo real para N1, N2, N3 e Exame. |
-| **#47** | [PR #10](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/10) ([`a5d6c51`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/a5d6c5129a2629bc1bcc9f2fcc5e5b72eefe6a08)) | **Eric Ricardo Lange** | `lange047-patch-1` | 19/10/2026 | **Correção de quebra de página frente e verso duplex:** Inserção exata de página em branco no verso do gabarito para destaque físico seguro. |
-| **#44** | [`3c234e7`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/3c234e7b1c81a0f53e3470eec198f8d0c1a5c9de) | **Agenor Alvise** | `main` | 16/10/2026 | **Documentação formal UML 2.5 (`Diagramas.md`):** Especificação completa com 4 diagramas, passos dedutivos e metodologia ABNT. |
-| **#43** | [PR #9](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/9) ([`b865904`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/b865904c553c7bf18736e77de079eb5634d9fffd)) | **Johnatan Vargas da Fonseca** | `docs/readme1-atualizacao` | 16/10/2026 | **Atualização documental do README institucional:** Revisão de requisitos, links oficiais e instruções de instalação. |
-| **#41** | [PR #8](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/8) ([`aab09a3`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/aab09a3d38b8ccc810ed1684260fe64e2a7571f9)) | **Johnatan Vargas da Fonseca** | `docs/complementa-prs-readme` | 14/10/2026 | **Complementação de rastreabilidade de PRs no README:** Registro do diário de bordo com as entregas de cada membro da equipe. |
-| **#39** | [`27466b1`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/27466b16dfb349c1fa7f85d6d21a1200dd8220ee) | **Agenor Alvise** | `main` | 13/10/2026 | **Sincronização em tempo real no Supabase sem cache:** Persistência atômica e desativação de cache estático em rotas dinâmicas. |
-| **#38** | [`b38eeb4`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/b38eeb45dbfda1a57d8b981b3b7096d72f21fb78) | **Agenor Alvise** | `main` | 13/10/2026 | **Configuração de build do Prisma no deploy Vercel:** Automatização do comando `prisma generate` durante o pipeline de deploy em produção. |
-| **#37** | [`96e1955`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/96e1955fbc39b7a30977baaed9e6699ccff522bb) | **Agenor Alvise** | `main` | 13/10/2026 | **Integração completa com banco PostgreSQL no Supabase:** Criação dos modelos relacionais e migração definitiva dos dados para a nuvem. |
-| **#35** | [`7439a6d`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/7439a6d9db50d7b006a9efae8ee54195aab4d56b) | **Agenor Alvise** | `main` | 12/10/2026 | **Leitura de QR Code nominal e correção automatizada:** Identificação instantânea do gabarito oficial e cálculo das notas. |
-| **#30** | [`c91ce9d`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/c91ce9d80aebe5ea4410c45e771362b02f608b77) | **Agenor Alvise** | `main` | 12/10/2026 | **Reestruturação completa da arquitetura em 5 camadas:** Desacoplamento de rotas, controllers, services, repositories e models. |
-| **#28** | [`1008513`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/10085133b101dd3840b74d36450db28c807ecf10) | **Agenor Alvise** | `main` | 12/10/2026 | **Atualização de pacotes para suporte ao React 19:** Atualização de bibliotecas de ícones e compatibilidade de UI. |
-| **#25** | [PR #7](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/7) ([`dcb4ccb`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/dcb4ccb8a1fc8b49c54a6b75300e93b37d278855)) | **Johnatan Vargas da Fonseca** | `feat/portal-aluno` | 09/10/2026 | **Foco exclusivo no painel do professor:** Remoção do acesso por e-mail de alunos e centralização da operação no corpo docente. |
-| **#23** | [PR #5](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/5) ([`fa815ee`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/fa815eeebdc97dd56d6f4ff013b0b2218cb94f57)) | **Johnatan Vargas da Fonseca** | `feat/portal-aluno` | 02/10/2026 | **Documentação visual das interfaces:** Capturas comprobatórias e mapeamento de componentes. |
-| **#21** | [PR #4](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/4) ([`f2ee69c`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/f2ee69c3a45f6bf17fbf7aaf8524aa7c7ae013fc)) | **Johnatan Vargas da Fonseca** | `feat/portal-aluno` | 02/10/2026 | **Implementação de consultas e relatórios:** Estruturação da consulta de notas e status avaliativo. |
-| **#18** | [`0deb293`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/0deb293083ae971c0414e6120f7c3b58f620803a) | **Agenor Alvise** | `main` | 30/09/2026 | **Motor OMR com leitura via câmera:** Implementação de processamento de imagem com 4 marcadores de calibração fiducial. |
-| **#14** | [`e537ff3`](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/commit/e537ff358df154bd1938dbc0bcb501c14235bdc9) | **Agenor Alvise** | `main` | 21/09/2026 | **Criação de novas questões desvinculadas da prova:** Desacoplamento entre o cadastro no banco e a montagem ativa de cadernos. |
+| PR # / Commit | Autor / Contribuidor | Branch de Origem | Escopo Técnico e Entregas Realizadas |
+|:---:|:---:|:---:|:---|
+| **Branch Ativa** | **Agenor Alvise** (`@Agenorsc`) | `feat/tsk-44-refactor-controller-service-repository` | **TSK-44: Refatoração Arquitetural Rota $\rightarrow$ Controller $\rightarrow$ Service $\rightarrow$ Repository:** Desacoplamento integral de todas as rotas da API em controladores dedicados com tratamento padronizado de erros e serviços isolados. |
+| [**PR #38**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/38) | **Agenor Alvise** (`@Agenorsc`) | `feat/tsk-57-isolamento-docente-backend` | **TSK-57: Isolamento por Docente no Backend (Multi-Tenancy):** Filtro estrito nas rotas pelo professor da sessão, bloqueio `403 Forbidden` a acessos de terceiros e ocultação definitiva de turmas órfãs para docentes. |
+| [**PR #33**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/33) | **Eric Ricardo Lange** (`@lange047`) | `test/tsk-62-regressao-a4` | **TSK-62: Teste de Regressão de Impressão A4:** Roteiro formal de testes e evidências automatizadas de fidelidade de impressão duplex em folha A4. |
+| [**PR #31**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/31) | **Eric Ricardo Lange** (`@lange047`) | `feat/tsk-56-sessao-segura` | **TSK-56: Sessão Segura Server-Side:** Emissão de cookies `httpOnly` assinados com HMAC-SHA256 no login, validação em `proxy.ts` e substituição de localStorage. |
+| [**PR #29**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/29) | **Eric Ricardo Lange** (`@lange047`) | `fix/tsk-62-impressao-a4` | **TSK-62: Preservação do Verso em Branco:** Correção CSS na folha de gabarito para destaque físico seguro sem vazamento no caderno de questões. |
+| [**PR #28**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/28) | **Edinei Junio Machado** (`@edineiJM`) | `feat/tsk-59-cabecalho-dinamico-gabarito-30q` | **TSK-59: Cabeçalho Dinâmico e Validação de 30 Questões:** Sincronização do cabeçalho da prova com professor/turma e suporte balanceado para até 30 questões. |
+| [**PR #26**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/26) | **Edinei Junio Machado** (`@edineiJM`) | `tsk-46/omr-ux-minimalista` | **TSK-46: OMR UX Minimalista:** Simplificação do fluxo de escaneamento em lote com transição ágil para o próximo estudante e feedback visual. |
+| [**PR #24**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/24) | **Eric Ricardo Lange** (`@lange047`) | `feat/tsk-54-paginacao` | **TSK-54: Paginação Física sem Quebra de Questões:** Regras CSS `@media print` com `page-break-inside: avoid` impedindo que questões fiquem partidas entre páginas. |
+| [**PR #23**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/23) | **Erick Andreas Pontecelli** (`@Erick-Andreas-Ponticelli`) | `feat/seguranca-hash-senhas-troca-senha` | **Segurança de Senhas com Bcrypt:** Criptografia com algoritmo Bcrypt (custo 10), migração de seed eliminando a senha padrão 'admin', validação de força e modal de troca de senha. |
+| [**PR #20**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/20) | **Agenor Alvise** (`@Agenorsc`) | `feat/tsk-61-api-latency-p95-indices-docs` | **TSK-61: Benchmark de Latência e Índices B-Tree:** Medição de p95 < 250ms em todas as rotas, otimização de índices no Prisma e documentação da execução em `force-dynamic`. |
+| [**PR #19**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/19) | **Agenor Alvise** (`@Agenorsc`) | `feat/tsk-36-relatorios-dashboard-distratores` | **TSK-36: Dashboard de Relatórios e Análise de Distratores:** Gráficos interativos por turma e aluno, cálculo de alternativas erradas mais assinaladas e limpeza de valores estáticos. |
+| [**PR #18**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/18) | **Agenor Alvise** (`@Agenorsc`) | `feat/tsk-45-omr-acuracia-grid` | **Ajustes de Grade OMR:** Eliminação de falsos deslocamentos em gabaritos de 4 e 5 alternativas e máscara de padding de 20%. |
+| [**PR #17**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/17) | **Agenor Alvise** (`@Agenorsc`) | `feat/tsk-40-exportar-relatorio-excel` | **TSK-40: Exportação Excel (.xlsx) Multi-Abas:** Geração de planilha institucional com 3 abas estruturadas (Notas, Espelho OMR e Distratores). |
+| [**PR #16**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/16) | **Edinei Junio Machado** (`@edineiJM`) | `feat/tsk-45-omr-acuracia-grid` | **TSK-45 / RNF04: Teste de Acurácia OMR com 36 Cenários:** Calibração dos limiares da `GridOmrEngine` atingindo 100% de precisão nos testes de estresse. |
+| [**PR #15**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/15) | **Johnatan Vargas da Fonseca** (`@FonsecaJohnatan`) | `feat/estatisticas-por-questao` | **Estatísticas por Questão:** Endpoint `/api/estatisticas/questoes` para levantamento estatístico de acertos por item avaliativo. |
+| [**PR #14**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/14) | **Edinei Junio Machado** (`@edineiJM`) | `feat/remocao-simulacao-omr` | **Remoção de Simulação:** Limpeza de código legada e foco exclusivo no reconhecimento por câmera real. |
+| [**PR #13**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/13) | **Johnatan Vargas da Fonseca** (`@FonsecaJohnatan`) | `feat/banco-questoes-por-turma-ciclos` | **Banco por Turma e Ciclos:** Segmentação de questões por disciplina e agrupamento automático na etapa N-1. |
+| [**PR #12**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/12) | **Eric Ricardo Lange** (`@lange047`) | `feat/montador-turma-ciclos` | **Montador por Ciclos:** Interface visual adaptada com contadores em tempo real para N1, N2, N3 e Exame. |
+| [**PR #10**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/10) | **Eric Ricardo Lange** (`@lange047`) | `lange047-patch-1` | **Ajuste de Duplex A4:** Folha de gabarito destacável física com verso em branco. |
+| [**PR #9**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/9) | **Johnatan Vargas da Fonseca** (`@FonsecaJohnatan`) | `docs/readme1-atualizacao` | **Documentação Institucional:** Atualização técnica do README e instruções de instalação. |
+| [**PR #8**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/8) | **Johnatan Vargas da Fonseca** (`@FonsecaJohnatan`) | `docs/complementa-prs-readme` | **Rastreabilidade de PRs:** Mapeamento das entregas e governança do time no repositório. |
+| [**PR #7**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/7) | **Johnatan Vargas da Fonseca** (`@FonsecaJohnatan`) | `feat/portal-aluno` | **Foco no Painel Docente:** Centralização operacional exclusiva no fluxo do professor. |
+| [**PR #5**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/5) | **Johnatan Vargas da Fonseca** (`@FonsecaJohnatan`) | `feat/portal-aluno` | **Evidências Visuais:** Documentação comprobatória das telas e componentes do sistema. |
+| [**PR #4**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/4) | **Johnatan Vargas da Fonseca** (`@FonsecaJohnatan`) | `feat/portal-aluno` | **Consultas e Relatórios:** Estruturação das consultas de notas por etapa avaliativa. |
+| [**PR #3**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/3) | **Agenor Alvise** (`@Agenorsc`) | `feat/mobile-sidebar-navigation` | **Navegação Responsiva:** Menu lateral e cabeçalho institucional adaptável a múltiplos dispositivos. |
+| [**PR #2**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/2) | **Agenor Alvise** (`@Agenorsc`) | `docs/readme-corrections` | **Revisão Documental:** Alinhamento dos termos institucionais e correções de referências. |
+| [**PR #1**](https://github.com/Agenorsc/SGP-CATOLICA-NEXT/pull/1) | **Agenor Alvise** (`@Agenorsc`) | `feat/login-e-perfis-de-acesso` | **Login Inicial e Perfis:** Infraestrutura básica de autenticação e papéis no sistema. |
 
 ---
 
 ### 6.2 Quadro de Evidências por Integrante da Equipe
 
 #### 🟢 Agenor Alvise (`@Agenorsc`)
-- **Arquitetura & Engenharia de Dados:** Migração para o Supabase PostgreSQL em nuvem via Prisma ORM com schemas tipados, chaves estrangeiras e deleção em cascata (`96e1955`, `27466b1`, `b38eeb4`).
-- **Motor OMR e Reconhecimento Automático:** Implementação da leitura 100% automática por câmera de Turma, Ciclo (N1/N2/N3/N-1) e Aluno, com validação cruzada entre abas e painel HUD com máquina de estados (`ef050f7`, `0deb293`, `7439a6d`).
-- **Gabarito Oficial Católica SC & Pontuação Fracionada:** Layout fiel à prova institucional com duplex em branco e suporte a pontuação fracionada flexível de 0,05 pts (para provas de 25 questões de 0,4 pts até 30 questões) com trava de 10,0 pts (`914cd09`, `16b319f`).
-- **DevOps & Qualidade:** Esteira completa de CI/CD no GitHub Actions, garantindo 100% de aprovação nos 55 testes unitários em Jest (`c91ce9d`, `1008513`, `e3e477b`).
+- **Arquitetura em Camadas (TSK-44):** Refatoração integral do backend estruturando as rotas em `Rota → Controller → Service → Repository` com tratamento de erro padronizado (`HttpError`, `ForbiddenError`, `NotFoundError`).
+- **Isolamento de Docente no Backend (TSK-57):** Implementação de regras multi-tenancy protegendo turmas, estudantes, questões, leituras e exames, com bloqueio `403` a recursos alheios e ocultação de turmas órfãs.
+- **SLA de Performance e Benchmarking (TSK-61 / RNF03):** Otimização de consultas com índices B-Tree e comprovação de `p95 < 250ms` em todas as rotas dinâmicas.
+- **Painel de Distratores e Exportação Excel (TSK-36 / TSK-40):** Dashboard analítico de frequência de erros por alternativa e exportador de planilhas `.xlsx` multi-abas.
+- **Engenharia de Dados e OMR:** Persistência no PostgreSQL Supabase via Prisma e motor de visão computacional em tempo real com validação cruzada.
 
 #### 🔵 Johnatan Vargas da Fonseca (`@FonsecaJohnatan`)
-- **Gestão de Turmas e Banco por Ciclos:** Implementação da individualização de questões por turma e ciclos avaliativos (N1, N2, N3 e N-1 cumulativo) no PR #13 (`8bd16b1`).
-- **Inspeção de Espelhos OMR:** Módulo de auditoria para visualização detalhada do cartão escaneado e das respostas capturadas da turma (PR #06).
-- **Rastreabilidade e Governança:** Organização e complementação da documentação institucional e matriz de PRs no README (PR #8 e PR #9).
+- **Gestão de Turmas e Banco por Ciclos:** Implementação da segmentação de questões por turma e ciclos avaliativos (N1, N2, N3 e N-1) no PR #13.
+- **Estatísticas por Questão:** Criação do endpoint analítico de acertos e erros no PR #15.
+- **Auditoria OMR e Governança:** Módulo de inspeção de espelhos OMR e complementação da rastreabilidade das PRs no README (PR #8 e PR #9).
 
 #### 🟣 Eric Ricardo Lange (`@lange047`)
-- **Montador de Provas por Ciclos:** Estruturação visual e lógica do montador com contadores por ciclo avaliativo N1, N2, N3 e N-1 no PR #12 (`fe500f6`).
-- **Engenharia de Impressão Duplex:** Resolução e ajuste milimétrico de quebras de página física com folha de respostas OMR destacável e verso em branco no PR #10 (`a5d6c51`, `04e2848`).
-- **Modelagem OO e Integração:** Classes de domínio com herança (`PessoaModel` $\rightarrow$ `AlunoModel`) e preenchimento de endereço por CEP (ViaCEP).
+- **Infraestrutura de Sessão Segura (TSK-56):** Substituição de sessão em localStorage por cookies `httpOnly` assinados com HMAC-SHA256 validados em `proxy.ts` (PR #31).
+- **Engenharia de Impressão A4 (TSK-54 / TSK-62):** Regras de paginação física evitando corte de questões entre folhas e preservação do verso em branco para destaque do gabarito (PR #24, PR #29 e PR #33).
+- **Modelagem Orientada a Objetos:** Entidades de domínio com herança (`PessoaModel` $\rightarrow$ `AlunoModel`), consumo ViaCEP e montador por ciclos (PR #12).
 
 #### 🟠 Erick Andreas Pontecelli (`@Erick-Andreas-Ponticelli`)
-- **Autenticação Real e Isolamento:** Implementação do sistema de login com credenciais criptografadas (`admin@admin.com` e docentes) com segregação estrita de dados por professor (`e6ba2d7`, `f782ce2`).
-- **Segurança de Credenciais e Hashing Bcrypt:** Criptografia de senhas com algoritmo Bcrypt (fator de custo 10), migração dos usuários do seed institucional com eliminação definitiva da senha padrão 'admin', validações de força de senha e módulo de troca de senha (`/api/auth/trocar-senha` e `ModalTrocarSenha`) com retrocompatibilidade em produção.
-- **Algoritmos Determinísticos:** Implementação do embaralhamento determinístico Fisher-Yates com sementes auditáveis de 64 bits por versão de prova (`PR #04`).
+- **Segurança Criptográfica Bcrypt (PR #23):** Implementação de hashing Bcrypt para senhas de usuários, migração do seed institucional eliminando a senha fraca 'admin' e módulo de troca de senha com validação de força.
+- **Controle de Acesso RBAC:** Proteção de rotas administrativas e docentes.
+- **Algoritmos Determinísticos:** Implementação do embaralhamento determinístico Fisher-Yates com sementes auditáveis de 64 bits por versão de prova.
 
 #### 🔴 Edinei Junio Machado (`@edineiJM`)
-- **Suporte a 30 Questões & Editor de Orientações:** Expansão da capacidade do gabarito e caderno para 30 questões, criação do painel de personalização do cabeçalho institucional e das 10 orientações da prova com variáveis dinâmicas (`a37e49c`).
-- **Remoção de Simulação e Foco na Câmera Real:** Limpeza de código e exclusão da caixa de bancada para foco estrito na leitura óptica via sensor óptico no PR #14 (`2c81636`).
-- **Modelagem Formal UML:** Elaboração e especificação dos diagramas de Casos de Uso, Atividades, Classes e Sequência alinhados à metodologia institucional da Católica SC.
+- **Acurácia OMR de Alta Precisão (TSK-45 / RNF04):** Construção da suíte de teste de acurácia com 36 cenários e calibração dos limiares da `GridOmrEngine` (PR #16).
+- **Cabeçalho Dinâmico e 30 Questões (TSK-59):** Suporte completo para até 30 questões no gabarito e injeção dinâmica de professor e turma no cabeçalho institucional (PR #28).
+- **OMR UX Minimalista (TSK-46):** Simplificação do fluxo de escaneamento em lote para agilizar a rotina de correção docente (PR #26).
 
 ---
 
-## 7. Arquitetura de Software em 5 Camadas Desacopladas
+## 7. Arquitetura em Camadas Desacopladas (TSK-44)
 
-Em conformidade com o padrão institucional da Católica SC, a aplicação é rigidamente organizada no fluxo:
+### 7.1 Fluxo Rota → Controller → Service → Repository
 
-$$\text{Rota / UI} \longrightarrow \text{Controle (Controller)} \longrightarrow \text{Serviço (Service)} \longrightarrow \text{Repositório (Repository)} \longrightarrow \text{Modelo (Model)}$$
+A aplicação implementa rigorosamente a separação de responsabilidades em camadas desacopladas:
 
-### 7.1 Estrutura de Diretórios
+$$\text{Cliente / HTTP} \longrightarrow \mathbf{Rota} \longrightarrow \mathbf{Controller} \longrightarrow \mathbf{Service} \longrightarrow \mathbf{Repository} \longrightarrow \mathbf{Banco\ PostgreSQL\ (Prisma)}$$
+
+1. **Rota (`src/app/api/.../route.ts`):** Ponto de entrada do Next.js App Router. Não contém lógica de negócio nem chamadas de banco de dados; apenas despacha a chamada para o Controller.
+2. **Controller (`src/controllers/...`):** Extrai parâmetros da requisição HTTP (`request`), cookies de sessão, query params e body JSON. Trata erros com status HTTP semânticos (`200`, `201`, `400`, `403`, `404`, `500`) usando a infraestrutura de `HttpError`.
+3. **Service (`src/services/...`):** Contém todas as regras de domínio, validações acadêmicas, validação de limites (teto de 30 questões, soma de 10,0 pontos), algoritmos OMR e a aplicação estrita do isolamento multilocatário por docente da sessão.
+4. **Repository (`src/repositories/...`):** Realiza a persistência relacional através do Prisma Client (`PrismaTurmaRepository`, `PrismaAlunoRepository`, `PrismaQuestionRepository`, `PrismaOmrRepository`) e provê fallbacks tipados para execução em testes.
+
+### 7.2 Estrutura de Diretórios
 
 ```text
 C:\SGP-CATOLICA-NEXT\src/
-├── models/                     # [Camada 1: Modelos de Domínio e Entidades OO]
-│   ├── PessoaModel.ts          # Classe base de pessoa (dados cadastrais, filiação, endereço)
-│   ├── AlunoModel.ts           # Entidade Aluno (herança, notas N1/N2/N3, cálculo de média e status)
-│   ├── TurmaModel.ts           # Entidade Turma e gerador de códigos de convite
-│   └── ExamModel.ts            # Entidade de diagramação e modelos de avaliação
+├── app/                        # [Camada 1: Rotas HTTP / Next.js 16 App Router]
+│   ├── api/
+│   │   ├── turmas/             # route.ts e [id]/route.ts (Delega para TurmaController)
+│   │   ├── alunos/             # route.ts e [id]/route.ts (Delega para AlunoController)
+│   │   ├── questoes/           # route.ts e [id]/route.ts (Delega para QuestionController)
+│   │   ├── omr/                # route.ts (Delega para OmrController)
+│   │   ├── exams/              # route.ts e generate/route.ts (Delega para ExamController)
+│   │   ├── relatorios/         # route.ts (Delega para RelatorioController)
+│   │   ├── estatisticas/       # questoes/route.ts (Delega para QuestionStatisticsController)
+│   │   └── auth/               # login, logout, me, trocar-senha
+│   └── page.tsx                # Interface Principal SPA (React 19)
 │
-├── repositories/               # [Camada 2: Repositórios / Persistência com Prisma]
-│   ├── prisma/                 # Implementações reais com PrismaClient conectado ao Supabase
-│   │   ├── PrismaAlunoRepository.ts
+├── controllers/                # [Camada 2: Controladores HTTP e Orquestração]
+│   ├── TurmaController.ts
+│   ├── AlunoController.ts
+│   ├── QuestionController.ts
+│   ├── OmrController.ts
+│   ├── ExamController.ts
+│   ├── RelatorioController.ts
+│   ├── QuestionStatisticsController.ts
+│   └── index.ts
+│
+├── services/                   # [Camada 3: Regras de Negócio e Serviços de Domínio]
+│   ├── TurmaService.ts         # Regras de turmas e isolamento docente
+│   ├── AlunoService.ts         # Validações cadastrais de alunos e notas
+│   ├── QuestionService.ts      # Banco de questões, ciclos e pontuações
+│   ├── OmrService.ts           # Reconhecimento óptico, validação cruzada e HUD
+│   ├── ExamService.ts          # Embaralhamento determinístico e montagem
+│   ├── RelatoriosService.ts    # Agregação estatística e pipeline analítico
+│   ├── QuestionStatisticsService.ts # Análise de distratores e acertos
+│   ├── ProfessorService.ts     # Gestão docente e hashes de senha
+│   ├── AuthService.ts          # Validação de credenciais e autenticação
+│   ├── ExportService.ts        # Geração de planilhas Excel (.xlsx) multi-abas
+│   └── omr/GridOmrEngine.ts    # Motor de visão computacional em grade
+│
+├── repositories/               # [Camada 4: Repositórios e Persistência de Dados]
+│   ├── prisma/                 # Implementações reais conectadas ao Supabase PostgreSQL
 │   │   ├── PrismaTurmaRepository.ts
+│   │   ├── PrismaAlunoRepository.ts
 │   │   ├── PrismaQuestionRepository.ts
-│   │   └── PrismaOmrRepository.ts
-│   └── base/IBaseRepository.ts # Interfaces e contratos genéricos de repositório
+│   │   ├── PrismaOmrRepository.ts
+│   │   └── PrismaUsuarioRepository.ts
+│   ├── base/IBaseRepository.ts # Contratos de interface dos repositórios
+│   └── ...                     # Implementações de fallback em memória para testes
 │
-├── services/                   # [Camada 3: Serviços e Regras de Negócio]
-│   ├── AlunoService.ts         # Regras de médias semestrais e aprovação direta/exame
-│   ├── TurmaService.ts         # Regras de turmas e validação de convites
-│   ├── QuestionService.ts      # Validação de teto (até 30 questões), ciclos e soma de 10.0 pts
-│   ├── OmrService.ts           # Decodificação QR Code, validação cruzada e máquina de estados
-│   ├── ExamService.ts          # Algoritmo determinístico de shuffle com seeds auditáveis
-│   └── omr/GridOmrEngine.ts    # Motor de visão computacional e leitura de bolhas ópticas
+├── models/                     # [Camada 5: Entidades de Domínio e Herança OO]
+│   ├── PessoaModel.ts          # Entidade base (nome, filiação, contato, endereço)
+│   ├── AlunoModel.ts           # Herança de PessoaModel com notas N1, N2, N3 e média
+│   ├── TurmaModel.ts           # Turma e gerador de códigos de convite
+│   ├── UsuarioModel.ts         # Usuário com controle RBAC e sanitização de senha
+│   └── ExamModel.ts            # Layouts de versão de prova e cabeçalhos
 │
-├── controllers/                # [Camada 4: Controladores e Orquestração]
-│   ├── AlunoController.ts      # Orquestrador de estudantes e notas
-│   ├── TurmaController.ts      # Orquestrador de turmas acadêmicas
-│   ├── QuestionController.ts   # Orquestrador do banco de questões
-│   └── OmrController.ts        # Orquestrador das sessões de correção óptica
+├── lib/                        # Infraestrutura compartilhada
+│   ├── errors.ts               # Classes customizadas: HttpError, ForbiddenError, NotFoundError, etc.
+│   ├── prisma.ts               # Singleton do PrismaClient com pooling de conexão
+│   ├── session.ts              # Utilitários de sessão com assinatura HMAC-SHA256 e cookies
+│   ├── password.ts             # Funções de hash Bcrypt e validação de força
+│   └── shuffle.ts              # Algoritmo Fisher-Yates com sementes reproduzíveis
 │
-├── components/                 # [Camada 5: Apresentação e Componentes React 19]
-│   ├── auth/LoginScreen.tsx    # Tela de autenticação institucional com papéis (RBAC)
-│   ├── cadastros/              # CadastrosTab, TurmasGrid, AlunosTable, ModalAluno, ModalTurma
-│   ├── montador/               # MontadorTab, ModalQuestao (suporte de 1 a 30 questões e N1/N2/N3/N-1)
-│   ├── impressao/              # ImpressaoTab (layout oficial Católica SC, cabeçalho e orientações editáveis)
-│   ├── leitura/                # CorrectionScanner.tsx (scanner 100% automático, validação cruzada e HUD)
-│   ├── relatorios/             # RelatoriosTab (análise de distratores, médias e exportação CSV)
-│   └── layout/                 # Sidebar e Header institucionais
-│
-├── lib/                        # Singletons de infraestrutura (prisma.ts, shuffle.ts)
-├── prisma/schema.prisma        # Definição declarativa do schema PostgreSQL no Supabase
-└── docs/                       # Documentação técnica, diagramas UML e capturas de tela
+└── proxy.ts                    # Middleware do Next.js para proteção perimetral de rotas API
 ```
 
-### 7.2 Execução Local e Testes Automatizados
+### 7.3 Execução Local e Testes Automatizados (171 Testes Verdes)
 
 ```bash
 # 1. Clonar o repositório oficial
 git clone https://github.com/Agenorsc/SGP-CATOLICA-NEXT.git
 cd SGP-CATOLICA-NEXT
 
-# 2. Instalar as dependências do projeto
+# 2. Instalar dependências
 npm install
 
-# 3. Gerar os clientes tipados do Prisma
+# 3. Gerar clientes tipados do Prisma ORM
 npx prisma generate
 
-# 4. Executar em modo de desenvolvimento local
+# 4. Executar em modo desenvolvimento
 npm run dev
 
-# 5. Executar a suíte de testes unitários automatizados (Jest)
+# 5. Executar a suíte completa de testes automatizados (Jest)
 npm test
 
 # 6. Executar build de produção otimizado com TypeScript
 npm run build
 ```
 
-#### Cobertura dos Testes Unitários:
+#### Cobertura Consolidada dos Testes Automatizados:
 ```text
 PASS __tests__/services/GridOmrEngine.test.ts
 PASS __tests__/services/OmrAccuracyBenchmark.test.ts
-PASS __tests__/services/OmrService.test.ts
-PASS __tests__/services/RelatoriosService.test.ts
-PASS __tests__/services/DistratoresEDashboardRelatorios.test.ts
-PASS __tests__/api/ApiLatencyBenchmark.test.ts
-PASS __tests__/api/estatisticasQuestoesRoute.test.ts
-PASS __tests__/services/ExportService.test.ts
-PASS __tests__/services/ExamService.test.ts
-PASS __tests__/services/AlunoService.test.ts
-PASS __tests__/services/ProfessorService.test.ts
-PASS __tests__/services/QuestionStatisticsService.test.ts
-PASS __tests__/services/QuestionService.test.ts
 PASS __tests__/services/AuthService.test.ts
+PASS __tests__/services/ProfessorService.test.ts
+PASS __tests__/services/OmrService.test.ts
+PASS __tests__/api/ApiLatencyBenchmark.test.ts
+PASS __tests__/api/IsolamentoDocenteBackend.test.ts
+PASS __tests__/api/TrocarSenhaRoute.test.ts
+PASS __tests__/services/Gabarito30Questoes.test.ts
+PASS __tests__/api/LoginRoute.test.ts
+PASS __tests__/api/SessionRoutes.test.ts
+PASS __tests__/services/ExportService.test.ts
+PASS __tests__/api/estatisticasQuestoesRoute.test.ts
+PASS __tests__/print/TSK62PrintContract.test.ts
+PASS __tests__/services/QuestionStatisticsService.test.ts
+PASS __tests__/services/ExamService.test.ts
+PASS __tests__/services/QuestionService.test.ts
+PASS __tests__/services/DistratoresEDashboardRelatorios.test.ts
+PASS __tests__/services/AlunoService.test.ts
+PASS __tests__/services/RelatoriosService.test.ts
 
-Test Suites: 14 passed, 14 total
-Tests:       123 passed, 123 total
+Test Suites: 20 passed, 20 total
+Tests:       171 passed, 171 total
 Snapshots:   0 total
+Time:        38.392 s
 Status:      100% dos testes aprovados com sucesso.
 ```
 
-### 7.3 Benchmark de Latência das APIs, Índices Supabase e Execução Dinâmica (`force-dynamic`) — TSK-61 / RNF03
+### 7.4 Benchmark de Latência (p95 < 250 ms / TSK-61)
 
-#### 1. Correção Arquitetural: Por que as APIs operam em `force-dynamic` (e não Static Generation)
-A especificação original do RNF03 mencionava genericamente *Static Generation (SSG)*. No entanto, no ecossistema Next.js App Router, rotas de API que gerenciam:
-1. **Lançamento Atômico de Notas OMR:** Gravação em tempo real da folha de respostas e atualização da nota ($N1, N2, N3, N-1$);
-2. **Segregação Multilocatário por Docente:** Filtragem dinâmica do cabeçalho de sessão e token do professor logado (`professorId`);
-3. **Consistência Instantânea:** O professor que valida uma nota na bancada de escaneamento precisa visualizar o reflexo imediato nos relatórios e nos espelhos de correção, sem latência de invalidação de cache estático;
-
-Portanto, **todas as rotas da API em `src/app/api/` são explicitamente configuradas como dinâmicas no servidor**:
-```typescript
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-```
-Com emissão de cabeçalho HTTP de consistência:
-```http
-Cache-Control: no-store, no-cache, must-revalidate
-```
-
-#### 2. Otimização de Consultas e Índices B-Tree no PostgreSQL (Supabase)
-Para assegurar que a execução dinâmica server-side atinja o SLA estipulado de **p95 < 250 ms**, foram configurados índices B-tree nos pontos de maior cardinalidade do schema Prisma (`prisma/schema.prisma`), erradicando *Sequential Scans* (Full Table Scans):
-
-| Modelo Prisma | Campos Indexados (B-Tree) | Finalidade e Impacto na Consulta |
-|---|---|---|
-| `Turma` | `@@index([professorId])`, `@@index([semestre])` | Isolamento imediato das turmas do professor logado no semestre letivo. |
-| `Aluno` | `@@index([turmaId])` | Busca instantânea de estudantes por turma em `/api/alunos?turmaId=...`. |
-| `Questao` | `@@index([turmaId])`, `@@index([professorId])`, `@@index([avaliacao])` | Agilidade na montagem de provas por ciclo ($N1, N2, N3, N-1$) e disciplina. |
-| `Alternativa` | `@@index([questaoId])` | Resolução imediata de opções $A, B, C, D, E$ com `include: { alternativas: true }`. |
-| `ProvaMontada` | `@@index([turmaId])`, `@@index([professorId])`, `@@index([ciclo])` | Consulta ultra-rápida do espelho de avaliação e histórico de provas. |
-| `LeituraOMR` | `@@index([alunoId])`, `@@index([turmaId])`, `@@index([professorId])`, `@@index([createdAt])` | Ordenação temporal descrescente e cálculo instantâneo de médias e distratores. |
-
-Além disso, as consultas em `/api/relatorios` e `/api/estatisticas/questoes` realizam *pushdown* de predicados no banco (`where: { turmaId }`), transferindo apenas o subconjunto estritamente necessário de dados do Supabase.
-
-#### 3. Resultados Consolidados do Benchmark de Latência (p95)
-Medições coletadas via `npm run test:latency` e script de benchmark de alta precisão (`scripts/measure-api-latency.js`), executando múltiplas requisições por rota com warm-up prévio:
+Todas as rotas da API operam em execução dinâmica no servidor (`force-dynamic`, `revalidate = 0` e `Cache-Control: no-store`), atendendo com folga ao requisito **RNF03**:
 
 | Rota / Endpoint | Amostras | Min (ms) | Média (ms) | p50 (ms) | p90 (ms) | p95 (ms) | p99 (ms) | Max (ms) | Meta SLA | Status RNF03 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **`GET /api/alunos`** | 25 | 0.04 | 0.09 | 0.08 | 0.16 | **0.18** | 0.23 | 0.23 | < 250 ms | ✅ CONFORME |
-| **`GET /api/alunos?turmaId=t1`** | 25 | 0.03 | 0.04 | 0.04 | 0.06 | **0.07** | 0.19 | 0.19 | < 250 ms | ✅ CONFORME |
-| **`GET /api/turmas`** | 25 | 0.01 | 0.02 | 0.01 | 0.03 | **0.03** | 0.03 | 0.03 | < 250 ms | ✅ CONFORME |
-| **`GET /api/questoes`** | 25 | 0.07 | 0.11 | 0.10 | 0.12 | **0.19** | 0.39 | 0.39 | < 250 ms | ✅ CONFORME |
-| **`GET /api/exams`** | 25 | 0.03 | 0.07 | 0.06 | 0.08 | **0.11** | 0.20 | 0.20 | < 250 ms | ✅ CONFORME |
-| **`GET /api/omr`** | 25 | 0.07 | 0.09 | 0.08 | 0.10 | **0.12** | 0.21 | 0.21 | < 250 ms | ✅ CONFORME |
-| **`GET /api/omr?alunoId=a1`** | 25 | 0.02 | 0.03 | 0.03 | 0.04 | **0.04** | 0.05 | 0.05 | < 250 ms | ✅ CONFORME |
-| **`GET /api/relatorios?turmaId=TODAS`** | 25 | 0.23 | 0.30 | 0.29 | 0.37 | **0.38** | 0.43 | 0.43 | < 250 ms | ✅ CONFORME |
-| **`GET /api/relatorios?turmaId=t1`** | 25 | 0.19 | 0.22 | 0.22 | 0.25 | **0.25** | 0.26 | 0.26 | < 250 ms | ✅ CONFORME |
-| **`GET /api/estatisticas/questoes`** | 25 | 0.03 | 0.08 | 0.05 | 0.16 | **0.19** | 0.20 | 0.20 | < 250 ms | ✅ CONFORME |
+| **`GET /api/alunos`** | 25 | 0.04 | 0.08 | 0.06 | 0.14 | **0.18** | 0.19 | 0.19 | < 250 ms | ✅ CONFORME |
+| **`GET /api/alunos?turmaId=...`** | 25 | 0.03 | 0.04 | 0.04 | 0.06 | **0.07** | 0.10 | 0.10 | < 250 ms | ✅ CONFORME |
+| **`GET /api/turmas`** | 25 | 0.01 | 0.01 | 0.01 | 0.02 | **0.02** | 0.03 | 0.03 | < 250 ms | ✅ CONFORME |
+| **`GET /api/questoes`** | 25 | 0.05 | 0.07 | 0.07 | 0.08 | **0.09** | 0.10 | 0.10 | < 250 ms | ✅ CONFORME |
+| **`GET /api/exams`** | 25 | 0.04 | 0.05 | 0.05 | 0.06 | **0.07** | 0.07 | 0.07 | < 250 ms | ✅ CONFORME |
+| **`GET /api/omr`** | 25 | 0.07 | 0.10 | 0.09 | 0.11 | **0.13** | 0.18 | 0.18 | < 250 ms | ✅ CONFORME |
+| **`GET /api/omr?alunoId=...`** | 25 | 0.02 | 0.03 | 0.03 | 0.04 | **0.05** | 0.13 | 0.13 | < 250 ms | ✅ CONFORME |
+| **`GET /api/relatorios?turmaId=TODAS`** | 25 | 0.21 | 0.32 | 0.28 | 0.38 | **0.42** | 0.95 | 0.95 | < 250 ms | ✅ CONFORME |
+| **`GET /api/relatorios?turmaId=...`** | 25 | 0.15 | 0.20 | 0.20 | 0.22 | **0.22** | 0.25 | 0.25 | < 250 ms | ✅ CONFORME |
+| **`GET /api/estatisticas/questoes`** | 25 | 0.04 | 0.06 | 0.05 | 0.08 | **0.10** | 0.12 | 0.12 | < 250 ms | ✅ CONFORME |
 
-> **Conclusão de Performance:** 100% dos endpoints dinâmicos registraram tempos de resposta $p95 \ll 250\text{ ms}$, assegurando conformidade total com o requisito não-funcional **RNF03** em ambiente de produção Vercel e Supabase.
+### 7.5 Isolamento Multi-Tenancy por Docente no Backend (TSK-57)
 
-#### 4. Como Executar a Medição
-```bash
-# Executar a suíte de testes de latência p95 via Jest:
-npm run test:latency
-
-# Ou disparar contra a URL de produção na Vercel:
-node scripts/measure-api-latency.js --url https://sgp-catolica-next.vercel.app --samples 30
-```
+O sistema garante que docentes nunca acessem dados de colegas ou turmas sem professor (órfãs):
+- `GET /api/turmas`: Professores recebem exclusivamente suas turmas (`professorId = session.id`).
+- `GET /api/alunos`: Acesso filtrado pelos estudantes das turmas do docente.
+- `GET /api/questoes`: Questões associadas ao docente ou às suas turmas.
+- `GET /api/omr`: Leituras das turmas do professor.
+- `GET /api/relatorios`: Agregação semestral consolidada restrita ao escopo do docente autenticado.
+- Bloqueio com status `403 Forbidden` disparado imediatamente em qualquer tentativa de consulta, inserção ou exclusão de recursos de outros professores.
 
 ---
 
 ## 8. Considerações Finais
 
-O desenvolvimento do **SGP Católica** cumpriu com excelência a totalidade dos objetivos acadêmicos e pedagógicos estabelecidos para a avaliação N2:
-1. **Rigor Conceitual e Arquitetural:** Implementação autêntica da Arquitetura em 5 Camadas Desacopladas com herança orientada a objetos e persistência relacional normalizada;
-2. **Eficiência Operacional Real:** O tempo de correção de um lote de 200 a 400 provas presenciais foi reduzido de dias para poucos segundos por folha, com conferência assistida por HUD visual e garantia de não-duplicação de notas;
-3. **Fidelidade Institucional e Usabilidade:** Gabaritos e cadernos perfeitamente alinhados ao padrão da Católica SC com editor dinâmico de orientações e injeção automática de notas e durações;
-4. **Governança e Trabalho em Equipe:** Diário de bordo comprovado por 61 execuções de pipeline no GitHub Actions e histórico detalhado de PRs e commits de todos os 5 integrantes da equipe.
+O desenvolvimento do **SGP Católica** cumpriu com rigor a totalidade dos requisitos didático-pedagógicos e arquiteturais estabelecidos para o projeto:
+1. **Padrão Arquitetural em 4 Camadas:** Implementação autêntica de `Rota → Controller → Service → Repository`, garantindo clareza de responsabilidades, alta testabilidade e manutenibilidade;
+2. **Isolamento e Segurança Institucional:** Multi-tenancy no backend, senhas protegidas com Bcrypt, cookies assinados e restrição estrita de dados por professor;
+3. **Desempenho Comprovado:** Latência p95 muito abaixo de 250ms com execução dinâmica server-side e índices B-Tree no PostgreSQL;
+4. **Precisão de Reconhecimento Óptico:** Leitura OMR por câmera com acurácia superior a 99% e fluxo ágil em lote;
+5. **Governança e Trabalho em Equipe:** Diário de bordo detalhado com todas as 28+ PRs catalogadas, atribuídas nominalmente a cada membro e 100% dos 171 testes unitários aprovados.
 
 ---
 
 <div align="center">
   <sub>Centro Universitário Católica de Santa Catarina — Engenharia de Software 2026</sub>
 </div>
-
-
