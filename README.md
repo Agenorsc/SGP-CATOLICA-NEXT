@@ -990,11 +990,6 @@ O desenvolvimento do **SGP Católica** cumpriu com rigor a totalidade dos requis
 
 ---
 
-<div align="center">
-  <sub>Centro Universitário Católica de Santa Catarina — Engenharia de Software 2026</sub>
-</div>
-
-
 ### Configuração do `.env` para usar o banco localmente
 
 Para executar a aplicação local conectada ao PostgreSQL do Supabase, crie um arquivo chamado `.env` na raiz do projeto. Esse arquivo é ignorado pelo Git e não deve ser commitado, pois contém credenciais.
@@ -1002,12 +997,11 @@ Para executar a aplicação local conectada ao PostgreSQL do Supabase, crie um a
 No painel do Supabase, acesse **Project Settings → Database → Connect** e copie as strings de conexão do PostgreSQL:
 
 ```env
-DATABASE_URL="postgresql://postgres:[SENHA]@[HOST-POOLER]:6543/postgres?pgbouncer=true"
-DIRECT_URL="postgresql://postgres:[SENHA]@[HOST-DIRETO]:5432/postgres"
-SESSION_SECRET="troque-por-um-segredo-local-longo-e-aleatorio"
+DATABASE_URL="postgresql://postgres.ubmhvuhbyiugrdykhcfe:[YOUR-PASSWORD]@aws-1-sa-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://postgres.ubmhvuhbyiugrdykhcfe:[YOUR-PASSWORD]@aws-1-sa-east-1.pooler.supabase.com:5432/postgres"
 ```
 
-Substitua os placeholders pelos valores reais do projeto. Não compartilhe o arquivo `.env`.
+Substitua os placeholders ([YOUR-PASSWORD]) pelos valores reais do projeto. Não compartilhe o arquivo `.env`.
 
 Valide a configuração com:
 
@@ -1019,3 +1013,9 @@ npm run dev
 ```
 
 Em banco compartilhado ou de produção, não execute `prisma migrate dev` nem comandos de reset. Novas migrações devem passar pelo fluxo de PR do projeto.
+
+---
+
+<div align="center">
+  <sub>Centro Universitário Católica de Santa Catarina — Engenharia de Software 2026</sub>
+</div>
