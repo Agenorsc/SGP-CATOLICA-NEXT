@@ -3,6 +3,9 @@ import { PrismaTurmaRepository } from '@/repositories/prisma/PrismaTurmaReposito
 import { AlunoModel } from '@/models/AlunoModel';
 import { UserSession } from '@/lib/session';
 import { ForbiddenError, NotFoundError, ValidationError } from '@/lib/errors';
+import { UnauthorizedError } from '@/lib/errors';
+import { importarAlunosDaPlanilha, AlunoImportResult } from '@/services/AlunoImportService';
+import { randomUUID } from 'node:crypto';
 
 export class AlunoService {
   constructor(
@@ -83,6 +86,31 @@ export class AlunoService {
 
     const aluno = new AlunoModel(dados);
     return this.alunoRepository.save(aluno);
+  }
+
+  async importarAlunos(
+    file: ArrayBuffer | Uint8Array,
+    session?: UserSession | null
+  ): Promise<AlunoImportResult & { importados: number }> {
+    if (!session) throw new UnauthorizedError();
+
+    const turmas = session.role === 'PROFESSOR'
+      ? await this.turmaRepository.findByProfessorId(session.id)
+      : await this.turmaRepository.findAll();
+    const alunosExistentes = await this.alunoRepository.findAll();
+    const resultado = importarAlunosDaPlanilha(file, turmas, alunosExistentes);
+    const novosAlunos = resultado.validos.map(row => new AlunoModel({
+      id: randomUUID(),
+      nome: row.nome,
+      ra: row.ra.trim(),
+      turmaId: row.turmaId
+    }));
+
+    const importados = typeof this.alunoRepository.createMany === 'function'
+      ? await this.alunoRepository.createMany(novosAlunos)
+      : await Promise.all(novosAlunos.map(aluno => this.alunoRepository.save(aluno))).then(saved => saved.length);
+
+    return { ...resultado, importados };
   }
 
   async excluirAluno(id: string, session?: UserSession | null): Promise<boolean> {

@@ -30,6 +30,22 @@ export class AlunoController {
     }
   }
 
+  async importAlunos(request: Request): Promise<NextResponse> {
+    try {
+      const session = sessionFromRequest(request);
+      const formData = await request.formData();
+      const file = formData.get('file') as { arrayBuffer?: () => Promise<ArrayBuffer> } | null;
+      if (!file || typeof file.arrayBuffer !== 'function') {
+        return NextResponse.json({ error: 'Envie um arquivo no campo "file".' }, { status: 400 });
+      }
+
+      const resultado = await this.alunoService.importarAlunos(await file.arrayBuffer(), session);
+      return NextResponse.json(resultado, { status: 200 });
+    } catch (error: any) {
+      return this.handleError(error);
+    }
+  }
+
   async deleteAluno(
     request: Request,
     context: { params: Promise<{ id: string }> }
