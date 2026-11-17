@@ -125,10 +125,31 @@ export function classificarLeituraGrade(
     });
   }
 
+  // 4 cantos da grade para exibição das âncoras fiduciais na tela de conferência
+  let anchors: OMRProcessorOutput['anchors'] | undefined = undefined;
+  const todasCoords = Object.values(saida.coordenadasDetectadas || {}).flatMap(c => Object.values(c));
+  if (todasCoords.length >= 4) {
+    const xs = todasCoords.map(c => c.x);
+    const ys = todasCoords.map(c => c.y);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const boxSize = todasCoords[0]?.boxSize || 18;
+    const pad = boxSize * 0.9;
+    anchors = {
+      topLeft: { x: minX - pad, y: minY - pad, width: boxSize, height: boxSize, confidence: saida.confianca ?? 1 },
+      topRight: { x: maxX + pad, y: minY - pad, width: boxSize, height: boxSize, confidence: saida.confianca ?? 1 },
+      bottomLeft: { x: minX - pad, y: maxY + pad, width: boxSize, height: boxSize, confidence: saida.confianca ?? 1 },
+      bottomRight: { x: maxX + pad, y: maxY + pad, width: boxSize, height: boxSize, confidence: saida.confianca ?? 1 }
+    };
+  }
+
   return {
     sucesso: detectouGrade,
     erro: detectouGrade ? undefined : 'Não foi possível localizar a grade de respostas na foto.',
-    fiduciaisDetectados: detectouGrade && (saida.confianca ?? 1) >= 0.5,
+    fiduciaisDetectados: detectouGrade && (saida.confianca ?? 1) >= 0.45,
+    anchors,
     questoes,
     totalQuestoes: config.totalQuestoes,
     totalAcertos: acertos,

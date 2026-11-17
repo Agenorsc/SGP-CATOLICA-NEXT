@@ -223,7 +223,23 @@ export async function detectarQrCompleto(
 ): Promise<QrDetectado | null> {
   if (detectorNativo) {
     const nativo = await detectorNativo.detectar(fonte);
-    if (nativo) return nativo;
+    if (nativo) {
+      // Refina os 4 cantos com jsQR no recorte do QR para garantir orientação exata dos finder patterns (360°)
+      const cx = nativo.anchor.x;
+      const cy = nativo.anchor.y;
+      const w = Math.max(nativo.anchor.width, 40);
+      const h = Math.max(nativo.anchor.height, 40);
+      const margem = Math.max(w, h) * 0.45;
+      const rx = Math.max(0, Math.floor(cx - margem));
+      const ry = Math.max(0, Math.floor(cy - margem));
+      const rw = Math.min(largura - rx, Math.ceil(w + margem * 2));
+      const rh = Math.min(altura - ry, Math.ceil(h + margem * 2));
+      if (rw > 30 && rh > 30) {
+        const rFino = decodificarRegiao(fonte, { x: rx, y: ry, w: rw, h: rh, escala: 1 }, canvasTrabalho);
+        if (rFino) return rFino;
+      }
+      return nativo;
+    }
   }
   for (const regiao of gerarRegioesBusca(largura, altura, ultimaAncora)) {
     const r = decodificarRegiao(fonte, regiao, canvasTrabalho);

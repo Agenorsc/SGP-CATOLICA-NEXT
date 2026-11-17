@@ -257,4 +257,81 @@ describe('GridOmrEngine - Leitura por ajuste de grade em foto estática', () => 
     expect(res!.statusQuestoes[3]).toBe('EM_BRANCO');
     expect(Object.keys(res!.respostas)).toHaveLength(8);
   });
+
+  it('lê com precisão folha real de 7 questões com alternativa C na última questão (Q.07)', () => {
+    const { img, anchor } = gerarFoto({
+      W: 1280,
+      H: 720,
+      qrX: 200,
+      qrY: 100,
+      qrSize: 120,
+      anguloGraus: 0,
+      aA: 3.2,
+      b1: 0.16,
+      pc: 0.21,
+      pr: 0.14,
+      half: 0.07,
+      borda: 0.012,
+      totalQuestoes: 7,
+      marcas: {
+        1: { B: 0.90 },
+        2: { B: 0.90 },
+        3: { A: 0.95 },
+        4: { C: 0.88 },
+        5: { A: 0.92 },
+        6: { A: 0.90 },
+        7: { C: 0.85 }
+      }
+    });
+
+    const opcoes4 = [4, 4, 4, 4, 4, 4, 4];
+    const res = lerGradeOmrPorAjuste(img, 7, anchor, opcoes4);
+    // eslint-disable-next-line no-console
+    console.log('[grid-fit] 7 questoes detalhes:', res?.detalhesLetras);
+    expect(res).not.toBeNull();
+    expect(res!.respostas[1]).toBe('B');
+    expect(res!.respostas[2]).toBe('B');
+    expect(res!.respostas[3]).toBe('A');
+    expect(res!.respostas[4]).toBe('C');
+    expect(res!.respostas[5]).toBe('A');
+    expect(res!.respostas[6]).toBe('A');
+    expect(res!.respostas[7]).toBe('C');
+    expect(res!.statusQuestoes[7]).toBe('CORRETA');
+  });
+
+  it('lê prova de 7 questões com rotação de 180 graus (folha de cabeça para baixo)', () => {
+    const { img, anchor } = gerarFoto({
+      W: 1280,
+      H: 720,
+      qrX: 800,
+      qrY: 550,
+      qrSize: 120,
+      anguloGraus: 180,
+      aA: 3.2,
+      b1: 0.16,
+      pc: 0.21,
+      pr: 0.14,
+      half: 0.07,
+      borda: 0.012,
+      totalQuestoes: 7,
+      marcas: {
+        1: { B: 0.90 },
+        2: { B: 0.90 },
+        3: { A: 0.95 },
+        4: { C: 0.88 },
+        5: { A: 0.92 },
+        6: { A: 0.90 },
+        7: { C: 0.85 }
+      }
+    });
+
+    const opcoes4 = [4, 4, 4, 4, 4, 4, 4];
+    const res = lerGradeOmrPorAjuste(img, 7, anchor, opcoes4);
+    // eslint-disable-next-line no-console
+    console.log('[grid-fit] 7 questoes detalhes:', res?.detalhesLetras);
+    expect(res).not.toBeNull();
+    expect(res!.respostas[1]).toBe('B');
+    expect(res!.respostas[7]).toBe('C');
+    expect(res!.statusQuestoes[7]).toBe('CORRETA');
+  });
 });

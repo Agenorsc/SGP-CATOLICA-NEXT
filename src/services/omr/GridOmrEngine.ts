@@ -66,33 +66,33 @@ const LETRAS = ['A', 'B', 'C', 'D', 'E'];
 
 export interface LimiaresOmr {
   capResposta?: number;              // Teto da resposta do contorno (padrão: 0.50)
-  minRespostaCelula?: number;        // Resposta mínima do contorno de uma célula para validação (padrão: 0.05)
-  minConfianca?: number;             // Confiança mínima para aceitar detecção da grade (padrão: 0.50)
-  fatorBinarizacao?: number;         // Multiplicador da média local para binarização adaptativa (padrão: 0.82)
-  sensibilidadeAzulR?: number;       // Diferença mínima canal azul vs vermelho para caneta azul (padrão: 20)
-  sensibilidadeAzulG?: number;       // Diferença mínima canal azul vs verde para caneta azul (padrão: 10)
-  amplitudeMinGlobal?: number;       // Amplitude mínima (max - fundo) na folha para considerar marcação real (padrão: 16)
-  maxMinGlobal?: number;             // Preenchimento máximo mínimo na folha para considerar marcação real (padrão: 32)
-  limiarCorteBase?: number;          // Limiar base de corte para preenchimento de alternativa marcada (padrão: 28)
-  fatorCorteAmplitude?: number;      // Fator multiplicador da amplitude global no limiar de corte (padrão: 0.30)
-  deltaMarcada?: number;             // Diferença mínima entre a alternativa mais marcada e a linha de base (padrão: 14)
-  deltaAnulada?: number;             // Diferença mínima da 2ª alternativa para a linha de base em dupla marcação (padrão: 12)
+  minRespostaCelula?: number;        // Resposta mínima do contorno de uma célula para validação (padrão: 0.04)
+  minConfianca?: number;             // Confiança mínima para aceitar detecção da grade (padrão: 0.45)
+  fatorBinarizacao?: number;         // Multiplicador da média local para binarização adaptativa (padrão: 0.85)
+  sensibilidadeAzulR?: number;       // Diferença mínima canal azul vs vermelho para caneta azul (padrão: 10)
+  sensibilidadeAzulG?: number;       // Diferença mínima canal azul vs verde para caneta azul (padrão: 6)
+  amplitudeMinGlobal?: number;       // Amplitude mínima (max - fundo) na folha para considerar marcação real (padrão: 14)
+  maxMinGlobal?: number;             // Preenchimento máximo mínimo na folha para considerar marcação real (padrão: 28)
+  limiarCorteBase?: number;          // Limiar base de corte para preenchimento de alternativa marcada (padrão: 22)
+  fatorCorteAmplitude?: number;      // Fator multiplicador da amplitude global no limiar de corte (padrão: 0.25)
+  deltaMarcada?: number;             // Diferença mínima entre a alternativa mais marcada e a linha de base (padrão: 11)
+  deltaAnulada?: number;             // Diferença mínima da 2ª alternativa para a linha de base em dupla marcação (padrão: 10)
   fatorAnulada?: number;             // Fator do limiar de corte para a 2ª alternativa em anulação (padrão: 0.85)
 }
 
 export const LIMIARES_OMR_PADRAO: Required<LimiaresOmr> = {
   capResposta: 0.5,
-  minRespostaCelula: 0.05,
-  minConfianca: 0.50,
-  fatorBinarizacao: 0.82,
-  sensibilidadeAzulR: 20,
-  sensibilidadeAzulG: 10,
-  amplitudeMinGlobal: 16,
-  maxMinGlobal: 32,
-  limiarCorteBase: 28,
-  fatorCorteAmplitude: 0.30,
-  deltaMarcada: 14,
-  deltaAnulada: 12,
+  minRespostaCelula: 0.04,
+  minConfianca: 0.45,
+  fatorBinarizacao: 0.85,
+  sensibilidadeAzulR: 10,
+  sensibilidadeAzulG: 6,
+  amplitudeMinGlobal: 14,
+  maxMinGlobal: 28,
+  limiarCorteBase: 22,
+  fatorCorteAmplitude: 0.25,
+  deltaMarcada: 11,
+  deltaAnulada: 10,
   fatorAnulada: 0.85
 };
 
@@ -179,8 +179,8 @@ export function lerGradeOmrPorAjuste(
     const r = data[p], g = data[p + 1], b = data[p + 2];
     const lum = (r * 77 + g * 150 + b * 29) >> 8;
     gray[i] = lum;
-    // Caneta azul esferográfica (BIC / similar): deve ser tinta (lum < 175) e ter canal Azul predominante
-    if (lum < 175 && ((b > r + azulR && b > g + azulG) || (b > 100 && b > r * 1.18 && b > g * 1.10))) {
+    // Caneta azul esferográfica (BIC / similar): deve ser tinta e ter canal Azul predominante
+    if (lum < 210 && ((b > r + azulR && b > g + azulG) || (b > 85 && b > r * 1.10 && b > g * 1.05))) {
       isBluePen[i] = 1;
     }
   }
@@ -276,7 +276,13 @@ export function lerGradeOmrPorAjuste(
         const sOut = somaQuadrado(r, x, y, rOut);
         const sIn = rIn >= 0 ? somaQuadrado(r, x, y, rIn) : 0;
         const sFar = somaQuadrado(r, x, y, rFar);
-        out[y * r.w + x] = (sOut - sIn) / anelArea - (sFar - sOut) / foraArea;
+        const foraContra = (sFar - sOut) / foraArea;
+        // Resposta de anel vazio (borda escura, centro claro)
+        const respAnel = (sOut - sIn) / anelArea - foraContra;
+        // Resposta de célula preenchida com caneta (área interna escura, entorno claro)
+        const respPreenchida = (sOut / aOut) - foraContra;
+        // Uma célula do gabarito pode estar vazia ou preenchida por caneta
+        out[y * r.w + x] = Math.max(respAnel, respPreenchida * 0.90);
       }
     }
     return out;
@@ -308,13 +314,26 @@ export function lerGradeOmrPorAjuste(
     confianca: number,
     qtdQuestoes: number = N
   ): ResultadoGradeOmr => {
-    const raioInterno = Math.max(1, Math.round(hPx * 0.6));
+    const raioInterno = Math.max(1, Math.round(hPx * 0.55));
     const areaInterna = (2 * raioInterno + 1) ** 2;
     const centrosEfetivos = centros.slice(0, qtdQuestoes);
+    const kernelOffsets = [
+      { dx: 0, dy: 0 },
+      { dx: -1, dy: 0 },
+      { dx: 1, dy: 0 },
+      { dx: 0, dy: -1 },
+      { dx: 0, dy: 1 }
+    ];
     const fills: number[][] = centrosEfetivos.map((linha, q) =>
-      linha.map((p, c) =>
-        c < ops[q] ? Math.round((somaQuadrado(rf, p.x, p.y, raioInterno) / areaInterna) * 100) : 0
-      )
+      linha.map((p, c) => {
+        if (c >= ops[q]) return 0;
+        let maxFill = 0;
+        for (const off of kernelOffsets) {
+          const val = Math.round((somaQuadrado(rf, p.x + off.dx, p.y + off.dy, raioInterno) / areaInterna) * 100);
+          if (val > maxFill) maxFill = val;
+        }
+        return maxFill;
+      })
     );
 
     const todos = fills.flatMap((linha, q) => linha.slice(0, ops[q])).sort((a, b) => a - b);
@@ -423,26 +442,26 @@ export function lerGradeOmrPorAjuste(
     const opsLinha = (q: number) => ops[q];
 
     const Sc = 48;
-    const aMinC = 0.9;
+    const aMinC = 0.8;
     const aMaxC = 7.8;
-    // O início da questão 1 (Q.01) na folha oficial Católica SC fica em torno de b1 = +0.18 a +0.22 do QR Code.
-    // Janela vertical ampla e busca horizontal que cobre toda a folha (inclusive grades de 4 ou 5 alternativas)
-    const bMinC = 0.02;
-    const b1Min = 0.10;
-    const b1Max = 0.23;
+    // O início da questão 1 (Q.01) na folha oficial Católica SC fica em torno de b1 = +0.10 a +0.30 do QR Code.
+    // Janela vertical e busca horizontal amplas que cobrem toda a folha (inclusive grades de 4 ou 5 alternativas)
+    const bMinC = 0.00;
+    const b1Min = 0.12;
+    const b1Max = 0.30;
     const prMaxU = 0.26;
     const bMaxC = b1Max + (N1 - 1) * prMaxU + 0.35;
     const rc = retificar(Sc, aMinC, aMaxC, bMinC, bMaxC);
     const anelC = criarCacheAnel(rc);
 
-    const pcMin = Math.max(7, Math.ceil(0.15 * Sc));
-    const pcMax = Math.floor(0.30 * Sc);
-    const aSearchMin = N > 15 ? 1.40 : 3.50;
-    const aSearchMax = N > 15 ? 2.40 : 5.20;
+    const pcMin = Math.max(7, Math.ceil(0.14 * Sc));
+    const pcMax = Math.floor(0.32 * Sc);
+    const aSearchMin = 1.30;
+    const aSearchMax = 5.60;
     const xMin = Math.max(0, Math.round((aSearchMin - aMinC) * Sc));
     const xMax = Math.min(rc.w - 1, Math.round((aSearchMax - aMinC) * Sc));
     const yMin = Math.max(0, Math.round((b1Min - bMinC) * Sc));
-    const yMax = Math.round((b1Max - bMinC) * Sc);
+    const yMax = Math.min(rc.h - 1, Math.round((b1Max - bMinC) * Sc));
     const proporcoes = [0.28, 0.35, 0.42];
     const multCol2 = N2 > 0 ? [6.2, 6.6, 7.0, 7.4, 7.8] : [0];
 
@@ -561,10 +580,10 @@ export function lerGradeOmrPorAjuste(
     for (const prop of [melhor.prop - 0.05, melhor.prop, melhor.prop + 0.05]) {
       const hPx = Math.max(2, Math.round(prop * pcC));
       const R = anelF(hPx);
-      for (let k = -4; k <= 4; k++) {
+      for (let k = -5; k <= 5; k++) {
         const pcF = pcC * (1 + k * 0.012);
-        for (let m = -6; m <= 6; m++) {
-          const prF = prC * (1 + m * 0.015);
+        for (let m = -8; m <= 8; m++) {
+          const prF = prC * (1 + m * 0.013);
           for (let dy = -raio; dy <= raio; dy++) {
             for (let dx = -raio; dx <= raio; dx++) {
               const s = pontuar(R, x0c + dx, x0c2 + dx, y0c + dy, pcF, prF);
@@ -600,9 +619,9 @@ export function lerGradeOmrPorAjuste(
     }
 
     const Rf = anelF(fino.hPx);
-    // Ajuste de linha com janela suficiente para compensar curvatura do papel e inclinação
-    const raioLinhaY = Math.max(3, Math.round(fino.pr * 0.28));
-    const raioLinhaX = Math.max(2, Math.round(fino.pc * 0.15));
+    // Ajuste de linha suave para compensar curvatura do papel sem saltar para linhas de rodapé
+    const raioLinhaY = Math.max(2, Math.round(fino.pr * 0.18));
+    const raioLinhaX = Math.max(2, Math.round(fino.pc * 0.12));
     const centros: Pt[][] = [];
     let celulasOk = 0;
     let celulasTotal = 0;
@@ -622,16 +641,21 @@ export function lerGradeOmrPorAjuste(
             const v = lerR(Rf, Math.round(colX0 + c * fino.pc + dx), yy);
             s += v > CAP_RESPOSTA ? CAP_RESPOSTA : v;
           }
-          s -= (Math.abs(dx) + Math.abs(dy)) * 0.002;
+          // Regularização: penaliza desvios da linha de grade linear para evitar snap em rodapés "Q: a b c d"
+          s -= (Math.abs(dx) * 0.01 + Math.abs(dy) * 0.03);
           if (s > melhorLinha.s) melhorLinha = { s, dx, dy };
         }
       }
 
+      // Se o ajuste da linha encontrar sinal fraco, mantém estritamente yBase sem deriva
+      const dyEfetivo = melhorLinha.s > 0 ? melhorLinha.dy : 0;
+      const dxEfetivo = melhorLinha.s > 0 ? melhorLinha.dx : 0;
+      const cy = Math.round(yBase + dyEfetivo);
+
       // Mantém as alternativas rigidamente alinhadas na linha da questão (sem pular para bordas externas)
       const linha: Pt[] = [];
-      const cy = Math.round(yBase + melhorLinha.dy);
       for (let c = 0; c < maxOps; c++) {
-        const cx = Math.round(colX0 + c * fino.pc + melhorLinha.dx);
+        const cx = Math.round(colX0 + c * fino.pc + dxEfetivo);
         if (c < nOps) {
           celulasTotal++;
           if (lerR(Rf, cx, cy) >= MIN_RESPOSTA_CELULA) celulasOk++;
