@@ -275,27 +275,23 @@ export function ImpressaoTab({
     const cadernoId = `cad_${examId}_${versaoLetra.toLowerCase()}`.replace(/[^a-zA-Z0-9_-]/g, '_');
     const codigoProvaFormatado = `${aluno?.ra ? aluno.ra.padStart(7, '0') : '2839932'}.${idx % 4}`;
 
-    const qrPayload = {
+    // Payload COMPACTO (baixa densidade de módulos): o QR anterior carregava ~25 campos
+    // duplicados e virava um QR versão 25+ (módulos de ~0,3 mm), impossível de ler por
+    // câmera de celular. Aqui só vai o essencial; nome/turma são resolvidos pelo RA.
+    const pontosUniformes = pontosImpressos.every(p => Math.abs(p - pontosImpressos[0]) < 0.001);
+    const qrPayload: Record<string, string | number> = {
       p: examId,
-      c: cadernoId,
-      a: nomeAluno,
+      t: turmaSelecionadaId || 't1',
       r: raQr,
-      examId,
-      cadernoId,
-      classId: turmaSelecionadaId || 't1',
-      className: nomeTurma,
-      teacherId: resolvedTeacherId,
-      studentId: aluno?.id || `alu-${idx + 1}`,
-      studentName: nomeAluno,
-      studentRa: raQr,
-      stage: resolvedStage,
-      system: 'SGP-CATOLICA',
-      turmaId: turmaSelecionadaId || 't1',
-      name: nomeAluno,
-      ra: raQr,
-      examVersion: versaoLetra,
-      ...layoutGabarito
+      s: resolvedStage,
+      v: versaoLetra,
+      nq: layoutGabarito.nq,
+      op: layoutGabarito.op,
+      k: layoutGabarito.k
     };
+    if (!pontosUniformes && layoutGabarito.pt) {
+      qrPayload.pt = layoutGabarito.pt;
+    }
 
     return {
       aluno,
@@ -914,8 +910,8 @@ export function ImpressaoTab({
                             <div className="p-1.5 bg-white border border-slate-300 print:border-none rounded-md shadow-xs print:shadow-none">
                               <QRCodeWrapper
                                 value={JSON.stringify(dados.qrPayload)}
-                                size={140}
-                                level="H"
+                                size={150}
+                                level="M"
                                 includeMargin={true}
                               />
                             </div>
@@ -963,9 +959,9 @@ export function ImpressaoTab({
                                           {letras.slice(0, totalOpcoes).map(l => (
                                             <div
                                               key={l}
-                                              className="w-5 h-5 border-[1.5px] border-slate-900 print:border-black rounded-full flex items-center justify-center text-[8px] font-bold text-slate-700 print:text-black bg-white"
+                                              className="w-5 h-4.5 border-[1px] border-slate-700 print:border-black rounded-xs flex items-center justify-center text-[7.5px] font-normal text-slate-400 print:text-slate-500 bg-white"
                                             >
-                                              {l.toUpperCase()}
+                                              {l}
                                             </div>
                                           ))}
                                         </div>
@@ -1011,9 +1007,9 @@ export function ImpressaoTab({
                                             {letras.slice(0, totalOpcoes).map(l => (
                                               <div
                                                 key={l}
-                                                className="w-5 h-5 border-[1.5px] border-slate-900 print:border-black rounded-full flex items-center justify-center text-[8px] font-bold text-slate-700 print:text-black bg-white"
+                                                className="w-5 h-4.5 border-[1px] border-slate-700 print:border-black rounded-xs flex items-center justify-center text-[7.5px] font-normal text-slate-400 print:text-slate-500 bg-white"
                                               >
-                                                {l.toUpperCase()}
+                                                {l}
                                               </div>
                                             ))}
                                           </div>

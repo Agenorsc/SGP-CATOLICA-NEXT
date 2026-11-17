@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { 
   Camera, 
   VideoOff, 
@@ -21,10 +21,19 @@ import {
   ShieldCheck,
   CheckCheck
 } from 'lucide-react';
-import jsQR from 'jsqr';
 import { ProvaMontadaRegistro, CadernoProvaRegistro } from '@/types';
 import { AlunoModel } from '@/models/AlunoModel';
-import { processarOMR, OMRProcessorOutput, QuestionOMRResult } from '@/lib/omr/omrProcessor';
+import { OMRProcessorOutput } from '@/lib/omr/omrProcessor';
+import { classificarLeituraGrade } from '@/lib/omr/omrGradeAdapter';
+import {
+  DetectorNativo,
+  QrDetectado,
+  decodificarRegiao,
+  detectarQrCompleto,
+  gerarRegioesBusca
+} from '@/lib/omr/qrScanner';
+import { decodificarGabaritoQr, sementeGabarito } from '@/lib/answerKey';
+import { OmrService } from '@/services/OmrService';
 
 export type ScannerFlowStep = 
   | 'SCAN_QR'       // Passo 1: Busca e decodificação do QR Code 360°
@@ -90,6 +99,19 @@ export function UnifiedOMRScanner({
   // Snapshot congelado (imagem em base64 para preview)
   const [snapshotDataUrl, setSnapshotDataUrl] = useState<string | null>(null);
 
+  // Motor óptico comprovado (GridOmrEngine ancorado no QR) e estado de rastreamento
+  const omrService = useMemo(() => new OmrService(), []);
+  const detectorNativoRef = useRef<DetectorNativo>(new DetectorNativo());
+  const ultimaAncoraRef = useRef<QrDetectado['anchor'] | null>(null);
+  const regiaoIdxRef = useRef<number>(0);
+  const cadernoRealIdRef = useRef<string | null>(null);
+  const leituraRef = useRef<{
+    totalQuestoes: number;
+    gabarito: Record<string, string>;
+    pontos: number[];
+    opcoes: number[];
+  }>({ totalQuestoes: 0, gabarito: {}, pontos: [], opcoes: [] });
+
   // Som de Feedback (Web Audio API)
   const tocarSom = useCallback((frequencia = 900, duracao = 0.1, tipo: OscillatorType = 'sine') => {
     try {
@@ -130,8 +152,8 @@ export function UnifiedOMRScanner({
           ? { deviceId: { exact: deviceId } }
           : {
               facingMode: { ideal: 'environment' },
-              width: { ideal: 1920, min: 1280 },
-              height: { ideal: 1080, min: 720 },
+              width: { ideal: 3840 },
+              height: { ideal: 2160 },
               advanced: [{ focusMode: 'continuous' }] as any
             }
       };
@@ -189,218 +211,275 @@ export function UnifiedOMRScanner({
     }
   };
 
-  // PASSO 1: LOOP DE VARREDURA DO QR CODE 360° (0°, 90°, 180°, 270°)
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PASSO 1: VARREDURA DO QR CODE (qualquer orientação)
+  // jsQR já decodifica QR rotacionado; o que impedia a leitura era a resolução:
+  // agora a busca roda em resolução nativa por blocos + BarcodeDetector nativo.
+  // ─────────────────────────────────────────────────────────────────────────────
+  const processarQrDetectado = useCallback(async (texto: string): Promise<boolean> => {
+    let parsed: any;
+    try {
+      parsed = JSON.parse(texto.trim());
+    } catch {
+      setAlertaDivergenciaProva('QR Code lido não pertence a uma folha do SGP Católica.');
+      return false;
+    }
+
+    const pId = String(parsed.p || parsed.examId || '');
+    const ra = String(parsed.r || parsed.studentRa || parsed.ra || '').trim();
+    const versao = String(parsed.v || parsed.examVersion || 'A').toUpperCase();
+    const cId = String(parsed.c || parsed.cadernoId || '');
+    const nomeQr = String(parsed.a || parsed.studentName || parsed.name || '');
+
+    if (!pId) {
+      setAlertaDivergenciaProva('QR Code sem identificação da prova. Reimprima a folha pelo sistema.');
+      return false;
+    }
+
+    if (provaMontadaId && pId !== provaMontadaId) {
+      const msg = `Esta folha pertence a outra prova (${pId}). Você abriu o leitor para a prova ${provaMontadaId}.`;
+      setAlertaDivergenciaProva(prev => {
+        if (prev !== msg) {
+          tocarSom(300, 0.25, 'sawtooth');
+          vibrar([200, 100, 200]);
+        }
+        return msg;
+      });
+      return false;
+    }
+
+    // 1) Gabarito embutido (ofuscado) no próprio QR — fonte de verdade da folha impressa
+    let decod = decodificarGabaritoQr(parsed, sementeGabarito(pId, ra, versao));
+
+    // 2) Caderno salvo localmente / no servidor
+    const provaLocal = provasDisponiveis.find(p => p.id === pId);
+    let cadernoData: CadernoProvaRegistro | null = null;
+    if (provaLocal?.cadernos) {
+      cadernoData = provaLocal.cadernos.find(c =>
+        (cId && (c.id === cId || c.codigoVersao === cId)) ||
+        (ra && (c as any).alunoRa === ra && String(c.codigoVersao || '').toUpperCase().endsWith(versao))
+      ) || null;
+    }
+    if (!cadernoData && cId) {
+      try {
+        const res = await fetch(`/api/cadernos/${encodeURIComponent(cId)}`);
+        if (res.ok) cadernoData = await res.json();
+      } catch (_) {}
+    }
+
+    if (!decod && cadernoData?.gabaritoOficialJson && Object.keys(cadernoData.gabaritoOficialJson).length > 0) {
+      const gab = cadernoData.gabaritoOficialJson as Record<string, string>;
+      const n = Object.keys(gab).length;
+      const g: Record<number, string> = {};
+      Object.entries(gab).forEach(([k, v]) => { g[Number(k)] = String(v).toUpperCase(); });
+      decod = {
+        totalQuestoes: n,
+        opcoesPorQuestao: Array.from({ length: n }, () => 5),
+        gabarito: g,
+        pontos: Array.from({ length: n }, () => 10 / n)
+      };
+    }
+
+    if (!decod) {
+      setAlertaDivergenciaProva('Não foi possível obter o gabarito desta folha. Reimprima a prova pelo sistema e tente novamente.');
+      return false;
+    }
+
+    const gabaritoStr: Record<string, string> = {};
+    Object.entries(decod.gabarito).forEach(([k, v]) => { gabaritoStr[String(k)] = v; });
+
+    leituraRef.current = {
+      totalQuestoes: decod.totalQuestoes,
+      gabarito: gabaritoStr,
+      pontos: decod.pontos,
+      opcoes: decod.opcoesPorQuestao
+    };
+    cadernoRealIdRef.current = cadernoData?.id || null;
+
+    const alunoCadastro = ra
+      ? alunosDisponiveis.find(a => a.ra.trim().replace(/^0+/, '') === ra.replace(/^0+/, ''))
+      : undefined;
+
+    setAlertaDivergenciaProva(null);
+    setProvaDetectadaId(pId);
+    setCadernoDetectadoId(cadernoData?.id || cId);
+    setProvaTitulo(provaLocal?.titulo || 'Avaliação Oficial');
+    setGabaritoOficial(gabaritoStr);
+    setTotalQuestoesCaderno(decod.totalQuestoes);
+    setValorPorQuestaoCaderno(Number((10 / decod.totalQuestoes).toFixed(2)));
+    setCodigoVersao(cadernoData?.codigoVersao || `VERSÃO ${versao}`);
+    setAlunoNome(alunoCadastro?.nome || nomeQr || cadernoData?.alunoNome || 'Estudante Avaliado');
+    setAlunoRa(ra && ra !== 'ANONIMO' ? ra : (cadernoData?.alunoRa || ''));
+
+    tocarSom(1100, 0.12, 'sine');
+    vibrar([80, 40, 80]);
+    setCountdown(2.0);
+    setStep('STABILIZING');
+    return true;
+  }, [provaMontadaId, provasDisponiveis, alunosDisponiveis, tocarSom, vibrar]);
+
   useEffect(() => {
     if (!cameraAtiva || step !== 'SCAN_QR') return;
 
-    let animId: number;
-    let lastScan = 0;
-    const SCAN_CADENCE_MS = 60; // 16 verificações por segundo
+    let animId = 0;
+    let cancelado = false;
+    let ocupado = false;
+    let ultimoScan = 0;
+    const CADENCIA_MS = 80;
 
-    const scanFrame = async (timestamp: number) => {
-      if (!videoRef.current || !qrCanvasRef.current) {
-        animId = requestAnimationFrame(scanFrame);
-        return;
-      }
-
+    const tick = async (ts: number) => {
+      if (cancelado) return;
       const video = videoRef.current;
       const canvas = qrCanvasRef.current;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-      if (video.readyState === video.HAVE_ENOUGH_DATA && ctx && (timestamp - lastScan >= SCAN_CADENCE_MS)) {
-        lastScan = timestamp;
-        const vw = video.videoWidth;
-        const vh = video.videoHeight;
+      if (
+        video && canvas && !ocupado &&
+        video.readyState >= video.HAVE_CURRENT_DATA && video.videoWidth > 0 &&
+        ts - ultimoScan >= CADENCIA_MS
+      ) {
+        ultimoScan = ts;
+        ocupado = true;
+        let concluido = false;
+        try {
+          const vw = video.videoWidth;
+          const vh = video.videoHeight;
+          let det: QrDetectado | null = null;
 
-        let detectedQr: any = null;
-
-        // 1.1 Orientação Nativa 0°
-        canvas.width = 640;
-        canvas.height = Math.round((640 * vh) / vw);
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        detectedQr = jsQR(imgData.data, canvas.width, canvas.height, { inversionAttempts: 'attemptBoth' });
-
-        // 1.2 Rotação 90° (folha virada de lado na mesa)
-        if (!detectedQr) {
-          canvas.width = Math.round((640 * vh) / vw);
-          canvas.height = 640;
-          ctx.save();
-          ctx.translate(canvas.width / 2, canvas.height / 2);
-          ctx.rotate((90 * Math.PI) / 180);
-          ctx.drawImage(video, -canvas.height / 2, -canvas.width / 2, canvas.height, canvas.width);
-          ctx.restore();
-          imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          detectedQr = jsQR(imgData.data, canvas.width, canvas.height, { inversionAttempts: 'attemptBoth' });
-        }
-
-        // 1.3 Rotação 180° (folha de ponta-cabeça)
-        if (!detectedQr) {
-          canvas.width = 640;
-          canvas.height = Math.round((640 * vh) / vw);
-          ctx.save();
-          ctx.translate(canvas.width / 2, canvas.height / 2);
-          ctx.rotate((180 * Math.PI) / 180);
-          ctx.drawImage(video, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
-          ctx.restore();
-          imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          detectedQr = jsQR(imgData.data, canvas.width, canvas.height, { inversionAttempts: 'attemptBoth' });
-        }
-
-        // 1.4 Rotação 270°
-        if (!detectedQr) {
-          canvas.width = Math.round((640 * vh) / vw);
-          canvas.height = 640;
-          ctx.save();
-          ctx.translate(canvas.width / 2, canvas.height / 2);
-          ctx.rotate((270 * Math.PI) / 180);
-          ctx.drawImage(video, -canvas.height / 2, -canvas.width / 2, canvas.height, canvas.width);
-          ctx.restore();
-          imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          detectedQr = jsQR(imgData.data, canvas.width, canvas.height, { inversionAttempts: 'attemptBoth' });
-        }
-
-        // QR Code Reconhecido!
-        if (detectedQr && detectedQr.data) {
-          try {
-            let pId = '';
-            let cId = '';
-            let aNome = '';
-            let aRa = '';
-
-            try {
-              const parsed = JSON.parse(detectedQr.data);
-              pId = parsed.p || parsed.examId || '';
-              cId = parsed.c || parsed.cadernoId || '';
-              aNome = parsed.a || parsed.studentName || parsed.name || '';
-              aRa = parsed.r || parsed.studentRa || parsed.ra || '';
-            } catch (_) {
-              if (detectedQr.data.includes('EXAM')) {
-                pId = 'prova_padrao';
-                cId = 'cad_padrao_a';
-              }
-            }
-
-            if (pId && cId) {
-              // Validação de Prova Selecionada na aba "Provas Montadas"
-              if (provaMontadaId && pId !== provaMontadaId) {
-                setAlertaDivergenciaProva(`Atenção: Você está na prova "${provaMontadaId}", mas o gabarito apontado pertence à prova "${pId}".`);
-                tocarSom(300, 0.25, 'sawtooth');
-                vibrar([200, 100, 200]);
-              } else {
-                setAlertaDivergenciaProva(null);
-                setProvaDetectadaId(pId);
-                setCadernoDetectadoId(cId);
-
-                // Recupera metadados do Caderno e Gabarito Oficial
-                let cadernoData: CadernoProvaRegistro | null = null;
-                const provaLocal = provasDisponiveis.find(p => p.id === pId);
-                if (provaLocal) {
-                  setProvaTitulo(provaLocal.titulo);
-                  if (provaLocal.cadernos) {
-                    cadernoData = provaLocal.cadernos.find(c => c.id === cId || c.codigoVersao === cId) || null;
-                  }
-                }
-
-                if (!cadernoData) {
-                  try {
-                    const res = await fetch(`/api/cadernos/${cId}`);
-                    if (res.ok) cadernoData = await res.json();
-                  } catch (_) {}
-                }
-
-                const gabaritoFinal = cadernoData?.gabaritoOficialJson || {
-                  "1": "B", "2": "A", "3": "C", "4": "B", "5": "D",
-                  "6": "A", "7": "C", "8": "B", "9": "A", "10": "D"
-                };
-
-                const totalQ = Object.keys(gabaritoFinal).length || 10;
-                setGabaritoOficial(gabaritoFinal);
-                setTotalQuestoesCaderno(totalQ);
-                setValorPorQuestaoCaderno(Number((10 / totalQ).toFixed(2)));
-                setCodigoVersao(cadernoData?.codigoVersao || 'CADERNO-OFICIAL');
-                setAlunoNome(aNome || cadernoData?.alunoNome || 'Estudante Avaliado');
-                setAlunoRa(aRa || cadernoData?.alunoRa || '');
-
-                // Transição para PASSO 2: Feedback Sonoro + Timer de 2 Segundos
-                tocarSom(1100, 0.12, 'sine');
-                vibrar([80, 40, 80]);
-                setCountdown(2.0);
-                setStep('STABILIZING');
-                return;
-              }
-            }
-          } catch (e) {
-            console.warn('Erro ao decodificar QR Code:', e);
+          const nativo = detectorNativoRef.current;
+          if (await nativo.inicializar()) {
+            det = await nativo.detectar(video);
           }
+
+          if (!det) {
+            const regioes = gerarRegioesBusca(vw, vh, ultimaAncoraRef.current);
+            const idx = regiaoIdxRef.current % regioes.length;
+            regiaoIdxRef.current = (regiaoIdxRef.current + 1) % 10000;
+            det = decodificarRegiao(video, regioes[idx], canvas);
+          }
+
+          if (det && !cancelado) {
+            ultimaAncoraRef.current = det.anchor;
+            concluido = await processarQrDetectado(det.data);
+          }
+        } catch (e) {
+          console.warn('Falha na varredura do QR Code:', e);
+        } finally {
+          ocupado = false;
         }
+        if (concluido) return;
       }
 
-      animId = requestAnimationFrame(scanFrame);
+      if (!cancelado) animId = requestAnimationFrame(tick);
     };
 
-    animId = requestAnimationFrame(scanFrame);
-    return () => cancelAnimationFrame(animId);
-  }, [cameraAtiva, step, provaMontadaId, provasDisponiveis, tocarSom, vibrar]);
+    animId = requestAnimationFrame(tick);
+    return () => {
+      cancelado = true;
+      cancelAnimationFrame(animId);
+    };
+  }, [cameraAtiva, step, processarQrDetectado]);
 
   // PASSO 2: CONTADOR REGRESSIVO DE 2.0 SEGUNDOS COM PREVIEW AO VIVO
+  // Durante a contagem o QR continua sendo rastreado para manter a âncora atualizada.
   useEffect(() => {
     if (step !== 'STABILIZING') return;
 
-    const interval = 100; // atualiza a cada 0.1s
+    const inicio = performance.now();
+    const DURACAO_MS = 2000;
+    let disparado = false;
+
     const timer = setInterval(() => {
-      setCountdown(prev => {
-        const nextVal = Number((prev - 0.1).toFixed(1));
-        if (nextVal <= 0) {
-          clearInterval(timer);
-          // Ao zerar o timer: Bate o Print (Snapshot) e vai para o PASSO 3
-          capturarSnapshotEProcessar();
-          return 0;
-        }
-        return nextVal;
-      });
-    }, interval);
+      const restante = Math.max(0, DURACAO_MS - (performance.now() - inicio));
+      setCountdown(Number((restante / 1000).toFixed(1)));
+
+      const video = videoRef.current;
+      const canvas = qrCanvasRef.current;
+      if (video && canvas && ultimaAncoraRef.current && video.videoWidth > 0) {
+        const regioes = gerarRegioesBusca(video.videoWidth, video.videoHeight, ultimaAncoraRef.current);
+        const det = decodificarRegiao(video, regioes[0], canvas);
+        if (det) ultimaAncoraRef.current = det.anchor;
+      }
+
+      if (restante <= 0 && !disparado) {
+        disparado = true;
+        clearInterval(timer);
+        void capturarSnapshotEProcessar();
+      }
+    }, 100);
 
     return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
-  // PASSO 3: BATE O PRINT EM ALTA RESOLUÇÃO E EXECUTA O MOTOR OMR
-  const capturarSnapshotEProcessar = () => {
-    if (!videoRef.current || !snapshotCanvasRef.current) return;
+  // PASSO 3: PRINT EM ALTA RESOLUÇÃO + MOTOR ÓPTICO ANCORADO NO QR CODE
+  const capturarSnapshotEProcessar = async () => {
+    if (!videoRef.current || !snapshotCanvasRef.current || !qrCanvasRef.current) return;
     const video = videoRef.current;
     const canvas = snapshotCanvasRef.current;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
-    // Congela no canvas na resolução nativa máxima do vídeo
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    setSnapshotDataUrl(canvas.toDataURL('image/jpeg', 0.92));
 
-    // Salva dataUrl para preview visual estático
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-    setSnapshotDataUrl(dataUrl);
-
-    // Transita para o processamento
     setStep('PROCESSING');
     tocarSom(750, 0.08, 'triangle');
 
-    // Executa o processador em background no frame seguinte para não travar a UI
-    setTimeout(() => {
+    // Cede um frame para a UI mostrar o spinner antes do processamento pesado
+    await new Promise(r => setTimeout(r, 60));
+
+    try {
+      // Posição EXATA do QR no instante da foto (a folha pode ter se movido)
+      const qrNoPrint = await detectarQrCompleto(
+        canvas,
+        canvas.width,
+        canvas.height,
+        qrCanvasRef.current,
+        detectorNativoRef.current,
+        ultimaAncoraRef.current
+      );
+      const ancora = qrNoPrint?.anchor || ultimaAncoraRef.current;
+
+      if (!ancora) {
+        throw new Error('QR Code saiu do enquadramento durante a captura.');
+      }
+
+      const cfg = leituraRef.current;
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const resultado = processarOMR(imageData, {
-        totalQuestoes: totalQuestoesCaderno,
-        gabaritoOficialJson: gabaritoOficial,
-        valorPorQuestao: valorPorQuestaoCaderno,
-        opcoesPorQuestao: 5
+      const saida = omrService.processarGradeOMRFromImageData(
+        imageData,
+        cfg.totalQuestoes,
+        ancora,
+        cfg.opcoes
+      );
+
+      const resultado = classificarLeituraGrade(saida, {
+        totalQuestoes: cfg.totalQuestoes,
+        gabarito: cfg.gabarito,
+        pontosPorQuestao: cfg.pontos,
+        opcoesPorQuestao: cfg.opcoes
       });
+
+      if (!resultado.sucesso) {
+        throw new Error(resultado.erro || 'Grade de respostas não localizada.');
+      }
 
       setOmrResult(resultado);
       desenharSobreposicaoVisual(canvas.width, canvas.height, resultado);
       setStep('CONFERENCE');
       tocarSom(1400, 0.15, 'sine');
       vibrar([100]);
-    }, 150);
+    } catch (err: any) {
+      console.warn('Falha no processamento OMR:', err);
+      tocarSom(300, 0.25, 'sawtooth');
+      setAlertaDivergenciaProva(
+        `${err?.message || 'Falha na leitura.'} Enquadre a folha inteira (QR Code + quadro de respostas), sem sombra, e tente de novo.`
+      );
+      setSnapshotDataUrl(null);
+      setStep('SCAN_QR');
+    }
   };
 
   // PASSO 4: DESENHO DA SOBREPOSIÇÃO VISUAL (Círculos Coloridos sobre as Questões)
@@ -490,7 +569,7 @@ export function UnifiedOMRScanner({
       setIsSaving(true);
       const payload = {
         provaMontadaId: provaDetectadaId,
-        cadernoProvaId: cadernoDetectadoId,
+        cadernoProvaId: cadernoRealIdRef.current,
         alunoNome: alunoNome.trim() || 'Estudante Avaliado',
         alunoRa: alunoRa.trim() || null,
         respostasMarcadasJson: omrResult.respostasMarcadasJson,
@@ -536,6 +615,7 @@ export function UnifiedOMRScanner({
     setOmrResult(null);
     setCountdown(2.0);
     setIsSaving(false);
+    ultimaAncoraRef.current = null;
     setStep('SCAN_QR');
   };
 
@@ -676,19 +756,18 @@ export function UnifiedOMRScanner({
                 <div className="absolute -bottom-1 -left-1 w-9 h-9 border-b-4 border-l-4 border-emerald-400 rounded-bl-2xl shadow-sm" />
                 <div className="absolute -bottom-1 -right-1 w-9 h-9 border-b-4 border-r-4 border-emerald-400 rounded-br-2xl shadow-sm" />
 
-                {/* Retículo do QR Code com Suporte 360° */}
-                <div className="w-48 h-48 sm:w-56 sm:h-56 border-2 border-dashed border-emerald-400/70 rounded-2xl flex flex-col items-center justify-center p-3 text-center bg-black/20 backdrop-blur-xs mt-4">
-                  <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse mb-3" />
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 bg-black/75 px-2.5 py-1 rounded-md border border-emerald-500/30">
-                    Aponte para o QR Code
+                {/* Dica de enquadramento (sem retículo central: o QR fica no rodapé da folha) */}
+                <div className="mt-2 rounded-xl bg-black/75 px-3 py-1.5 text-center border border-emerald-500/30">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300">
+                    Buscando QR Code da folha...
                   </span>
-                  <p className="text-[9px] text-slate-300 mt-1">
-                    Leitura em 360° (qualquer ângulo)
+                  <p className="text-[9px] text-slate-300 mt-0.5">
+                    Qualquer orientação • boa iluminação • sem sombra
                   </p>
                 </div>
 
                 <div className="rounded-2xl bg-black/80 backdrop-blur-md px-4 py-2 text-xs font-semibold text-white border border-white/10 text-center shadow-lg mb-2">
-                  Enquadre a folha na câmera para iniciar a leitura
+                  Enquadre a folha INTEIRA (QR Code + quadro de respostas)
                 </div>
               </div>
             )}
@@ -707,7 +786,7 @@ export function UnifiedOMRScanner({
                     <span>QR Code Identificado!</span>
                   </div>
                   <p className="text-xs text-slate-200">
-                    Mantenha a folha e as 4 marcas enquadradas... Capturando foto!
+                    Mantenha a folha parada e inteira no quadro... Capturando foto!
                   </p>
                 </div>
               </div>
@@ -718,7 +797,7 @@ export function UnifiedOMRScanner({
               <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex flex-col items-center justify-center space-y-3 z-30">
                 <Loader2 className="h-12 w-12 text-emerald-400 animate-spin" />
                 <h3 className="text-sm font-black text-white">Processando Marcas e Gabarito...</h3>
-                <p className="text-xs text-slate-300">Retificando perspectiva das 4 âncoras fiduciais...</p>
+                <p className="text-xs text-slate-300">Localizando o quadro de respostas a partir do QR Code...</p>
               </div>
             )}
           </>
@@ -748,7 +827,7 @@ export function UnifiedOMRScanner({
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-400">
-                    {omrResult.fiduciaisDetectados ? '✓ 4 Marcas Fiduciais Alinhadas' : '⚠️ Alinhamento Estimado'}
+                    {omrResult.fiduciaisDetectados ? '✓ Quadro de respostas localizado' : '⚠️ Confira as marcações antes de salvar'}
                   </p>
                 </div>
 

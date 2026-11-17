@@ -174,15 +174,18 @@ export class OmrService {
     }
 
     // 2. Extração e normalização de campos com suporte a CardPayload e formato legado
-    const classId = parsed.classId || parsed.turmaId || turmaIdEsperado || '';
+    // Payload compacto de baixa densidade (QR legível por câmera de celular):
+    // { p: examId, t: turmaId, r: RA, a: nome, s: estágio, v: versão, i: studentId, nq, op, k, pt }
+    const classId = parsed.classId || parsed.turmaId || parsed.t || turmaIdEsperado || '';
     const rawClassName = parsed.className || turmasDisponiveis?.find(t => t.id === classId)?.nome || (classId ? `Turma ${classId}` : 'Turma');
-    const studentRa = String(parsed.studentRa || parsed.ra || '').trim();
-    const studentName = parsed.studentName || parsed.name || parsed.aluno || '';
-    const studentId = parsed.studentId || '';
+    const studentRa = String(parsed.studentRa || parsed.ra || parsed.r || '').trim();
+    const studentName = parsed.studentName || parsed.name || parsed.aluno || parsed.a || '';
+    const studentId = parsed.studentId || parsed.i || '';
     const teacherId = parsed.teacherId || '';
-    const stage: EvaluationStage = (parsed.stage === 'N1' || parsed.stage === 'N2' || parsed.stage === 'N3' || parsed.stage === 'N-1') ? parsed.stage : 'N1';
-    const examVersion = parsed.examVersion || parsed.versao || 'A';
-    const examId = parsed.examId || (classId ? `EXAM-${classId}` : 'EXAM-1');
+    const stageBruto = parsed.stage || parsed.s;
+    const stage: EvaluationStage = (stageBruto === 'N1' || stageBruto === 'N2' || stageBruto === 'N3' || stageBruto === 'N-1') ? stageBruto : 'N1';
+    const examVersion = parsed.examVersion || parsed.versao || parsed.v || 'A';
+    const examId = parsed.examId || parsed.p || (classId ? `EXAM-${classId}` : 'EXAM-1');
 
     if (parsed.system === 'SGP-CATOLICA') {
       const requiredFields = [
@@ -292,7 +295,11 @@ export class OmrService {
       aluno: alunoEncontrado,
       gabaritoEmbutido: decodificarGabaritoQr(
         parsed,
-        sementeGabarito(String(parsed.examId || ''), String(parsed.studentRa || parsed.ra || ''), String(parsed.examVersion || 'A'))
+        sementeGabarito(
+          String(parsed.examId || parsed.p || ''),
+          String(parsed.studentRa || parsed.ra || parsed.r || ''),
+          String(parsed.examVersion || parsed.v || 'A')
+        )
       )
     };
 
