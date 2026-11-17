@@ -28,6 +28,14 @@ export class UsuarioRepository implements IBaseRepository<UsuarioModel> {
       senha: hashPasswordSync('Marcos@Catolica2026!'),
       role: 'PROFESSOR',
       disciplina: 'Arquitetura de Software'
+    }),
+    new UsuarioModel({
+      id: 'usr-prof-03',
+      nome: 'Prof. Me. Samuel',
+      email: 'prof.samuel@catolica.edu.br',
+      senha: hashPasswordSync('Samuel@Catolica2026!'),
+      role: 'PROFESSOR',
+      disciplina: 'Direito Civil'
     })
   ];
 

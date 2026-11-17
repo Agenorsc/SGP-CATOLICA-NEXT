@@ -32,6 +32,14 @@ async function main() {
       senha: bcrypt.hashSync('Marcos@Catolica2026!', 10),
       role: 'PROFESSOR',
       disciplina: 'Arquitetura de Software'
+    },
+    {
+      id: 'usr-prof-03',
+      nome: 'Prof. Me. Samuel',
+      email: 'prof.samuel@catolica.edu.br',
+      senha: bcrypt.hashSync('Samuel@Catolica2026!', 10),
+      role: 'PROFESSOR',
+      disciplina: 'Direito Civil'
     }
   ];
 
@@ -61,6 +69,14 @@ async function main() {
       semestre: '2026/2',
       codigoConvite: 'CAT-9910',
       professorId: 'usr-prof-02'
+    },
+    {
+      id: 't3',
+      nome: 'Direito Civil II',
+      curso: 'Direito',
+      semestre: '2026/2',
+      codigoConvite: 'CAT-7731',
+      professorId: 'usr-prof-03'
     }
   ];
 
