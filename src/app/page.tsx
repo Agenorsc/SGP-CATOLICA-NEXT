@@ -853,6 +853,11 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
             onReimprimirProva={(prova) => {
               handleCarregarProvaParaReimpressao(prova);
               setCurrentTab('impressao');
+              if (typeof window !== 'undefined') {
+                setTimeout(() => {
+                  window.print();
+                }, 350);
+              }
             }}
             onAbrirScannerMobile={(prova) => {
               setProvaParaScannerMobile(prova);

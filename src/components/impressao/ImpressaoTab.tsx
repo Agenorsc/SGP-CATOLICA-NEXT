@@ -109,6 +109,9 @@ export function ImpressaoTab({
   // Controle de Frente e Verso (Gera página de verso em branco para destacar o gabarito sem perder questões)
   const [modoFrenteVerso, setModoFrenteVerso] = useState(true);
 
+  // Escopo de Impressão: Prova Completa, Apenas Gabarito A4 ou Apenas Caderno de Questões
+  const [tipoConteudoImpressao, setTipoConteudoImpressao] = useState<'COMPLETA' | 'APENAS_GABARITO' | 'APENAS_CADERNO'>('COMPLETA');
+
   // Painel de Personalização e Sub-abas
   const [painelCabecalhoAberto, setPainelCabecalhoAberto] = useState(false);
   const [subAbaEdicao, setSubAbaEdicao] = useState<'cabecalho' | 'orientacoes' | 'gabarito'>('cabecalho');
@@ -318,12 +321,13 @@ export function ImpressaoTab({
   };
 
   // Lista de estudantes a renderizar para impressão
+  const alunoPadraoFallback = { id: 'alu-padrao-0', nome: 'ALUNO A (VERSÃO A)', ra: '0000001', turmaId: turmaSelecionadaId } as any;
   const listaAlunosParaImpressao: { aluno: AlunoModel; idx: number }[] = modoImpressao === 'individual'
-    ? [{ aluno: alunoAtual, idx: selectedVersionIdx }]
+    ? [{ aluno: alunoAtual || alunoPadraoFallback, idx: selectedVersionIdx }]
     : (alunosDaTurmaSelecionada.length > 0
         ? alunosDaTurmaSelecionada.map((aluno, idx) => ({ aluno, idx }))
         : [
-            { aluno: { id: 'alu-padrao-0', nome: 'ALUNO A (VERSÃO A)', ra: '0000001', turmaId: turmaSelecionadaId }, idx: 0 },
+            { aluno: alunoPadraoFallback, idx: 0 },
             { aluno: { alunoId: 'alu-padrao-1', id: 'alu-padrao-1', nome: 'ALUNO B (VERSÃO B)', ra: '0000002', turmaId: turmaSelecionadaId } as any, idx: 1 },
             { aluno: { alunoId: 'alu-padrao-2', id: 'alu-padrao-2', nome: 'ALUNO C (VERSÃO C)', ra: '0000003', turmaId: turmaSelecionadaId } as any, idx: 2 },
             { aluno: { alunoId: 'alu-padrao-3', id: 'alu-padrao-3', nome: 'ALUNO D (VERSÃO D)', ra: '0000004', turmaId: turmaSelecionadaId } as any, idx: 3 },
@@ -388,6 +392,43 @@ export function ImpressaoTab({
               </span>
             </div>
           )}
+
+          {/* SELETOR DO CONTEÚDO A IMPRIMIR */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+            <button
+              type="button"
+              onClick={() => setTipoConteudoImpressao('COMPLETA')}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                tipoConteudoImpressao === 'COMPLETA'
+                  ? 'bg-white text-catolica-primary shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Gabarito + Caderno
+            </button>
+            <button
+              type="button"
+              onClick={() => setTipoConteudoImpressao('APENAS_GABARITO')}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                tipoConteudoImpressao === 'APENAS_GABARITO'
+                  ? 'bg-catolica-primary text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Apenas Gabarito A4
+            </button>
+            <button
+              type="button"
+              onClick={() => setTipoConteudoImpressao('APENAS_CADERNO')}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                tipoConteudoImpressao === 'APENAS_CADERNO'
+                  ? 'bg-catolica-primary text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Apenas Caderno
+            </button>
+          </div>
 
           <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-700 hover:text-slate-900 transition">
             <input
@@ -757,7 +798,7 @@ export function ImpressaoTab({
               {/* ========================================================================= */}
               {/* PÁGINA 1: FOLHA DE RESPOSTAS E GABARITO (IDÊNTICO AO MODELO CATÓLICA SC) */}
               {/* ========================================================================= */}
-              <div className="sgp-answer-sheet rounded-xl border-2 border-slate-300 bg-white p-4 shadow-lg print:border-none print:p-0 print:m-0 print:shadow-none sm:p-8">
+              <div className={`sgp-answer-sheet rounded-xl border-2 border-slate-300 bg-white p-4 shadow-lg print:border-none print:p-0 print:m-0 print:shadow-none sm:p-8 ${tipoConteudoImpressao === 'APENAS_CADERNO' ? 'print:hidden' : ''}`}>
                 <div className="mb-4 flex flex-col gap-1 border-b-2 border-dashed border-slate-300 pb-2 text-xs font-bold uppercase text-slate-500 sm:flex-row sm:items-center sm:justify-between print:hidden">
                   <span>✂️ Destaque aqui — Entregar somente este gabarito ao professor</span>
                   <span className="flex items-center gap-1 text-catolica-primary">
@@ -1054,7 +1095,7 @@ export function ImpressaoTab({
               {/* ========================================================================= */}
               {/* PÁGINA 3 EM DIANTE: CADERNO DE QUESTÕES (IDÊNTICO AO MODELO DA IMAGEM 1)   */}
               {/* ========================================================================= */}
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-lg print:border-none print:shadow-none print:p-0 sm:p-8">
+              <div className={`rounded-xl border border-slate-200 bg-white p-4 shadow-lg print:border-none print:shadow-none print:p-0 sm:p-8 ${tipoConteudoImpressao === 'APENAS_GABARITO' ? 'print:hidden' : ''}`}>
                 
                 {/* Cabeçalho do Caderno de Questões */}
                 <div 

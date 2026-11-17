@@ -26,10 +26,23 @@
 }
 
 @media print {
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
   html,
-  body {
+  body,
+  main,
+  #root,
+  #__next {
     overflow: visible !important;
     height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
     background: #ffffff !important;
   }
 }
