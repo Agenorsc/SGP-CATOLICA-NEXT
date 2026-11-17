@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { WordExportService } from '@/services/WordExportService';
 import { 
   FileText, 
   Calendar, 
@@ -12,7 +13,8 @@ import {
   CheckCircle2, 
   Clock,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Download
 } from 'lucide-react';
 import { ProvaMontadaRegistro } from '@/types';
 import { TurmaModel } from '@/models/TurmaModel';
@@ -140,7 +142,7 @@ export function HistoricoProvasSection({
               </div>
 
               {/* Botões de Ação Bidirecional */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-slate-100">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-slate-100">
                 {/* 1. Visualizar Gabarito Oficial e Espelho */}
                 <button
                   type="button"
@@ -172,6 +174,20 @@ export function HistoricoProvasSection({
                 >
                   <Printer className="w-3.5 h-3.5" />
                   Reimprimir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      WordExportService.baixarDocx(prova);
+                    } catch (error) {
+                      window.alert(error instanceof Error ? error.message : 'Não foi possível exportar o Word.');
+                    }
+                  }}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 px-2 text-[11px] font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                  title="Exportar caderno de questões editável em Word (.docx)"
+                >
+                  <Download className="w-3.5 h-3.5" /> Exportar Word
                 </button>
               </div>
             </div>
