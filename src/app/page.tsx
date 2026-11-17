@@ -54,6 +54,7 @@ import { ProvasMontadasTab } from '@/components/provas/ProvasMontadasTab';
 import { ImpressaoTab } from '@/components/impressao/ImpressaoTab';
 import { LeituraTab } from '@/components/leitura/LeituraTab';
 import { MobileOmrScanner } from '@/components/leitura/MobileOmrScanner';
+import { UnifiedOMRScanner } from '@/components/omr/UnifiedOMRScanner';
 import { RelatoriosTab } from '@/components/relatorios/RelatoriosTab';
 
 export default function Home() {
@@ -939,9 +940,10 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
 
         {/* 7. SCANNER OMR MOBILE-FIRST (EMBARALHADO COM GABARITO AUTOMÁTICO) */}
         {mobileScannerAberto && (
-          <MobileOmrScanner
-            provasMontadas={provasMontadasVisiveis}
-            alunos={alunosVisiveis}
+          <UnifiedOMRScanner
+            provaMontadaId={provaParaScannerMobile?.id}
+            provasDisponiveis={provasMontadasVisiveis}
+            alunosDisponiveis={alunosVisiveis}
             onVoltar={() => {
               setMobileScannerAberto(false);
               setProvaParaScannerMobile(undefined);

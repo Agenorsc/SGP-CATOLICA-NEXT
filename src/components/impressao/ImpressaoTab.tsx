@@ -900,7 +900,7 @@ export function ImpressaoTab({
 
                       {/* QUADRO DE RESPOSTAS ÓPTICO COM 4 MARCADORES DE CANTO */}
                       <div className="relative border-2 border-slate-900 print:border-black p-3 pt-3.5 pb-2 bg-white rounded">
-                        {/* 4 Marcadores de Calibração */}
+                        {/* 4 Marcadores de Calibração (Fiduciais 8mm x 8mm) */}
                         <div className="absolute top-1.5 left-1.5 w-3.5 h-3.5 bg-black print:bg-black" />
                         <div className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-black print:bg-black" />
                         <div className="absolute bottom-1.5 left-1.5 w-3.5 h-3.5 bg-black print:bg-black" />
@@ -909,13 +909,13 @@ export function ImpressaoTab({
                         {/* Miolo: QR Code à esquerda e Grade de Respostas à direita */}
                         <div className="flex items-start justify-between gap-3 px-3">
                           
-                          {/* QR Code com Dimensão Aumentada e Alta Visibilidade */}
+                          {/* QR Code com Dimensão Aumentada e Alta Redundância (Nível H) */}
                           <div className="flex flex-col items-center justify-center pt-1 shrink-0">
                             <div className="p-1.5 bg-white border border-slate-300 print:border-none rounded-md shadow-xs print:shadow-none">
                               <QRCodeWrapper
                                 value={JSON.stringify(dados.qrPayload)}
                                 size={140}
-                                level="M"
+                                level="H"
                                 includeMargin={true}
                               />
                             </div>
@@ -963,9 +963,9 @@ export function ImpressaoTab({
                                           {letras.slice(0, totalOpcoes).map(l => (
                                             <div
                                               key={l}
-                                              className="w-5 h-4.5 border-[1px] border-slate-700 print:border-black rounded-xs flex items-center justify-center text-[7.5px] font-normal text-slate-400 print:text-slate-500 bg-white"
+                                              className="w-5 h-5 border-[1.5px] border-slate-900 print:border-black rounded-full flex items-center justify-center text-[8px] font-bold text-slate-700 print:text-black bg-white"
                                             >
-                                              {l}
+                                              {l.toUpperCase()}
                                             </div>
                                           ))}
                                         </div>
@@ -1011,9 +1011,9 @@ export function ImpressaoTab({
                                             {letras.slice(0, totalOpcoes).map(l => (
                                               <div
                                                 key={l}
-                                                className="w-5 h-4.5 border-[1px] border-slate-700 print:border-black rounded-xs flex items-center justify-center text-[7.5px] font-normal text-slate-400 print:text-slate-500 bg-white"
+                                                className="w-5 h-5 border-[1.5px] border-slate-900 print:border-black rounded-full flex items-center justify-center text-[8px] font-bold text-slate-700 print:text-black bg-white"
                                               >
-                                                {l}
+                                                {l.toUpperCase()}
                                               </div>
                                             ))}
                                           </div>

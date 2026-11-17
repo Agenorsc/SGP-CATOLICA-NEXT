@@ -38,6 +38,7 @@ import {
 } from '@/types';
 import { OmrService } from '@/services/OmrService';
 import { GabaritoDecodificado } from '@/lib/answerKey';
+import { UnifiedOMRScanner } from '@/components/omr/UnifiedOMRScanner';
 
 export type ScannerState = 'IDLE' | 'SCANNING' | 'ANALYZED' | 'VALIDATED';
 
@@ -86,6 +87,7 @@ export function CorrectionScanner({
 
   // TSK-46: Painel de configurações avançadas colapsável (oculto por padrão — interface minimalista)
   const [mostrarConfiguracoes, setMostrarConfiguracoes] = useState<boolean>(false);
+  const [scannerUnificadoAberto, setScannerUnificadoAberto] = useState<boolean>(false);
 
   // 3. Máquina de Estados: IDLE -> SCANNING -> ANALYZED -> VALIDATED
   const [scannerState, setScannerState] = useState<ScannerState>('IDLE');
@@ -795,6 +797,50 @@ export function CorrectionScanner({
     }
   };
 
+  if (scannerUnificadoAberto) {
+    return (
+      <UnifiedOMRScanner
+        provasDisponiveis={provasMontadas}
+        alunosDisponiveis={alunos}
+        onVoltar={() => setScannerUnificadoAberto(false)}
+        onNotaSalva={async (res) => {
+          const alunoExistente = alunos.find(a => a.ra === res.alunoRa);
+          const alunoAtualizado = alunoExistente
+            ? new AlunoModel({ ...alunoExistente, n2: res.notaFinal })
+            : new AlunoModel({
+                id: `aluno-${Date.now()}`,
+                nome: res.alunoNome || 'Estudante',
+                ra: res.alunoRa || '000000',
+                turmaId: turmaSelecionadaId !== 'TODAS' ? turmaSelecionadaId : (alunos[0]?.turmaId || 'turma-1'),
+                curso: 'Geral',
+                turno: 'Noturno',
+                n2: res.notaFinal
+              });
+          const turmaNome = turmas.find(t => t.id === turmaSelecionadaId)?.nome || 'Turma Geral';
+          const registro: LeituraOMRRegistro = {
+            id: `omr-${Date.now()}`,
+            alunoId: alunoAtualizado.id,
+            alunoNome: res.alunoNome || alunoAtualizado.nome || 'Estudante',
+            ra: res.alunoRa || alunoAtualizado.ra || '000000',
+            turmaId: turmaSelecionadaId !== 'TODAS' ? turmaSelecionadaId : (alunos[0]?.turmaId || 'turma-1'),
+            turmaNome,
+            materia: tituloProva || 'Avaliação Oficial',
+            versao: 'A',
+            stage: 'N2',
+            acertos: res.acertos,
+            totalQuestoes: res.totalQuestoes,
+            notaCalculada: res.notaFinal,
+            dataLeitura: new Date().toISOString(),
+            respostasDetectadas: res.respostasMarcadasJson || {},
+            detalhesQuestoes: []
+          };
+          await onSalvarLeitura(registro, alunoAtualizado);
+          setFolhasCorrigidas(prev => prev + 1);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       
@@ -852,6 +898,15 @@ export function CorrectionScanner({
                 </span>
               </div>
             )}
+            <button
+              type="button"
+              onClick={() => setScannerUnificadoAberto(true)}
+              className="px-3 py-2 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+              title="Abrir Leitor Unificado 360°"
+            >
+              <Scan className="w-3.5 h-3.5" />
+              Leitor 360°
+            </button>
             <button
               onClick={() => setMostrarConfiguracoes(v => !v)}
               className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 transition cursor-pointer flex items-center gap-1.5"
@@ -1070,21 +1125,30 @@ export function CorrectionScanner({
                     Ative a câmera para reconhecimento automático instantâneo do cartão-resposta.
                   </p>
                 </div>
-                <button
-                  onClick={() => handleIniciarCamera()}
-                  disabled={isStartingCamera}
-                  className="px-5 py-2.5 rounded-xl bg-catolica-primary hover:bg-catolica-dark text-white text-xs font-bold shadow-md shadow-catolica-primary/20 transition flex items-center gap-2 cursor-pointer"
-                >
-                  {isStartingCamera ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" /> Conectando...
-                    </>
-                  ) : (
-                    <>
-                      <Scan className="w-4 h-4" /> Iniciar Correção
-                    </>
-                  )}
-                </button>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setScannerUnificadoAberto(true)}
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition flex items-center gap-2 cursor-pointer"
+                  >
+                    <Scan className="w-4 h-4" /> Leitor Unificado 360° (Recomendado)
+                  </button>
+                  <button
+                    onClick={() => handleIniciarCamera()}
+                    disabled={isStartingCamera}
+                    className="px-5 py-2.5 rounded-xl bg-catolica-primary hover:bg-catolica-dark text-white text-xs font-bold shadow-md shadow-catolica-primary/20 transition flex items-center gap-2 cursor-pointer"
+                  >
+                    {isStartingCamera ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" /> Conectando...
+                      </>
+                    ) : (
+                      <>
+                        <Scan className="w-4 h-4" /> Iniciar Correção
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             )}
 
