@@ -20,6 +20,15 @@ export class TurmaRepository implements IBaseRepository<TurmaModel> {
       codigoConvite: 'CAT-9910',
       professorId: 'usr-prof-02',
       professorNome: 'Prof. Marcos Silva'
+    }),
+    new TurmaModel({
+      id: 't3',
+      nome: 'Direito Civil II',
+      curso: 'Direito',
+      semestre: '2026/2',
+      codigoConvite: 'CAT-7731',
+      professorId: 'usr-prof-03',
+      professorNome: 'Prof. Me. Samuel'
     })
   ];
 

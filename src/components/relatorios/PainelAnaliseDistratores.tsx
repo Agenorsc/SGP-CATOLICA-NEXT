@@ -291,7 +291,7 @@ export function PainelAnaliseDistratores({ questoes, turmaNome }: PainelAnaliseD
                               </div>
 
                               {/* Barra de Progresso Relativa */}
-                              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden shadow-inner">
                                 <div
                                   className={`h-full rounded-full transition-all duration-500 ${barColor}`}
                                   style={{ width: `${Math.max(4, dados.percentual)}%` }}
