@@ -629,10 +629,10 @@ export function RelatoriosTab({
                         {l.stage || 'N2'}
                       </td>
                       <td className="py-3 text-center font-semibold text-slate-700">
-                        {l.acertos} / {l.totalQuestoes}
+                        {l.acertos ?? (l as any).correctCount ?? 0} / {l.totalQuestoes ?? (l as any).totalQuestions ?? 10}
                       </td>
                       <td className="py-3 text-center font-black text-slate-900 text-sm">
-                        {l.notaCalculada.toFixed(1)} pts
+                        {(l.notaCalculada ?? (l as any).score ?? 0).toFixed(1)} pts
                       </td>
                       <td className="py-3 text-slate-400 text-[11px] font-mono">
                         {l.dataLeitura || 'Recentemente'}
@@ -643,7 +643,7 @@ export function RelatoriosTab({
                           onClick={() => setModalExclusaoNota({
                             id: l.id,
                             alunoNome: l.alunoNome,
-                            nota: l.notaCalculada,
+                            nota: l.notaCalculada ?? (l as any).score ?? 0,
                             ra: l.ra,
                             stage: l.stage
                           })}

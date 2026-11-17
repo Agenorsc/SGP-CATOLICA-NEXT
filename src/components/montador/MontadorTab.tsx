@@ -473,7 +473,7 @@ export function MontadorTab({
 
                         <div className="flex justify-between items-center pt-1 border-t border-slate-100">
                           <div className="flex flex-wrap gap-1">
-                            {q.tags.map((tag, i) => (
+                            {(q.tags || []).map((tag, i) => (
                               <span key={i} className="text-[9px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
                                 #{tag}
                               </span>
