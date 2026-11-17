@@ -909,18 +909,20 @@ export function ImpressaoTab({
                         {/* Miolo: QR Code à esquerda e Grade de Respostas à direita */}
                         <div className="flex items-start justify-between gap-3 px-3">
                           
-                          {/* QR Code */}
-                          <div className="flex flex-col items-center justify-center pt-2">
-                            <div className="p-1 bg-white border border-slate-200 print:border-none rounded">
+                          {/* QR Code com Dimensão Aumentada e Alta Visibilidade */}
+                          <div className="flex flex-col items-center justify-center pt-1 shrink-0">
+                            <div className="p-1.5 bg-white border border-slate-300 print:border-none rounded-md shadow-xs print:shadow-none">
                               <QRCodeWrapper
                                 value={JSON.stringify(dados.qrPayload)}
-                                size={115}
+                                size={140}
+                                level="M"
+                                includeMargin={true}
                               />
                             </div>
-                            <span className="text-[9px] font-mono font-bold text-slate-900 print:text-black mt-1">
+                            <span className="text-[9.5px] font-mono font-black text-slate-900 print:text-black mt-1">
                               {withId ? `RA: ${aluno?.ra}` : 'PROVA ANÔNIMA'}
                             </span>
-                            <span className="text-[8px] font-mono text-slate-600 print:text-black">
+                            <span className="text-[8.5px] font-mono font-bold text-slate-700 print:text-black">
                               Versão {dados.versaoLetra} • {resolvedStage}
                             </span>
                           </div>

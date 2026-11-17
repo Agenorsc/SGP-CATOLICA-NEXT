@@ -6,9 +6,16 @@ import { QRCodeSVG } from 'qrcode.react';
 interface QRCodeWrapperProps {
   value: string;
   size?: number;
+  level?: 'L' | 'M' | 'Q' | 'H';
+  includeMargin?: boolean;
 }
 
-export function QRCodeWrapper({ value, size = 110 }: QRCodeWrapperProps) {
+export function QRCodeWrapper({ 
+  value, 
+  size = 135,
+  level = 'M',
+  includeMargin = true 
+}: QRCodeWrapperProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -30,8 +37,8 @@ export function QRCodeWrapper({ value, size = 110 }: QRCodeWrapperProps) {
     <QRCodeSVG
       value={value}
       size={size}
-      level="L"
-      includeMargin={false}
+      level={level}
+      includeMargin={includeMargin}
     />
   );
 }
