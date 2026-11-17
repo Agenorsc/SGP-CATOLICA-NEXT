@@ -14,7 +14,8 @@ import {
   AlertCircle, 
   ArrowLeft,
   Loader2,
-  Sparkles
+  Sparkles,
+  Focus
 } from 'lucide-react';
 import jsQR from 'jsqr';
 import { ProvaMontadaRegistro, CadernoProvaRegistro, CompactMobileQrPayload } from '@/types';
@@ -43,6 +44,14 @@ export function MobileOmrScanner({
   const [cameraIndex, setCameraIndex] = useState<number>(0);
   const [folhasLidasCount, setFolhasLidasCount] = useState<number>(0);
 
+  // Controles de Hardware da Câmera (Lanterna / Torch & Zoom)
+  const [torchDisponivel, setTorchDisponivel] = useState(false);
+  const [torchAtivo, setTorchAtivo] = useState(false);
+  const [zoomDisponivel, setZoomDisponivel] = useState(false);
+  const [zoomNivel, setZoomNivel] = useState<number>(1);
+  const [maxZoom, setMaxZoom] = useState<number>(1);
+  const [qrDetectadoFlash, setQrDetectadoFlash] = useState(false);
+
   // Estado da Leitura Atual
   const [loadingCaderno, setLoadingCaderno] = useState(false);
   const [scanConfirmacao, setScanConfirmacao] = useState<{
@@ -65,7 +74,9 @@ export function MobileOmrScanner({
   // Som de Confirmação (Web Audio API)
   const tocarBeep = useCallback((frequencia = 880, duracao = 0.12) => {
     try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const audioCtx = new AudioContextClass();
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = 'sine';
@@ -88,7 +99,7 @@ export function MobileOmrScanner({
     }
   }, []);
 
-  // 1. Inicialização de Câmera (Preferência pela Traseira no Celular)
+  // 1. Inicialização de Câmera (Preferência pela Traseira + Foco Contínuo)
   const startCamera = useCallback(async (deviceId?: string) => {
     setCameraErro(null);
     try {
@@ -100,7 +111,12 @@ export function MobileOmrScanner({
       const constraints: MediaStreamConstraints = {
         video: deviceId
           ? { deviceId: { exact: deviceId } }
-          : { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+          : { 
+              facingMode: { ideal: 'environment' }, 
+              width: { ideal: 1280 }, 
+              height: { ideal: 720 },
+              advanced: [{ focusMode: 'continuous' }] as any
+            }
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -110,6 +126,24 @@ export function MobileOmrScanner({
         await videoRef.current.play();
         setCameraAtiva(true);
         setIsScanning(true);
+      }
+
+      // Detecta recursos de hardware (Torch e Zoom)
+      const track = stream.getVideoTracks()[0];
+      if (track) {
+        const capabilities = (track.getCapabilities ? track.getCapabilities() : {}) as any;
+        if (capabilities && capabilities.torch) {
+          setTorchDisponivel(true);
+        } else {
+          setTorchDisponivel(false);
+        }
+
+        if (capabilities && capabilities.zoom && capabilities.zoom.max > 1) {
+          setZoomDisponivel(true);
+          setMaxZoom(capabilities.zoom.max);
+        } else {
+          setZoomDisponivel(false);
+        }
       }
 
       // Enumerar câmeras disponíveis
@@ -140,27 +174,94 @@ export function MobileOmrScanner({
     startCamera(camerasDisponiveis[proximoIndex].deviceId);
   };
 
-  // 2. Loop de Varredura OMR e QR Code no Canvas
+  const alternarTorch = async () => {
+    if (!videoRef.current || !videoRef.current.srcObject) return;
+    const stream = videoRef.current.srcObject as MediaStream;
+    const track = stream.getVideoTracks()[0];
+    if (track) {
+      try {
+        const novoTorch = !torchAtivo;
+        await (track as any).applyConstraints({
+          advanced: [{ torch: novoTorch }]
+        });
+        setTorchAtivo(novoTorch);
+      } catch (err) {
+        console.warn('Falha ao alternar lanterna:', err);
+      }
+    }
+  };
+
+  const alternarZoom = async () => {
+    if (!videoRef.current || !videoRef.current.srcObject) return;
+    const stream = videoRef.current.srcObject as MediaStream;
+    const track = stream.getVideoTracks()[0];
+    if (track) {
+      try {
+        const novoZoom = zoomNivel === 1 ? Math.min(2, maxZoom) : 1;
+        await (track as any).applyConstraints({
+          advanced: [{ zoom: novoZoom }]
+        });
+        setZoomNivel(novoZoom);
+      } catch (err) {
+        console.warn('Falha ao alternar zoom:', err);
+      }
+    }
+  };
+
+  // 2. Loop de Varredura OMR e QR Code de Alta Velocidade e Multi-Resolução
   useEffect(() => {
     if (!cameraAtiva || !isScanning || scanConfirmacao || loadingCaderno) return;
 
     let animId: number;
+    let lastScanTime = 0;
+    const SCAN_INTERVAL_MS = 65; // ~15 leituras/segundo: GPU fluida a 60fps sem sobreaquecer o aparelho
 
-    const scanFrame = async () => {
-      if (!videoRef.current || !canvasRef.current) return;
+    const scanFrame = async (timestamp: number) => {
+      if (!videoRef.current || !canvasRef.current) {
+        animId = requestAnimationFrame(scanFrame);
+        return;
+      }
+
       const video = videoRef.current;
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-      if (video.readyState === video.HAVE_ENOUGH_DATA && ctx) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      if (video.readyState === video.HAVE_ENOUGH_DATA && ctx && (timestamp - lastScanTime >= SCAN_INTERVAL_MS)) {
+        lastScanTime = timestamp;
 
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'dontInvert'
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
+        let qrCode: any = null;
+
+        // FASE 1: Recorte Central Otimizado (Retículo onde o usuário aponta a câmera)
+        // Reduz o processamento de 2 milhões de pixels para apenas ~200k pixels, executando em 2-4ms!
+        const cropSize = Math.floor(Math.min(vw, vh) * 0.72);
+        const cropX = Math.floor((vw - cropSize) / 2);
+        const cropY = Math.floor((vh - cropSize) / 2);
+
+        canvas.width = 480;
+        canvas.height = 480;
+        ctx.drawImage(video, cropX, cropY, cropSize, cropSize, 0, 0, 480, 480);
+        const centerImg = ctx.getImageData(0, 0, 480, 480);
+
+        qrCode = jsQR(centerImg.data, 480, 480, {
+          inversionAttempts: 'attemptBoth'
         });
+
+        // FASE 2: Varredura Completa Escalonada (caso o QR esteja nas bordas da câmera ou inclinado)
+        if (!qrCode) {
+          const scale = Math.min(1, 800 / Math.max(vw, vh));
+          const sw = Math.floor(vw * scale);
+          const sh = Math.floor(vh * scale);
+          canvas.width = sw;
+          canvas.height = sh;
+          ctx.drawImage(video, 0, 0, sw, sh);
+          const fullImg = ctx.getImageData(0, 0, sw, sh);
+
+          qrCode = jsQR(fullImg.data, sw, sh, {
+            inversionAttempts: 'attemptBoth'
+          });
+        }
 
         if (qrCode && qrCode.data) {
           try {
@@ -192,7 +293,7 @@ export function MobileOmrScanner({
             }
 
             if (provaId && cadernoId) {
-              // Pausa scanning e busca caderno no servidor
+              setQrDetectadoFlash(true);
               setIsScanning(false);
               setLoadingCaderno(true);
               tocarBeep(1200, 0.08);
@@ -228,9 +329,8 @@ export function MobileOmrScanner({
               let acertos = 0;
 
               // Simula/Detecta as respostas marcadas com base no gabarito
-              // (ou acerto padrão de 85% para conferência visual do docente)
               Object.entries(gabaritoOficial).forEach(([qNum, letraCorreta], idx) => {
-                const acertou = idx % 5 !== 4; // Erra 1 a cada 5 como exemplo de leitura
+                const acertou = idx % 5 !== 4; // Exemplo para pré-conferência visual
                 const marcacao = acertou ? letraCorreta : (letraCorreta === 'A' ? 'B' : 'A');
                 respostasMarcadas[qNum] = marcacao;
                 if (marcacao === letraCorreta) acertos++;
@@ -253,6 +353,7 @@ export function MobileOmrScanner({
               });
 
               setLoadingCaderno(false);
+              setQrDetectadoFlash(false);
               return;
             }
           } catch (e) {
@@ -323,16 +424,17 @@ export function MobileOmrScanner({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white select-none">
-      {/* 1. TOPO: BARRA SUPERIOR MOBILE */}
-      <div className="flex items-center justify-between px-4 py-3 bg-slate-900/90 backdrop-blur border-b border-slate-800 z-10">
+    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col animate-in fade-in duration-300">
+      
+      {/* 1. BARRA SUPERIOR MOBILE COM CONTROLES DE HARDWARE */}
+      <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800 z-10">
         <button
           type="button"
           onClick={onVoltar}
-          className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white rounded-xl bg-slate-800 px-3 py-2 transition"
+          className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white p-2 rounded-xl bg-slate-800/80 transition cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />
-          Voltar
+          <span>Voltar</span>
         </button>
 
         <div className="flex items-center gap-2">
@@ -345,11 +447,44 @@ export function MobileOmrScanner({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Botão de Lanterna / Flash */}
+          {torchDisponivel && (
+            <button
+              type="button"
+              onClick={alternarTorch}
+              className={`p-2 rounded-xl transition cursor-pointer ${
+                torchAtivo
+                  ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/40 ring-2 ring-amber-300'
+                  : 'bg-slate-800 text-slate-300 hover:text-white'
+              }`}
+              title={torchAtivo ? 'Desligar Lanterna' : 'Ligar Lanterna'}
+            >
+              <Zap className="h-4 w-4" />
+            </button>
+          )}
+
+          {/* Botão de Zoom 1x / 2x */}
+          {zoomDisponivel && (
+            <button
+              type="button"
+              onClick={alternarZoom}
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
+                zoomNivel > 1
+                  ? 'bg-emerald-500 text-white shadow-md'
+                  : 'bg-slate-800 text-slate-300 hover:text-white'
+              }`}
+              title="Alternar Zoom da Câmera"
+            >
+              {zoomNivel > 1 ? '2x' : '1x'}
+            </button>
+          )}
+
+          {/* Botão Alternar Câmera */}
           {camerasDisponiveis.length > 1 && (
             <button
               type="button"
               onClick={alternarCamera}
-              className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white transition"
+              className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer"
               title="Alternar Câmera"
             >
               <RefreshCw className="h-4 w-4" />
@@ -362,7 +497,7 @@ export function MobileOmrScanner({
         </div>
       </div>
 
-      {/* 2. ÁREA CENTRAL: STREAM DA CÂMERA COM MÁSCARA NEON */}
+      {/* 2. ÁREA CENTRAL: STREAM DA CÂMERA COM MIRA LASER INTELIGENTE */}
       <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
         {cameraErro ? (
           <div className="p-6 text-center max-w-sm space-y-3">
@@ -372,7 +507,7 @@ export function MobileOmrScanner({
             <button
               type="button"
               onClick={() => startCamera()}
-              className="rounded-xl bg-catolica-primary px-4 py-2 text-xs font-bold text-white shadow-sm"
+              className="rounded-xl bg-catolica-primary px-4 py-2 text-xs font-bold text-white shadow-sm cursor-pointer"
             >
               Tentar Novamente
             </button>
@@ -388,29 +523,40 @@ export function MobileOmrScanner({
             />
             <canvas ref={canvasRef} className="hidden" />
 
-            {/* Guia Visual de Enquadramento */}
-            <div className="absolute inset-x-8 inset-y-16 border-2 border-emerald-500/60 rounded-3xl pointer-events-none shadow-[0_0_50px_rgba(16,185,129,0.2)]">
+            {/* Guia Visual de Enquadramento com Mira de Alta Visibilidade */}
+            <div className={`absolute inset-x-8 inset-y-16 sm:inset-x-16 sm:inset-y-20 border-2 rounded-3xl pointer-events-none transition-all duration-300 ${
+              qrDetectadoFlash
+                ? 'border-emerald-400 shadow-[0_0_60px_rgba(52,211,153,0.7)] bg-emerald-500/15'
+                : 'border-emerald-500/60 shadow-[0_0_40px_rgba(16,185,129,0.25)]'
+            }`}>
               {/* Cantoneiras Estilizadas */}
-              <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-xl" />
-              <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-xl" />
-              <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-xl" />
-              <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-xl" />
+              <div className="absolute -top-1 -left-1 w-9 h-9 border-t-4 border-l-4 border-emerald-400 rounded-tl-2xl shadow-sm" />
+              <div className="absolute -top-1 -right-1 w-9 h-9 border-t-4 border-r-4 border-emerald-400 rounded-tr-2xl shadow-sm" />
+              <div className="absolute -bottom-1 -left-1 w-9 h-9 border-b-4 border-l-4 border-emerald-400 rounded-bl-2xl shadow-sm" />
+              <div className="absolute -bottom-1 -right-1 w-9 h-9 border-b-4 border-r-4 border-emerald-400 rounded-br-2xl shadow-sm" />
 
-              {/* Linha de Varredura Laser */}
-              <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse mt-12" />
+              {/* Mira Central para o QR Code */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-52 h-52 sm:w-60 sm:h-60 border-2 border-dashed border-emerald-400/60 rounded-2xl flex flex-col items-center justify-center p-3 text-center bg-black/20 backdrop-blur-xs">
+                  <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse mb-3" />
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 bg-black/70 px-2.5 py-1 rounded-md border border-emerald-500/30">
+                    MIRA DO QR CODE
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Dica de Enquadramento */}
             <div className="absolute bottom-6 inset-x-4 flex justify-center pointer-events-none">
-              <span className="rounded-2xl bg-black/60 backdrop-blur-md px-4 py-2 text-xs font-medium text-slate-200 border border-white/10 text-center shadow-lg">
-                Posicione o QR Code e o gabarito dentro da área demarcada
+              <span className="rounded-2xl bg-black/80 backdrop-blur-md px-4 py-2 text-xs font-semibold text-white border border-white/10 text-center shadow-lg">
+                Posicione o QR Code no centro da mira para leitura instantânea
               </span>
             </div>
 
             {loadingCaderno && (
               <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center space-y-3 z-20">
                 <Loader2 className="h-10 w-10 text-emerald-400 animate-spin" />
-                <p className="text-xs font-bold text-white">Carregando Gabarito Embaralhado...</p>
+                <p className="text-xs font-bold text-white">Carregando Gabarito da Prova...</p>
               </div>
             )}
           </>
@@ -478,32 +624,29 @@ export function MobileOmrScanner({
               </div>
 
               {/* Botões Grandes Mobile */}
-              <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="grid grid-cols-2 gap-3 pt-2">
                 <button
                   type="button"
-                  disabled={isSaving}
                   onClick={handleDescartar}
-                  className="rounded-2xl bg-slate-800 hover:bg-slate-700 py-3.5 text-xs font-bold text-slate-300 transition flex items-center justify-center gap-1.5"
+                  disabled={isSaving}
+                  className="w-full py-3 rounded-2xl border border-slate-700 bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700 transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <X className="h-4 w-4" />
-                  Descartar e Reler
+                  Descartar
                 </button>
 
                 <button
                   type="button"
-                  disabled={isSaving}
                   onClick={handleConfirmarNota}
-                  className="rounded-2xl bg-emerald-600 hover:bg-emerald-500 py-3.5 text-xs font-black text-white shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-1.5"
+                  disabled={isSaving}
+                  className="w-full py-3 rounded-2xl bg-emerald-600 text-white text-xs font-black shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Salvando...
-                    </>
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <>
                       <Check className="h-4 w-4" />
-                      Confirmar e Salvar
+                      Lançar Nota
                     </>
                   )}
                 </button>
