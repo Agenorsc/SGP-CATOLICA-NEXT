@@ -17,6 +17,7 @@ import {
   ScanResult
 } from '@/types';
 import { lerGradeOmrPorAjuste, LimiaresOmr } from '@/services/omr/GridOmrEngine';
+import { lerCartaoOmrPorFiduciais, ResultadoCartaoOmr } from '@/lib/omr/cartaoOmrEngine';
 import { shuffleArray } from '@/lib/shuffle';
 import { decodificarGabaritoQr, sementeGabarito, GabaritoDecodificado } from '@/lib/answerKey';
 
@@ -381,8 +382,28 @@ export class OmrService {
     coordenadasDetectadas?: Record<number, Record<string, { x: number; y: number; fill: number; boxSize?: number }>>;
     confianca?: number;
     metodo?: string;
+    marcadasPorQuestao?: Record<number, string[]>;
+    fiduciais?: ResultadoCartaoOmr['fiduciais'];
+    homografia?: number[];
   } {
-    // Motor principal: localiza a grade de quadrados real na foto (robusto a escala de impressão)
+    // Motor 1 (padrão lotérica): cartão novo com 4 âncoras de 8 mm + homografia
+    if (qrAnchor) {
+      try {
+        const ops = Array.from({ length: Math.max(1, Math.min(30, Math.round(totalQuestoes))) }, (_, i) => {
+          const o = Math.round(Number(opcoesPorQuestao?.[i] ?? 5));
+          return o >= 2 && o <= 5 ? o : 5;
+        });
+        const resCartao = lerCartaoOmrPorFiduciais(imgData, qrAnchor, ops);
+        if (resCartao) {
+          const { layout: _layout, ...saida } = resCartao;
+          return saida;
+        }
+      } catch (e) {
+        console.warn('Falha no motor de âncoras fiduciais, usando ajuste de grade:', e);
+      }
+    }
+
+    // Motor 2: localiza a grade de quadrados real na foto (folhas do layout anterior)
     if (qrAnchor) {
       try {
         const resultadoGrade = lerGradeOmrPorAjuste(imgData, totalQuestoes, qrAnchor, opcoesPorQuestao, limiares);

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { QRCodeWrapper } from '@/components/common/QRCodeWrapper';
+import { CartaoRespostasOmr } from '@/components/omr/CartaoRespostasOmr';
 import { AlunoModel } from '@/models/AlunoModel';
 import { TurmaModel } from '@/models/TurmaModel';
 import { Question } from '@/types';
@@ -54,10 +55,11 @@ export function FolhaRespostaA4({
   });
 
   const numQuestoes = Math.min(30, Math.max(1, questoes.length || totalQuestoes || 10));
-  const isDuasColunas = numQuestoes > 15;
-  const col1Count = isDuasColunas ? 15 : numQuestoes;
-  const col2Count = isDuasColunas ? numQuestoes - 15 : 0;
-  const opcoesLetras = ['A', 'B', 'C', 'D', 'E'];
+  const opcoesPorQuestao = Array.from({ length: numQuestoes }, (_, i) => {
+    const q = questoes[i] as any;
+    const n = q?.options?.length || q?.alternativas?.length || 5;
+    return Math.max(2, Math.min(5, n));
+  });
 
   return (
     <div className="sgp-answer-sheet bg-white p-6 sm:p-8 font-sans text-slate-900 print:text-black print:p-0 print:m-0 w-full max-w-[210mm] mx-auto box-border">
@@ -172,42 +174,12 @@ export function FolhaRespostaA4({
         {/* COLUNA DIREITA: BLOCO DO GABARITO DELIMITADO PELAS 4 MARCAS FIDUCIAIS (8mm x 8mm) */}
         <div className="md:col-span-7 flex flex-col items-center">
           
-          {/* ÁREA FIDUCIAL RETIFICÁVEL POR HOMOGRAFIA */}
-          <div 
-            id="area-gabarito-fiduciais" 
-            className="relative border-2 border-slate-900 print:border-black bg-white rounded-md p-6 w-full max-w-[125mm]"
+          {/* CARTÃO ÓPTICO COM 4 ÂNCORAS FIDUCIAIS DE 8mm × 8mm (GEOMETRIA EXATA EM mm, RETIFICÁVEL POR HOMOGRAFIA) */}
+          <div
+            id="area-gabarito-fiduciais"
+            className="border-2 border-slate-900 print:border-black bg-white rounded-md p-3 flex flex-col items-center gap-2"
           >
-            {/* 4 ÂNCORAS FIDUCIAIS EXATAS DE 8mm x 8mm COM RESPIRO BRANCO */}
-            {/* Top-Left */}
-            <div 
-              data-fiducial="TL"
-              className="absolute top-2 left-2 w-[8mm] h-[8mm] min-w-[8mm] min-h-[8mm] bg-black print:bg-black rounded-none shadow-xs print:shadow-none"
-              title="Marca Fiducial Top-Left (8mm x 8mm)"
-            />
-
-            {/* Top-Right */}
-            <div 
-              data-fiducial="TR"
-              className="absolute top-2 right-2 w-[8mm] h-[8mm] min-w-[8mm] min-h-[8mm] bg-black print:bg-black rounded-none shadow-xs print:shadow-none"
-              title="Marca Fiducial Top-Right (8mm x 8mm)"
-            />
-
-            {/* Bottom-Left */}
-            <div 
-              data-fiducial="BL"
-              className="absolute bottom-2 left-2 w-[8mm] h-[8mm] min-w-[8mm] min-h-[8mm] bg-black print:bg-black rounded-none shadow-xs print:shadow-none"
-              title="Marca Fiducial Bottom-Left (8mm x 8mm)"
-            />
-
-            {/* Bottom-Right */}
-            <div 
-              data-fiducial="BR"
-              className="absolute bottom-2 right-2 w-[8mm] h-[8mm] min-w-[8mm] min-h-[8mm] bg-black print:bg-black rounded-none shadow-xs print:shadow-none"
-              title="Marca Fiducial Bottom-Right (8mm x 8mm)"
-            />
-
-            {/* CABEÇALHO DO BLOCO INTERNO DE RESPOSTAS */}
-            <div className="text-center pb-2 pt-1">
+            <div className="text-center">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-900 print:text-black">
                 FOLHA DE RESPOSTAS ÓPTICA (OMR)
               </span>
@@ -215,84 +187,10 @@ export function FolhaRespostaA4({
                 Versão: {versaoLetra} • Caderno: {cadernoId}
               </p>
             </div>
-
-            {/* GRADE PADRONIZADA DE BOLINHAS (CÍRCULOS COM LETRAS INTERNAS) */}
-            <div className={`pt-2 pb-2 px-6 flex justify-around gap-6 ${isDuasColunas ? 'flex-row' : 'flex-col items-center'}`}>
-              
-              {/* Coluna 1: Questões 1 até col1Count */}
-              <div className="space-y-2">
-                {/* Rótulo superior das alternativas */}
-                <div className="flex items-center gap-2 text-[10px] font-black text-slate-800 print:text-black font-mono">
-                  <span className="w-10 text-right pr-2">Q:</span>
-                  {opcoesLetras.map(letra => (
-                    <span key={letra} className="w-6 text-center">{letra}</span>
-                  ))}
-                </div>
-
-                {/* Linhas das questões da Coluna 1 */}
-                {Array.from({ length: col1Count }).map((_, qIdx) => {
-                  const num = qIdx + 1;
-                  const numStr = num < 10 ? `0${num}` : `${num}`;
-                  return (
-                    <div key={num} className="flex items-center gap-2 font-mono">
-                      <span className="w-10 text-right pr-2 text-[10.5px] font-bold text-slate-900 print:text-black">
-                        Q.{numStr}:
-                      </span>
-                      {opcoesLetras.map(letra => (
-                        <div
-                          key={letra}
-                          data-question={num}
-                          data-option={letra}
-                          className="w-6 h-6 rounded-full border border-slate-900 print:border-black flex items-center justify-center text-[10px] font-black text-slate-900 print:text-black bg-white select-none"
-                        >
-                          {letra}
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Coluna 2: Questões 16 até numQuestoes (se houver mais de 15 questões) */}
-              {isDuasColunas && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-[10px] font-black text-slate-800 print:text-black font-mono">
-                    <span className="w-10 text-right pr-2">Q:</span>
-                    {opcoesLetras.map(letra => (
-                      <span key={letra} className="w-6 text-center">{letra}</span>
-                    ))}
-                  </div>
-
-                  {Array.from({ length: col2Count }).map((_, qIdx) => {
-                    const num = 16 + qIdx;
-                    return (
-                      <div key={num} className="flex items-center gap-2 font-mono">
-                        <span className="w-10 text-right pr-2 text-[10.5px] font-bold text-slate-900 print:text-black">
-                          Q.{num}:
-                        </span>
-                        {opcoesLetras.map(letra => (
-                          <div
-                            key={letra}
-                            data-question={num}
-                            data-option={letra}
-                            className="w-6 h-6 rounded-full border border-slate-900 print:border-black flex items-center justify-center text-[10px] font-black text-slate-900 print:text-black bg-white select-none"
-                          >
-                            {letra}
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Rodapé da Grade */}
-            <div className="pt-2 border-t border-slate-200 print:border-black text-center">
-              <span className="text-[8px] font-mono font-bold text-slate-600 print:text-black">
-                PROVA: {provaId} • CADERNO: {cadernoId}
-              </span>
-            </div>
+            <CartaoRespostasOmr opcoesPorQuestao={opcoesPorQuestao} />
+            <span className="text-[8px] font-mono font-bold text-slate-600 print:text-black">
+              PROVA: {provaId} • CADERNO: {cadernoId}
+            </span>
           </div>
         </div>
       </div>

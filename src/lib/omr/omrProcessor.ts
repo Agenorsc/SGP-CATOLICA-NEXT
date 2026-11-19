@@ -18,6 +18,7 @@ export interface BubblePoint {
   v: number; // Coordenada normalizada Y [0..1]
   pixelX: number; // Coordenada X na imagem original
   pixelY: number; // Coordenada Y na imagem original
+  raioPx?: number; // Raio real da bolinha na imagem (quando conhecido pelo motor)
   fillRatio: number; // Percentual de preenchimento (0.0 a 1.0)
   isMarked: boolean;
 }

@@ -24,7 +24,9 @@ import {
 import { ProvaMontadaRegistro, CadernoProvaRegistro } from '@/types';
 import { AlunoModel } from '@/models/AlunoModel';
 import { OMRProcessorOutput } from '@/lib/omr/omrProcessor';
-import { classificarLeituraGrade } from '@/lib/omr/omrGradeAdapter';
+import { classificarLeituraGrade, SaidaMotorGrade } from '@/lib/omr/omrGradeAdapter';
+import { desenharAncoras, desenharResultadoOmr, gerarRecorteConferencia } from '@/lib/omr/desenharConferencia';
+import { gerarLayoutCartao } from '@/lib/omr/layoutCartaoOmr';
 import {
   DetectorNativo,
   QrDetectado,
@@ -98,6 +100,10 @@ export function UnifiedOMRScanner({
 
   // Snapshot congelado (imagem em base64 para preview)
   const [snapshotDataUrl, setSnapshotDataUrl] = useState<string | null>(null);
+  // Recorte "de frente" do cartão com as cores da correção (Passo 4)
+  const [recorteUrl, setRecorteUrl] = useState<string | null>(null);
+  const [metodoLeitura, setMetodoLeitura] = useState<string>('');
+  const saidaMotorRef = useRef<SaidaMotorGrade | null>(null);
 
   // Motor óptico comprovado (GridOmrEngine ancorado no QR) e estado de rastreamento
   const omrService = useMemo(() => new OmrService(), []);
@@ -448,26 +454,39 @@ export function UnifiedOMRScanner({
 
       const cfg = leituraRef.current;
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const saida = omrService.processarGradeOMRFromImageData(
+      const saidaBruta = omrService.processarGradeOMRFromImageData(
         imageData,
         cfg.totalQuestoes,
         ancora,
         cfg.opcoes
       );
 
-      const resultado = classificarLeituraGrade(saida, {
+      const configClassificacao = {
         totalQuestoes: cfg.totalQuestoes,
         gabarito: cfg.gabarito,
         pontosPorQuestao: cfg.pontos,
         opcoesPorQuestao: cfg.opcoes
-      });
+      };
+      const preliminar = classificarLeituraGrade(saidaBruta, configClassificacao);
 
-      if (!resultado.sucesso) {
-        throw new Error(resultado.erro || 'Grade de respostas não localizada.');
+      if (!preliminar.sucesso) {
+        throw new Error(preliminar.erro || 'Grade de respostas não localizada.');
       }
 
+      // Marcações explícitas por questão (base para a correção manual por toque)
+      const marcadasPorQuestao: Record<number, string[]> = saidaBruta.marcadasPorQuestao
+        ? { ...saidaBruta.marcadasPorQuestao }
+        : Object.fromEntries(
+            preliminar.questoes.map(q => [q.numero, q.bubbles.filter(b => b.isMarked).map(b => b.optionLetter)])
+          );
+      const saida: SaidaMotorGrade = { ...saidaBruta, marcadasPorQuestao };
+      saidaMotorRef.current = saida;
+      const resultado = classificarLeituraGrade(saida, configClassificacao);
+
+      setMetodoLeitura(saida.metodo || '');
       setOmrResult(resultado);
       desenharSobreposicaoVisual(canvas.width, canvas.height, resultado);
+      atualizarRecorte(resultado);
       setStep('CONFERENCE');
       tocarSom(1400, 0.15, 'sine');
       vibrar([100]);
@@ -482,7 +501,7 @@ export function UnifiedOMRScanner({
     }
   };
 
-  // PASSO 4: DESENHO DA SOBREPOSIÇÃO VISUAL (Círculos Coloridos sobre as Questões)
+  // PASSO 4: DESENHO DA SOBREPOSIÇÃO VISUAL (cores por status sobre a foto inteira)
   const desenharSobreposicaoVisual = (w: number, h: number, resultado: OMRProcessorOutput) => {
     if (!overlayCanvasRef.current) return;
     const overlay = overlayCanvasRef.current;
@@ -490,76 +509,54 @@ export function UnifiedOMRScanner({
     overlay.height = h;
     const ctx = overlay.getContext('2d');
     if (!ctx) return;
-
     ctx.clearRect(0, 0, w, h);
-
-    // 1. Destaca as 4 Âncoras Fiduciais Detectadas com Quadrados Verdes
-    if (resultado.anchors) {
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = '#10b981'; // Esmeralda
-      [resultado.anchors.topLeft, resultado.anchors.topRight, resultado.anchors.bottomLeft, resultado.anchors.bottomRight].forEach(a => {
-        ctx.strokeRect(a.x - a.width / 2, a.y - a.height / 2, a.width, a.height);
-      });
-
-      // Linha conectando as 4 âncoras (retângulo delimitador)
-      ctx.beginPath();
-      ctx.lineWidth = 2;
-      ctx.setLineDash([8, 8]);
-      ctx.strokeStyle = 'rgba(16, 185, 129, 0.6)';
-      ctx.moveTo(resultado.anchors.topLeft.x, resultado.anchors.topLeft.y);
-      ctx.lineTo(resultado.anchors.topRight.x, resultado.anchors.topRight.y);
-      ctx.lineTo(resultado.anchors.bottomRight.x, resultado.anchors.bottomRight.y);
-      ctx.lineTo(resultado.anchors.bottomLeft.x, resultado.anchors.bottomLeft.y);
-      ctx.closePath();
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    // 2. Sobreposição das Bolinhas e Status das Questões
-    resultado.questoes.forEach(q => {
-      q.bubbles.forEach(b => {
-        ctx.beginPath();
-        const r = Math.max(10, Math.min(22, w * 0.016));
-        ctx.arc(b.pixelX, b.pixelY, r, 0, 2 * Math.PI);
-
-        if (b.isMarked) {
-          if (q.status === 'ACERTO') {
-            // VERDE: Acerto
-            ctx.fillStyle = 'rgba(16, 185, 129, 0.45)';
-            ctx.fill();
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = '#10b981';
-            ctx.stroke();
-          } else if (q.status === 'ERRO') {
-            // VERMELHO: Erro
-            ctx.fillStyle = 'rgba(239, 68, 68, 0.50)';
-            ctx.fill();
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = '#ef4444';
-            ctx.stroke();
-          } else {
-            // LARANJA: Duplicada
-            ctx.fillStyle = 'rgba(245, 158, 11, 0.50)';
-            ctx.fill();
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = '#f59e0b';
-            ctx.stroke();
-          }
-        } else if (q.status === 'ERRO' && b.optionLetter === q.gabaritoOficial) {
-          // Borda verde indicando qual era a alternativa correta
-          ctx.lineWidth = 3;
-          ctx.strokeStyle = '#10b981';
-          ctx.setLineDash([4, 4]);
-          ctx.stroke();
-          ctx.setLineDash([]);
-        } else if (q.status === 'EM_BRANCO') {
-          // Marcação suave em amarelo/âmbar para questões em branco
-          ctx.lineWidth = 2;
-          ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
-          ctx.stroke();
-        }
-      });
+    const identidade = (p: { x: number; y: number }) => p;
+    desenharAncoras(ctx, resultado, identidade, 1);
+    desenharResultadoOmr(ctx, resultado, {
+      paraDestino: identidade,
+      escalaRaio: 1,
+      raioPadrao: Math.max(10, Math.min(22, w * 0.016))
     });
+  };
+
+  // Recorte retificado do cartão (homografia) ou recorte girado (folhas antigas)
+  const atualizarRecorte = (resultado: OMRProcessorOutput) => {
+    const canvas = snapshotCanvasRef.current;
+    if (!canvas) return;
+    const saida = saidaMotorRef.current;
+    const layout = saida?.homografia ? gerarLayoutCartao(leituraRef.current.opcoes) : null;
+    try {
+      setRecorteUrl(gerarRecorteConferencia(canvas, resultado, saida?.homografia ?? null, layout));
+    } catch (e) {
+      console.warn('Falha ao gerar recorte de conferência:', e);
+      setRecorteUrl(null);
+    }
+  };
+
+  // CORREÇÃO MANUAL: o professor toca numa alternativa para marcar/desmarcar
+  const alternarMarcacaoManual = (numeroQuestao: number, letra: string) => {
+    const saida = saidaMotorRef.current;
+    if (!saida || !snapshotCanvasRef.current) return;
+    const atuais = saida.marcadasPorQuestao?.[numeroQuestao] ?? [];
+    const novas = atuais.includes(letra)
+      ? atuais.filter(l => l !== letra)
+      : [...atuais, letra].sort();
+    const atualizada: SaidaMotorGrade = {
+      ...saida,
+      marcadasPorQuestao: { ...(saida.marcadasPorQuestao || {}), [numeroQuestao]: novas }
+    };
+    saidaMotorRef.current = atualizada;
+    const cfg = leituraRef.current;
+    const resultado = classificarLeituraGrade(atualizada, {
+      totalQuestoes: cfg.totalQuestoes,
+      gabarito: cfg.gabarito,
+      pontosPorQuestao: cfg.pontos,
+      opcoesPorQuestao: cfg.opcoes
+    });
+    setOmrResult(resultado);
+    desenharSobreposicaoVisual(snapshotCanvasRef.current.width, snapshotCanvasRef.current.height, resultado);
+    atualizarRecorte(resultado);
+    tocarSom(1000, 0.05, 'sine');
   };
 
   // GRAVAÇÃO DA NOTA (CONFIRMAR E SALVAR NOTA)
@@ -612,6 +609,9 @@ export function UnifiedOMRScanner({
   // REFAZER LEITURA (Descarta o snapshot e volta para a câmera imediatamente)
   const reiniciarParaProximaLeitura = () => {
     setSnapshotDataUrl(null);
+    setRecorteUrl(null);
+    setMetodoLeitura('');
+    saidaMotorRef.current = null;
     setOmrResult(null);
     setCountdown(2.0);
     setIsSaving(false);
@@ -797,7 +797,7 @@ export function UnifiedOMRScanner({
               <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex flex-col items-center justify-center space-y-3 z-30">
                 <Loader2 className="h-12 w-12 text-emerald-400 animate-spin" />
                 <h3 className="text-sm font-black text-white">Processando Marcas e Gabarito...</h3>
-                <p className="text-xs text-slate-300">Localizando o quadro de respostas a partir do QR Code...</p>
+                <p className="text-xs text-slate-300">Localizando as 4 âncoras do cartão e corrigindo a perspectiva...</p>
               </div>
             )}
           </>
@@ -806,7 +806,7 @@ export function UnifiedOMRScanner({
 
       {/* PASSO 4: PAINEL INFERIOR DE CONFERÊNCIA VISUAL E GRAVAÇÃO DA NOTA */}
       {step === 'CONFERENCE' && omrResult && (
-        <div className="fixed inset-x-0 bottom-0 z-40 bg-slate-900 border-t border-slate-700/80 rounded-t-3xl p-5 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[55vh] overflow-y-auto">
+        <div className="fixed inset-x-0 bottom-0 z-40 bg-slate-900 border-t border-slate-700/80 rounded-t-3xl p-5 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[78vh] overflow-y-auto">
           {saveSuccess ? (
             <div className="py-6 text-center space-y-2">
               <CheckCheck className="h-14 w-14 text-emerald-400 mx-auto animate-bounce" />
@@ -827,7 +827,11 @@ export function UnifiedOMRScanner({
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-400">
-                    {omrResult.fiduciaisDetectados ? '✓ Quadro de respostas localizado' : '⚠️ Confira as marcações antes de salvar'}
+                    {metodoLeitura === 'fiducial-homografia'
+                      ? '✓ Cartão localizado pelas 4 âncoras (perspectiva corrigida)'
+                      : omrResult.fiduciaisDetectados
+                        ? '✓ Quadro de respostas localizado (folha modelo anterior)'
+                        : '⚠️ Confira as marcações antes de salvar'}
                   </p>
                 </div>
 
@@ -836,6 +840,72 @@ export function UnifiedOMRScanner({
                   <span className="text-3xl font-black text-emerald-400 tracking-tight">
                     {omrResult.notaFinal.toFixed(1)} <span className="text-sm font-normal text-slate-400">pts</span>
                   </span>
+                </div>
+              </div>
+
+              {/* Cartão lido, de frente, com as cores da correção */}
+              {recorteUrl && (
+                <div className="rounded-2xl overflow-hidden border border-slate-700 bg-black">
+                  <img src={recorteUrl} alt="Cartão de respostas lido" className="w-full h-auto max-h-[38vh] object-contain mx-auto" />
+                  <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-2 py-1.5 text-[10px] font-bold bg-slate-950">
+                    <span className="flex items-center gap-1 text-emerald-400"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />Acerto</span>
+                    <span className="flex items-center gap-1 text-rose-400"><span className="w-2.5 h-2.5 rounded-full bg-rose-500" />Erro</span>
+                    <span className="flex items-center gap-1 text-orange-400"><span className="w-2.5 h-2.5 rounded-full bg-orange-500" />Duplicada</span>
+                    <span className="flex items-center gap-1 text-amber-300"><span className="w-2.5 h-2.5 rounded-full border-2 border-dashed border-amber-400" />Em branco / correta</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Marcações por questão (toque numa letra para corrigir a leitura) */}
+              <div className="bg-slate-800/60 border border-slate-700 rounded-2xl p-2.5">
+                <p className="text-[10px] font-bold text-slate-400 mb-2 px-1">
+                  Marcações lidas — toque numa letra para corrigir manualmente
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {omrResult.questoes.map(q => {
+                    const opcoesQ = leituraRef.current.opcoes[q.numero - 1] ?? 5;
+                    const marcadas = saidaMotorRef.current?.marcadasPorQuestao?.[q.numero] ?? [];
+                    const corLinha =
+                      q.status === 'ACERTO' ? 'border-emerald-500/50 bg-emerald-500/10'
+                        : q.status === 'ERRO' ? 'border-rose-500/50 bg-rose-500/10'
+                          : q.status === 'DUPLICADA' ? 'border-orange-500/50 bg-orange-500/10'
+                            : 'border-amber-500/40 bg-amber-500/5';
+                    const rotulo =
+                      q.status === 'ACERTO' ? 'Acerto'
+                        : q.status === 'ERRO' ? `Erro (certa: ${q.gabaritoOficial})`
+                          : q.status === 'DUPLICADA' ? 'Duplicada'
+                            : `Em branco (certa: ${q.gabaritoOficial})`;
+                    return (
+                      <div key={q.numero} className={`flex items-center gap-2 rounded-xl border px-2 py-1 ${corLinha}`}>
+                        <span className="font-mono text-[11px] font-black text-white w-9">Q.{String(q.numero).padStart(2, '0')}</span>
+                        <div className="flex gap-1">
+                          {['A', 'B', 'C', 'D', 'E'].slice(0, opcoesQ).map(letra => {
+                            const marcada = marcadas.includes(letra);
+                            const correta = letra === q.gabaritoOficial;
+                            const estilo = marcada
+                              ? q.status === 'ACERTO' ? 'bg-emerald-500 text-white border-emerald-400'
+                                : q.status === 'ERRO' ? 'bg-rose-500 text-white border-rose-400'
+                                  : 'bg-orange-500 text-white border-orange-400'
+                              : correta && q.status !== 'ACERTO'
+                                ? 'bg-transparent text-emerald-300 border-emerald-400 border-dashed'
+                                : 'bg-slate-900 text-slate-400 border-slate-600';
+                            return (
+                              <button
+                                key={letra}
+                                type="button"
+                                onClick={() => alternarMarcacaoManual(q.numero, letra)}
+                                className={`w-7 h-7 rounded-full border-2 text-[11px] font-black transition cursor-pointer ${estilo}`}
+                                title={marcada ? `Desmarcar ${letra}` : `Marcar ${letra}`}
+                              >
+                                {letra}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <span className="ml-auto text-[10px] font-bold text-slate-200 text-right leading-tight">{rotulo}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

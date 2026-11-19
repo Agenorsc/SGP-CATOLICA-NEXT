@@ -19,6 +19,8 @@ import { AlunoModel } from '@/models/AlunoModel';
 import { TurmaModel } from '@/models/TurmaModel';
 import { Question, CardPayload, EvaluationStage, AvaliacaoCiclo, UserSession } from '@/types';
 import { QRCodeWrapper } from '@/components/common/QRCodeWrapper';
+import { CartaoRespostasOmr } from '@/components/omr/CartaoRespostasOmr';
+import { VERSAO_LAYOUT_CARTAO } from '@/lib/omr/layoutCartaoOmr';
 import { codificarGabaritoQr, sementeGabarito } from '@/lib/answerKey';
 import { shuffleArray } from '@/lib/shuffle';
 
@@ -290,7 +292,8 @@ export function ImpressaoTab({
       v: versaoLetra,
       nq: layoutGabarito.nq,
       op: layoutGabarito.op,
-      k: layoutGabarito.k
+      k: layoutGabarito.k,
+      l: VERSAO_LAYOUT_CARTAO
     };
     if (!pontosUniformes && layoutGabarito.pt) {
       qrPayload.pt = layoutGabarito.pt;
@@ -935,17 +938,10 @@ export function ImpressaoTab({
                         </p>
                       </div>
 
-                      {/* QUADRO DE RESPOSTAS ÓPTICO COM 4 MARCADORES DE CANTO */}
-                      <div className="relative border-2 border-slate-900 print:border-black p-3 pt-3.5 pb-2 bg-white rounded">
-                        {/* 4 Marcadores de Calibração (Fiduciais 8mm x 8mm) */}
-                        <div className="absolute top-1.5 left-1.5 w-3.5 h-3.5 bg-black print:bg-black" />
-                        <div className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-black print:bg-black" />
-                        <div className="absolute bottom-1.5 left-1.5 w-3.5 h-3.5 bg-black print:bg-black" />
-                        <div className="absolute bottom-1.5 right-1.5 w-3.5 h-3.5 bg-black print:bg-black" />
-
-                        {/* Miolo: QR Code à esquerda e Grade de Respostas à direita */}
-                        <div className="flex items-start justify-between gap-3 px-3">
-                          
+                      {/* QUADRO DE RESPOSTAS ÓPTICO: QR CODE + CARTÃO COM 4 ÂNCORAS DE 8 mm (PADRÃO LOTÉRICA) */}
+                      <div className="relative border-2 border-slate-900 print:border-black p-3 pb-2 bg-white rounded">
+                        {/* Miolo: QR Code à esquerda e Cartão de Respostas (SVG em mm) à direita */}
+                        <div className="flex items-center justify-between gap-4 px-1">
                           {/* QR Code com Dimensão Aumentada e Alta Redundância (Nível H) */}
                           <div className="flex flex-col items-center justify-center pt-1 shrink-0">
                             <div className="p-1.5 bg-white border border-slate-300 print:border-none rounded-md shadow-xs print:shadow-none">
@@ -964,111 +960,12 @@ export function ImpressaoTab({
                             </span>
                           </div>
 
-                          {/* Grade de Respostas: 1 ou 2 subcolunas para até 30 questões */}
-                          <div className="relative border border-slate-300 print:border-black p-3 pt-3.5 pb-3 pr-4 bg-white rounded-sm font-mono">
-                            {/* 4 Marcadores Fiduciais de Alta Precisão nos cantos da Grade */}
-                            <div className="absolute top-1 left-1 w-2.5 h-2.5 bg-black print:bg-black" />
-                            <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-black print:bg-black" />
-                            <div className="absolute bottom-1 left-1 w-2.5 h-2.5 bg-black print:bg-black" />
-                            <div className="absolute bottom-1 right-1 w-2.5 h-2.5 bg-black print:bg-black" />
-
-                            <div className="flex items-start gap-6 px-1">
-                              {/* Sub-coluna 1: Questões 1 até 15 */}
-                              <div className="flex flex-col items-start">
-                                <div className="flex items-center gap-2.5 text-[10px] font-black text-slate-800 print:text-black pb-1">
-                                  <span className="w-9 inline-block text-right pr-2">Q:</span>
-                                  {dados.letrasCol1.map(l => (
-                                    <span key={l} className="w-5 text-center">{l}</span>
-                                  ))}
-                                </div>
-
-                                <div className="space-y-2">
-                                  {dados.questoesObjetivas.slice(0, dados.questoesObjetivas.length > 15 ? 15 : dados.questoesObjetivas.length).map((q, qIdx) => {
-                                    const totalOpcoes = (q.options && q.options.length > 0)
-                                      ? q.options.length
-                                      : (q.alternativas && q.alternativas.length > 0)
-                                        ? q.alternativas.length
-                                        : 5;
-                                    const letras = ['a', 'b', 'c', 'd', 'e'];
-
-                                    return (
-                                      <div key={q.id || qIdx} className="flex items-center gap-2 text-[9px]">
-                                        <span className="w-9 text-right font-black text-slate-900 print:text-black pr-2 select-none shrink-0">
-                                          Q.{qIdx + 1 < 10 ? `0${qIdx + 1}` : qIdx + 1}:
-                                        </span>
-                                        <div className="flex items-center gap-2.5">
-                                          {letras.slice(0, totalOpcoes).map(l => (
-                                            <div
-                                              key={l}
-                                              className="w-5 h-4.5 border-[1px] border-slate-700 print:border-black rounded-xs flex items-center justify-center text-[7.5px] font-normal text-slate-400 print:text-slate-500 bg-white"
-                                            >
-                                              {l}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-
-                                <div className="flex items-center gap-2.5 text-[10px] font-black text-slate-800 print:text-black pt-1.5">
-                                  <span className="w-9 inline-block text-right pr-2">Q:</span>
-                                  {dados.letrasCol1.map(l => (
-                                    <span key={l} className="w-5 text-center">{l}</span>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* Sub-coluna 2: Questões 16 até 30 */}
-                              {dados.questoesObjetivas.length > 15 && (
-                                <div className="flex flex-col items-start">
-                                  <div className="flex items-center gap-2.5 text-[10px] font-black text-slate-800 print:text-black pb-1">
-                                    <span className="w-9 inline-block text-right pr-2">Q:</span>
-                                    {dados.letrasCol2.map(l => (
-                                      <span key={l} className="w-5 text-center">{l}</span>
-                                    ))}
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    {dados.questoesObjetivas.slice(15, 30).map((q, idxRel) => {
-                                      const qNum = 16 + idxRel;
-                                      const totalOpcoes = (q.options && q.options.length > 0)
-                                        ? q.options.length
-                                        : (q.alternativas && q.alternativas.length > 0)
-                                        ? q.alternativas.length
-                                        : 5;
-                                      const letras = ['a', 'b', 'c', 'd', 'e'];
-
-                                      return (
-                                        <div key={q.id || qNum} className="flex items-center gap-2 text-[9px]">
-                                          <span className="w-9 text-right font-black text-slate-900 print:text-black pr-2 select-none shrink-0">
-                                            Q.{qNum}:
-                                          </span>
-                                          <div className="flex items-center gap-2.5">
-                                            {letras.slice(0, totalOpcoes).map(l => (
-                                              <div
-                                                key={l}
-                                                className="w-5 h-4.5 border-[1px] border-slate-700 print:border-black rounded-xs flex items-center justify-center text-[7.5px] font-normal text-slate-400 print:text-slate-500 bg-white"
-                                              >
-                                                {l}
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-
-                                  <div className="flex items-center gap-2.5 text-[10px] font-black text-slate-800 print:text-black pt-1.5">
-                                    <span className="w-9 inline-block text-right pr-2">Q:</span>
-                                    {dados.letrasCol2.map(l => (
-                                      <span key={l} className="w-5 text-center">{l}</span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                            </div>
+                          {/* Cartão de respostas com geometria exata em milímetros (mesmo layout usado pelo leitor) */}
+                          <div className="flex flex-col items-center gap-1">
+                            <CartaoRespostasOmr opcoesPorQuestao={dados.opcoesImpressas} />
+                            <span className="text-[8px] font-bold text-slate-700 print:text-black text-center">
+                              Preencha TODA a bolinha com caneta azul ou preta • Não rasure as 4 marcas pretas
+                            </span>
                           </div>
                         </div>
 

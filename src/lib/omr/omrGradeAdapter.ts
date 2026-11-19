@@ -21,6 +21,16 @@ export interface SaidaMotorGrade {
   coordenadasDetectadas?: Record<number, Record<string, { x: number; y: number; fill: number; boxSize?: number }>>;
   confianca?: number;
   metodo?: string;
+  /** Letras efetivamente marcadas por questão (motor de âncoras ou correção manual do professor). */
+  marcadasPorQuestao?: Record<number, string[]>;
+  /** Centros das 4 âncoras fiduciais detectadas (px da imagem original). */
+  fiduciais?: {
+    topLeft: { x: number; y: number; lado: number; estimado?: boolean };
+    topRight: { x: number; y: number; lado: number; estimado?: boolean };
+    bottomLeft: { x: number; y: number; lado: number; estimado?: boolean };
+    bottomRight: { x: number; y: number; lado: number; estimado?: boolean };
+  };
+  homografia?: number[];
 }
 
 export interface ConfigClassificacao {
@@ -71,7 +81,10 @@ export function classificarLeituraGrade(
     const fills = saida.detalhesLetras?.[q];
     const statusMotor = saida.statusQuestoes?.[q];
     const respostaMotor = saida.respostas?.[q] ?? null;
-    const marcadas = letrasMarcadas(fills, respostaMotor, statusMotor);
+    const marcadasExplicitas = saida.marcadasPorQuestao?.[q];
+    const marcadas = marcadasExplicitas
+      ? marcadasExplicitas.map(l => l.toUpperCase())
+      : letrasMarcadas(fills, respostaMotor, statusMotor);
 
     let status: QuestionStatus;
     let respostaMarcada: string | null = null;
@@ -80,7 +93,7 @@ export function classificarLeituraGrade(
     if (marcadas.length === 0) {
       status = 'EM_BRANCO';
       emBranco++;
-    } else if (marcadas.length >= 2 || statusMotor === 'ANULADA') {
+    } else if (marcadas.length >= 2 || (!marcadasExplicitas && statusMotor === 'ANULADA')) {
       status = 'DUPLICADA';
       respostaMarcada = marcadas.join('+');
       duplicadas++;
@@ -110,6 +123,7 @@ export function classificarLeituraGrade(
         v: 0,
         pixelX: coords[l].x,
         pixelY: coords[l].y,
+        raioPx: coords[l].boxSize ? coords[l].boxSize / 2 : undefined,
         fillRatio: Math.max(0, Math.min(1, (fills?.[l] ?? coords[l].fill ?? 0) / 100)),
         isMarked: marcadas.includes(l)
       }));
@@ -125,10 +139,26 @@ export function classificarLeituraGrade(
     });
   }
 
-  // 4 cantos da grade para exibição das âncoras fiduciais na tela de conferência
+  // 4 cantos para exibição das âncoras fiduciais na tela de conferência
   let anchors: OMRProcessorOutput['anchors'] | undefined = undefined;
   const todasCoords = Object.values(saida.coordenadasDetectadas || {}).flatMap(c => Object.values(c));
-  if (todasCoords.length >= 4) {
+  if (saida.fiduciais) {
+    const conf = saida.confianca ?? 1;
+    const f = saida.fiduciais;
+    const conv = (p: { x: number; y: number; lado: number; estimado?: boolean }) => ({
+      x: p.x,
+      y: p.y,
+      width: p.lado,
+      height: p.lado,
+      confidence: p.estimado ? conf * 0.8 : conf
+    });
+    anchors = {
+      topLeft: conv(f.topLeft),
+      topRight: conv(f.topRight),
+      bottomLeft: conv(f.bottomLeft),
+      bottomRight: conv(f.bottomRight)
+    };
+  } else if (todasCoords.length >= 4) {
     const xs = todasCoords.map(c => c.x);
     const ys = todasCoords.map(c => c.y);
     const minX = Math.min(...xs);
