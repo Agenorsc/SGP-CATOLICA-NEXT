@@ -11,6 +11,7 @@ import {
   Plus, 
   Trash2, 
   FileText, 
+  FileDown,
   Layers,
   User,
   Users
@@ -214,6 +215,19 @@ export function ImpressaoTab({
   const abrirPainel = (aba: 'cabecalho' | 'orientacoes' | 'gabarito') => {
     setSubAbaEdicao(aba);
     setPainelCabecalhoAberto(true);
+  };
+
+  const handleSalvarPdf = () => {
+    if (typeof window === 'undefined') return;
+    const tituloOriginal = document.title;
+    const nomeLimpo = (tituloProva || 'Prova_Catolica_SC').replace(/[^a-zA-Z0-9_\-]/g, '_');
+    const turmaLimpa = (turmaAtual?.nome || 'Turma').replace(/[^a-zA-Z0-9_\-]/g, '_');
+    const dataHoje = new Date().toISOString().slice(0, 10);
+    document.title = `${nomeLimpo}_${turmaLimpa}_${dataHoje}`;
+    window.print();
+    setTimeout(() => {
+      document.title = tituloOriginal;
+    }, 1500);
   };
 
   // Gerador determinístico de prova por aluno
@@ -460,16 +474,29 @@ export function ImpressaoTab({
           </button>
         </div>
 
-        <button
-          onClick={() => window.print()}
-          className="flex items-center justify-center gap-2 rounded-xl bg-catolica-primary px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-catolica-primary/20 transition hover:bg-catolica-dark cursor-pointer shrink-0"
-        >
-          <Printer className="w-4 h-4" /> 
-          {modoImpressao === 'toda-sala' 
-            ? `Imprimir Toda a Sala (${alunosDaTurmaSelecionada.length || 4} Provas)`
-            : `Imprimir Prova Completa ${modoFrenteVerso ? '(Frente/Verso)' : '(Apenas Frente)'}`
-          }
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleSalvarPdf}
+            className="flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 text-xs font-bold transition shadow-sm hover:shadow cursor-pointer shrink-0"
+            title="Salvar provas em arquivo PDF (selecione 'Salvar como PDF' como destino na janela de impressão)"
+          >
+            <FileDown className="w-4 h-4 text-emerald-400" />
+            <span>Salvar em PDF</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="flex items-center justify-center gap-2 rounded-xl bg-catolica-primary px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-catolica-primary/20 transition hover:bg-catolica-dark cursor-pointer shrink-0"
+          >
+            <Printer className="w-4 h-4" /> 
+            {modoImpressao === 'toda-sala' 
+              ? `Imprimir Toda a Sala (${alunosDaTurmaSelecionada.length || 4} Provas)`
+              : `Imprimir Prova Completa ${modoFrenteVerso ? '(Frente/Verso)' : '(Apenas Frente)'}`
+            }
+          </button>
+        </div>
       </div>
 
       {/* PAINEL DE PERSONALIZAÇÃO COMPLETO (EXPANSÍVEL E OCULTO NA IMPRESSÃO) */}
@@ -782,12 +809,23 @@ export function ImpressaoTab({
               </p>
             </div>
           </div>
-          <button
-            onClick={() => window.print()}
-            className="flex items-center justify-center gap-2 rounded-xl bg-catolica-primary hover:bg-catolica-dark text-white px-4 py-2.5 text-xs font-bold transition shadow-sm cursor-pointer shrink-0"
-          >
-            <Printer className="w-4 h-4" /> Enviar Todas para a Impressora
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleSalvarPdf}
+              className="flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 text-xs font-bold transition shadow-sm cursor-pointer shrink-0"
+              title="Salvar todas as provas em arquivo PDF"
+            >
+              <FileDown className="w-4 h-4 text-emerald-400" /> Salvar Todas em PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="flex items-center justify-center gap-2 rounded-xl bg-catolica-primary hover:bg-catolica-dark text-white px-4 py-2.5 text-xs font-bold transition shadow-sm cursor-pointer shrink-0"
+            >
+              <Printer className="w-4 h-4" /> Enviar Todas para a Impressora
+            </button>
+          </div>
         </div>
       )}
 

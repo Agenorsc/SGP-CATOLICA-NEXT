@@ -1251,7 +1251,7 @@ export function CorrectionScanner({
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
                   <span className="text-[10px] font-bold text-slate-500 uppercase block mb-0.5">Nota Final</span>
                   <span className={`text-2xl font-black ${
-                    scanResult.totalScore >= 7.0 
+                    scanResult.totalScore >= 6.0 
                       ? 'text-emerald-600' 
                       : scanResult.totalScore >= 4.0 
                         ? 'text-amber-600' 

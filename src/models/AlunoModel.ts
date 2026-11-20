@@ -27,7 +27,7 @@ export class AlunoModel extends PessoaModel {
   }
 
   get status(): 'Aprovado' | 'Exame' | 'Reprovado' {
-    if (this.media >= 7.0) return 'Aprovado';
+    if (this.media >= 6.0) return 'Aprovado';
     if (this.media >= 4.0) return 'Exame';
     return 'Reprovado';
   }

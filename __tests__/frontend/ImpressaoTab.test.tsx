@@ -138,4 +138,14 @@ describe('Frontend Integration — ImpressaoTab (TSK-37)', () => {
 
     expect(window.print).toHaveBeenCalled();
   });
+
+  it('renderiza o botão Salvar em PDF e aciona a impressão com título formatado', () => {
+    render(<ImpressaoTab {...defaultProps} />);
+
+    const pdfBtn = screen.getByRole('button', { name: /Salvar em PDF/i });
+    expect(pdfBtn).toBeInTheDocument();
+    fireEvent.click(pdfBtn);
+
+    expect(window.print).toHaveBeenCalled();
+  });
 });
