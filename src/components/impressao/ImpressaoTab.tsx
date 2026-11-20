@@ -1055,9 +1055,9 @@ export function ImpressaoTab({
                       )}
 
                       {/* Alternativas (a, b, c, d, e) */}
-                      {(q.tipo === 'objetiva' || q.type === 'OBJECTIVE') && q.alternativas && (
+                      {(q.tipo === 'objetiva' || q.type === 'OBJECTIVE') && (q.alternativas || q.options) && (
                         <div className="space-y-1.5 pl-4 pt-1">
-                          {q.alternativas.map((alt, altIdx) => (
+                          {(q.alternativas || q.options?.map((opt, oIdx) => ({ id: `opt_${oIdx}`, texto: opt.text, correta: opt.isCorrect })) || []).map((alt, altIdx) => (
                             <div key={alt.id || altIdx} className="sgp-print-question-option flex items-start gap-2 text-slate-800 print:text-black leading-relaxed">
                               <span className="font-bold w-4 shrink-0">
                                 {String.fromCharCode(97 + altIdx)})
