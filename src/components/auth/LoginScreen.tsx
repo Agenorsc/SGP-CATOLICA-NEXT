@@ -1,7 +1,17 @@
 'use client';
 
-import React, { FormEvent, useState } from 'react';
-import { ArrowRight, LockKeyhole, Mail, ShieldCheck, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
+import React, { FormEvent, useState, useEffect } from 'react';
+import { 
+  ArrowRight, 
+  LockKeyhole, 
+  Mail, 
+  ShieldCheck, 
+  KeyRound, 
+  AlertCircle, 
+  Loader2,
+  Eye,
+  EyeOff
+} from 'lucide-react';
 import { UserSession } from '@/types';
 
 interface LoginScreenProps {
@@ -11,6 +21,7 @@ interface LoginScreenProps {
 export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -106,15 +117,24 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               <label className="block">
                 <span className="mb-1.5 block text-xs font-bold text-slate-700">Senha</span>
                 <div className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 focus-within:border-catolica-primary focus-within:ring-2 focus-within:ring-catolica-primary/10 transition">
-                  <LockKeyhole className="w-4 h-4 text-slate-400" />
+                  <LockKeyhole className="w-4 h-4 text-slate-400 shrink-0" />
                   <input
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     className="w-full py-3 text-sm outline-none"
                     autoComplete="current-password"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="p-1 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                    title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                    aria-label={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </label>
 

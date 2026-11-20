@@ -40,12 +40,14 @@ export class UsuarioRepository implements IBaseRepository<UsuarioModel> {
   ];
 
   async findAll(): Promise<UsuarioModel[]> {
+    this.loadLocalStorage();
     if (typeof window !== 'undefined') {
       try {
         const res = await fetch('/api/professores', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           this.fallbackUsuarios = data.map((d: any) => new UsuarioModel(d));
+          this.persistLocalStorage();
           return this.fallbackUsuarios;
         }
       } catch (err) {
@@ -53,6 +55,36 @@ export class UsuarioRepository implements IBaseRepository<UsuarioModel> {
       }
     }
     return [...this.fallbackUsuarios];
+  }
+
+  private persistLocalStorage() {
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem('sgp-professores-cache', JSON.stringify(this.fallbackUsuarios.map(u => u.toSafeObject())));
+      } catch (_) {}
+    }
+  }
+
+  private loadLocalStorage() {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = window.localStorage.getItem('sgp-professores-cache');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            parsed.forEach((item: any) => {
+              const model = new UsuarioModel(item);
+              const idx = this.fallbackUsuarios.findIndex(u => u.email.toLowerCase() === model.email.toLowerCase());
+              if (idx >= 0) {
+                this.fallbackUsuarios[idx] = model;
+              } else {
+                this.fallbackUsuarios.push(model);
+              }
+            });
+          }
+        }
+      } catch (_) {}
+    }
   }
 
   async findById(id: string): Promise<UsuarioModel | undefined> {
@@ -83,6 +115,7 @@ export class UsuarioRepository implements IBaseRepository<UsuarioModel> {
           } else {
             this.fallbackUsuarios.push(savedModel);
           }
+          this.persistLocalStorage();
           return savedModel;
         }
       } catch (err) {
@@ -96,6 +129,7 @@ export class UsuarioRepository implements IBaseRepository<UsuarioModel> {
     } else {
       this.fallbackUsuarios.push(usuario);
     }
+    this.persistLocalStorage();
     return usuario;
   }
 
@@ -107,6 +141,7 @@ export class UsuarioRepository implements IBaseRepository<UsuarioModel> {
         });
         if (res.ok) {
           this.fallbackUsuarios = this.fallbackUsuarios.filter(u => u.id !== id);
+          this.persistLocalStorage();
           return true;
         }
       } catch (err) {
@@ -116,6 +151,7 @@ export class UsuarioRepository implements IBaseRepository<UsuarioModel> {
 
     const initialLength = this.fallbackUsuarios.length;
     this.fallbackUsuarios = this.fallbackUsuarios.filter(u => u.id !== id);
+    this.persistLocalStorage();
     return this.fallbackUsuarios.length < initialLength;
   }
 }

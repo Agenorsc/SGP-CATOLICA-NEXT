@@ -1,7 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, GraduationCap, Mail, LockKeyhole, BookOpen, Save, Loader2, ShieldAlert } from 'lucide-react';
+import { 
+  X, 
+  GraduationCap, 
+  Mail, 
+  LockKeyhole, 
+  BookOpen, 
+  Save, 
+  Loader2, 
+  ShieldAlert,
+  Eye,
+  EyeOff
+} from 'lucide-react';
 import { UsuarioModel } from '@/models/UsuarioModel';
 
 interface ModalProfessorProps {
@@ -20,6 +31,7 @@ export function ModalProfessor({
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [disciplina, setDisciplina] = useState('');
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
@@ -151,23 +163,32 @@ export function ModalProfessor({
               {professorEmEdicao ? 'Nova Senha (Opcional)' : 'Senha de Acesso'}
             </label>
             <div className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 focus-within:border-catolica-primary focus-within:ring-2 focus-within:ring-catolica-primary/10">
-              <LockKeyhole className="w-4 h-4 text-slate-400" />
+              <LockKeyhole className="w-4 h-4 text-slate-400 shrink-0" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 placeholder={
                   professorEmEdicao
                     ? 'Deixe em branco para manter a senha atual'
-                    : 'Ex: SenhaSegura@2026 (mín. 6 caracteres)'
+                    : 'Ex: SenhaSegura@2026 (ou deixe vazio para padrão)'
                 }
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 className="w-full text-xs outline-none bg-transparent font-mono"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="p-1 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                aria-label={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
             <p className="mt-1 text-[11px] text-slate-400">
               {professorEmEdicao
                 ? 'Preencha apenas se desejar redefinir a senha do professor.'
-                : 'Armazenada com hash seguro Bcrypt. A senha fraca "admin" não é permitida.'}
+                : 'Se deixar em branco, a senha inicial será Prof@Catolica2026! (clique no olhinho para conferir a senha digitada).'}
             </p>
           </div>
 

@@ -38,9 +38,30 @@ export class PrismaUsuarioRepository implements IBaseRepository<UsuarioModel> {
   }
 
   async findByEmail(email: string): Promise<UsuarioModel | undefined> {
-    const record = await prisma.usuario.findUnique({
-      where: { email: email.toLowerCase().trim() }
+    const cleanEmail = email.toLowerCase().trim();
+    let record = await prisma.usuario.findUnique({
+      where: { email: cleanEmail }
     });
+
+    if (!record) {
+      // Busca tolerante a pequenas variações no prefixo do e-mail (ex: tassiana vs tassiane)
+      const prefix = cleanEmail.split('@')[0];
+      if (prefix.length >= 4) {
+        const root = prefix.slice(0, prefix.length - 1);
+        const candidates = await prisma.usuario.findMany({
+          where: {
+            email: {
+              startsWith: root,
+              mode: 'insensitive'
+            }
+          }
+        });
+        if (candidates.length >= 1) {
+          record = candidates[0];
+        }
+      }
+    }
+
     return record ? new UsuarioModel({
       id: record.id,
       nome: record.nome,

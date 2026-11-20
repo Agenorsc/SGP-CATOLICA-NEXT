@@ -114,4 +114,21 @@ describe('Frontend Integration — LoginScreen (TSK-37)', () => {
     expect(await screen.findByText('E-mail ou senha incorretos.')).toBeInTheDocument();
     expect(mockOnLogin).not.toHaveBeenCalled();
   });
+
+  it('alterna a visibilidade da senha ao clicar no botão do olhinho', () => {
+    render(<LoginScreen onLogin={mockOnLogin} />);
+
+    const passInput = screen.getByPlaceholderText('••••••••') as HTMLInputElement;
+    expect(passInput.type).toBe('password');
+
+    const btnEye = screen.getByRole('button', { name: /Exibir senha/i });
+    fireEvent.click(btnEye);
+
+    expect(passInput.type).toBe('text');
+
+    const btnEyeOff = screen.getByRole('button', { name: /Ocultar senha/i });
+    fireEvent.click(btnEyeOff);
+
+    expect(passInput.type).toBe('password');
+  });
 });
