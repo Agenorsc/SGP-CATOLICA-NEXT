@@ -277,6 +277,17 @@ export class ExamService {
       }
     }
 
+    if (body.questoesSnapshot && body.questoesSnapshot.length > 30) {
+      throw new Error('O limite máximo permitido por prova é de 30 questões.');
+    }
+
+    if (body.questoesSnapshot && body.questoesSnapshot.length > 0) {
+      const validacaoPontuacao = this.validarPontuacaoExame(body.questoesSnapshot);
+      if (!validacaoPontuacao.valida) {
+        throw new Error(validacaoPontuacao.mensagem);
+      }
+    }
+
     const provaId = body.id || `prova_${Date.now()}`;
     const cadernosGerados = (body.cadernos && body.cadernos.length > 0)
       ? body.cadernos
@@ -373,7 +384,9 @@ export class ExamService {
       }
     } catch (dbErr) {
       console.warn('Banco relacional offline para INSERT de prova com cadernos, salvando via repositório:', dbErr);
-      await this.cadernoRepository.saveMany(cadernosGerados);
+      try {
+        await this.cadernoRepository.saveMany(cadernosGerados);
+      } catch (_) {}
       await this.examRepository.save(novaProva);
       return novaProva;
     }

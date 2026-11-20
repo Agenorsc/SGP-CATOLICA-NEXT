@@ -103,7 +103,12 @@ export function MontadorTab({
   const provasDaTurma = provasMontadas.filter(p => p.turmaId === turmaSelecionadaId);
 
   useEffect(() => {
-    if (questoesSelecionadas.length > 0 && Math.abs(pontuacaoTotal - 10.0) < 0.05 && avisoValidacao) {
+    if (
+      questoesSelecionadas.length > 0 &&
+      questoesSelecionadas.length <= 30 &&
+      Math.abs(pontuacaoTotal - 10.0) < 0.05 &&
+      avisoValidacao
+    ) {
       setAvisoValidacao('');
     }
   }, [questoesSelecionadas.length, pontuacaoTotal, avisoValidacao]);
@@ -111,6 +116,11 @@ export function MontadorTab({
   const handleGerarCaderno = () => {
     if (questoesSelecionadas.length === 0) {
       setAvisoValidacao('Adicione ao menos 1 questão ao caderno para gerar a avaliação e o gabarito.');
+      return;
+    }
+
+    if (questoesSelecionadas.length > 30) {
+      setAvisoValidacao('O limite máximo permitido por prova é de 30 questões.');
       return;
     }
 
