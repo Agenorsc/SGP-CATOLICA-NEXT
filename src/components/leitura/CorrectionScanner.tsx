@@ -694,6 +694,7 @@ export function CorrectionScanner({
     setResultadoRegistro(null);
     setAlunoAtualizadoPendente(null);
     setCardPayloadDetectado(null);
+    setAlunoAutenticado(null);
     setCameraErro(null);
     setAlertaCruzado(null);
     setErroGravacao(null);
