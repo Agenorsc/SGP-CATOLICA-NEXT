@@ -231,34 +231,62 @@ export function UnifiedOMRScanner({
       return false;
     }
 
-    const pId = String(parsed.p || parsed.examId || '');
+    const pId = String(parsed.p || parsed.examId || '').trim();
+    const turmaQr = String(parsed.t || parsed.turmaId || '').trim();
+    const etapaQr = String(parsed.s || parsed.stage || parsed.ciclo || '').trim().toUpperCase();
     const ra = String(parsed.r || parsed.studentRa || parsed.ra || '').trim();
     const versao = String(parsed.v || parsed.examVersion || 'A').toUpperCase();
-    const cId = String(parsed.c || parsed.cadernoId || '');
-    const nomeQr = String(parsed.a || parsed.studentName || parsed.name || '');
+    const cId = String(parsed.c || parsed.cadernoId || '').trim();
+    const nomeQr = String(parsed.a || parsed.studentName || parsed.name || '').trim();
 
     if (!pId) {
       setAlertaDivergenciaProva('QR Code sem identificação da prova. Reimprima a folha pelo sistema.');
       return false;
     }
 
-    if (provaMontadaId && pId !== provaMontadaId) {
-      const msg = `Esta folha pertence a outra prova (${pId}). Você abriu o leitor para a prova ${provaMontadaId}.`;
-      setAlertaDivergenciaProva(prev => {
-        if (prev !== msg) {
-          tocarSom(300, 0.25, 'sawtooth');
-          vibrar([200, 100, 200]);
-        }
-        return msg;
-      });
+    // Localiza a prova correspondente em provasDisponiveis:
+    // Compatível tanto com o UUID do banco quanto com o formato de impressão EXAM-{turmaId}-{ciclo}
+    const provaAlvo = provaMontadaId ? (provasDisponiveis.find(p => p.id === provaMontadaId) || null) : null;
+    const provaLocal = provasDisponiveis.find(p => {
+      if (p.id === pId) return true;
+      if (p.turmaId && (pId === `EXAM-${p.turmaId}-${p.ciclo}` || pId === `EXAM-${p.turmaId}`)) return true;
+      if (turmaQr && p.turmaId === turmaQr && (!etapaQr || !p.ciclo || p.ciclo.toUpperCase() === etapaQr)) return true;
+      if (cId && p.cadernos?.some(c => c.id === cId || c.codigoVersao === cId)) return true;
+      if (ra && ra !== 'ANONIMO' && p.cadernos?.some(c => c.alunoRa === ra)) return true;
       return false;
+    }) || null;
+
+    if (provaMontadaId) {
+      const ehMesmaProva =
+        pId === provaMontadaId ||
+        (provaLocal !== null && provaLocal.id === provaMontadaId) ||
+        (provaAlvo !== null && (
+          pId === `EXAM-${provaAlvo.turmaId}-${provaAlvo.ciclo}` ||
+          pId === `EXAM-${provaAlvo.turmaId}` ||
+          pId.includes(provaAlvo.turmaId) ||
+          (turmaQr !== '' && provaAlvo.turmaId !== '' && turmaQr === provaAlvo.turmaId && (!etapaQr || !provaAlvo.ciclo || etapaQr === String(provaAlvo.ciclo).toUpperCase())) ||
+          (cId !== '' && (provaAlvo.cadernos?.some(c => c.id === cId || c.codigoVersao === cId) ?? false)) ||
+          (ra !== '' && ra !== 'ANONIMO' && (provaAlvo.cadernos?.some(c => c.alunoRa === ra) ?? false))
+        ));
+
+      if (!ehMesmaProva) {
+        const nomeAlvo = provaAlvo?.titulo || provaMontadaId;
+        const msg = `Esta folha pertence a outra prova (${pId}). Você abriu o leitor para a prova "${nomeAlvo}".`;
+        setAlertaDivergenciaProva(prev => {
+          if (prev !== msg) {
+            tocarSom(300, 0.25, 'sawtooth');
+            vibrar([200, 100, 200]);
+          }
+          return msg;
+        });
+        return false;
+      }
     }
 
     // 1) Gabarito embutido (ofuscado) no próprio QR — fonte de verdade da folha impressa
     let decod = decodificarGabaritoQr(parsed, sementeGabarito(pId, ra, versao));
 
     // 2) Caderno salvo localmente / no servidor
-    const provaLocal = provasDisponiveis.find(p => p.id === pId);
     let cadernoData: CadernoProvaRegistro | null = null;
     if (provaLocal?.cadernos) {
       cadernoData = provaLocal.cadernos.find(c =>
@@ -307,9 +335,9 @@ export function UnifiedOMRScanner({
       : undefined;
 
     setAlertaDivergenciaProva(null);
-    setProvaDetectadaId(pId);
+    setProvaDetectadaId(provaLocal?.id || provaMontadaId || pId);
     setCadernoDetectadoId(cadernoData?.id || cId);
-    setProvaTitulo(provaLocal?.titulo || 'Avaliação Oficial');
+    setProvaTitulo(provaLocal?.titulo || provaAlvo?.titulo || 'Avaliação Oficial');
     setGabaritoOficial(gabaritoStr);
     setTotalQuestoesCaderno(decod.totalQuestoes);
     setValorPorQuestaoCaderno(Number((10 / decod.totalQuestoes).toFixed(2)));

@@ -143,7 +143,12 @@ export class ResultadoService {
           const prova = await (prisma as any).provaMontada?.findUnique({
             where: { id: dados.provaMontadaId }
           });
-          const ciclo = (prova?.ciclo || 'N2').toUpperCase();
+          const ciclo = (
+            prova?.ciclo ||
+            (dados.provaMontadaId.endsWith('-N1') ? 'N1' :
+             dados.provaMontadaId.endsWith('-N3') ? 'N3' :
+             dados.provaMontadaId.endsWith('-N-1') ? 'N-1' : 'N2')
+          ).toUpperCase();
 
           const updateData: any = {};
           if (ciclo === 'N1') updateData.n1 = novoResultado.notaFinal;

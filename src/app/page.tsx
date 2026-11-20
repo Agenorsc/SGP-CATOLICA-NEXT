@@ -388,6 +388,7 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
     setShuffleQ(prova.shuffleQuestoes);
     setShuffleAlt(prova.shuffleAlternativas);
     setWithId(prova.nominalQrCode);
+    if (prova.ciclo) setCicloSelecionado(prova.ciclo);
     setCurrentTab('impressao');
   };
 
