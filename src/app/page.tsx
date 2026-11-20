@@ -516,7 +516,7 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
   };
 
   // Handlers de Alunos
-  const abrirModalNovoAluno = (cursoInicial?: string) => {
+  const abrirModalNovoAluno = () => {
     if (turmasVisiveis.length === 0) {
       setAlertaVisual({
         aberto: true,
@@ -527,22 +527,13 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
       return;
     }
 
-    // Se informou um curso inicial, busca uma turma desse curso
-    let turmaPadrao = turmasVisiveis[0];
-    if (cursoInicial) {
-      const encontrada = turmasVisiveis.find(t => t.curso?.trim().toLowerCase() === cursoInicial.trim().toLowerCase());
-      if (encontrada) turmaPadrao = encontrada;
-    }
-
-    const cursoPadrao = cursoInicial || turmaPadrao?.curso || 'Engenharia de Software';
-
     setAlunoEmEdicaoId(null);
     setFormAluno({
       nome: '',
       ra: '',
-      curso: cursoPadrao,
+      curso: 'ENGENHARIA DE SOFTWARE',
       turno: 'Noturno',
-      turmaId: turmaPadrao?.id || '',
+      turmaId: turmasVisiveis[0]?.id || '',
       dataNascimento: '',
       naturalidade: 'Jaraguá do Sul',
       estadoNatal: 'SC',
