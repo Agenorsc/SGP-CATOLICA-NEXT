@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, AlertTriangle, AlertCircle } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, AlertTriangle, AlertCircle, BookOpen } from 'lucide-react';
 import { TurmaModel } from '@/models/TurmaModel';
 import { AlunoModel } from '@/models/AlunoModel';
 
@@ -51,6 +51,24 @@ export function ModalAluno({
   onAlertaErro
 }: ModalAlunoProps) {
   const [erroValidacao, setErroValidacao] = useState<string | null>(null);
+
+  // Lista consolidada de cursos cadastrados a partir das turmas e alunos
+  const cursosDisponiveis = useMemo(() => {
+    const nomes = new Set<string>();
+    turmas.forEach(t => {
+      if (t.curso && t.curso.trim()) nomes.add(t.curso.trim());
+    });
+    alunosExistentes.forEach(a => {
+      if (a.curso && a.curso.trim()) nomes.add(a.curso.trim());
+    });
+    if (formAluno.curso && formAluno.curso.trim()) {
+      nomes.add(formAluno.curso.trim());
+    }
+    if (nomes.size === 0) {
+      ['Direito', 'Engenharia de Software', 'Psicologia', 'Sistemas de Informação'].forEach(c => nomes.add(c));
+    }
+    return Array.from(nomes);
+  }, [turmas, alunosExistentes, formAluno.curso]);
 
   if (!isOpen) return null;
 
@@ -179,15 +197,23 @@ export function ModalAluno({
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">
+                <label htmlFor="modal-aluno-turma" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">
                   Disciplina / Turma <span className="text-red-500">*</span>
                 </label>
                 <select
+                  id="modal-aluno-turma"
                   required
                   value={formAluno.turmaId}
                   onChange={e => {
+                    const novaTurmaId = e.target.value;
+                    const turmaSel = turmas.find(t => t.id === novaTurmaId);
                     setErroValidacao(null);
-                    setFormAluno({ ...formAluno, turmaId: e.target.value });
+                    setFormAluno(prev => ({
+                      ...prev,
+                      turmaId: novaTurmaId,
+                      // Sincroniza o curso do aluno com o curso da turma selecionada
+                      curso: turmaSel?.curso && turmaSel.curso.trim() ? turmaSel.curso.trim() : prev.curso
+                    }));
                   }}
                   className={`w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-bold focus:border-catolica-primary outline-none ${
                     erroValidacao === 'Cadastre a turma antes!' ? 'border-red-500 bg-red-50/50' : 'border-slate-200'
@@ -196,7 +222,7 @@ export function ModalAluno({
                   <option value="">Selecione uma turma obrigatória...</option>
                   {turmas.map(t => (
                     <option key={t.id} value={t.id}>
-                      {t.nome} ({t.semestre})
+                      {t.nome} {t.curso ? `• ${t.curso}` : ''} ({t.semestre})
                     </option>
                   ))}
                 </select>
@@ -206,16 +232,63 @@ export function ModalAluno({
                   </p>
                 )}
               </div>
+
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">
-                  Curso
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[10px] font-bold uppercase text-slate-600">
+                    Curso Acadêmico
+                  </label>
+                  {formAluno.curso && (
+                    <span className="text-[10px] font-bold text-catolica-primary">
+                      Curso: {formAluno.curso}
+                    </span>
+                  )}
+                </div>
+
+                {/* BOTÕES RÁPIDOS DE CURSOS CADASTRADOS */}
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {cursosDisponiveis.map(cNome => {
+                    const isSelected = formAluno.curso?.trim().toLowerCase() === cNome.toLowerCase();
+                    return (
+                      <button
+                        key={cNome}
+                        type="button"
+                        onClick={() => {
+                          setErroValidacao(null);
+                          // Se a turma atual não pertencer a este curso, vincula a primeira turma deste curso
+                          const turmaDoCurso = turmas.find(t => t.curso?.trim().toLowerCase() === cNome.toLowerCase());
+                          setFormAluno(prev => ({
+                            ...prev,
+                            curso: cNome,
+                            turmaId: turmaDoCurso ? turmaDoCurso.id : prev.turmaId
+                          }));
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer border ${
+                          isSelected
+                            ? 'bg-catolica-primary text-white border-catolica-primary shadow-xs'
+                            : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                        }`}
+                        title={`Designar aluno para o curso ${cNome}`}
+                      >
+                        {cNome}
+                      </button>
+                    );
+                  })}
+                </div>
+
                 <input
                   type="text"
+                  list="lista-cursos-aluno"
+                  placeholder="Selecione um botão acima ou digite..."
                   value={formAluno.curso}
                   onChange={e => setFormAluno({ ...formAluno, curso: e.target.value })}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:border-catolica-primary outline-none"
                 />
+                <datalist id="lista-cursos-aluno">
+                  {cursosDisponiveis.map(c => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
               </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">
