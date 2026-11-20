@@ -77,7 +77,7 @@ export class AlunoService {
       throw new ValidationError('turmaId é obrigatório.');
     }
 
-    if (session?.role === 'PROFESSOR') {
+    if (typeof window === 'undefined' && session?.role === 'PROFESSOR') {
       const turma = await this.turmaRepository.findById(dados.turmaId);
       if (!turma || turma.professorId !== session.id) {
         throw new ForbiddenError('Acesso negado. Você só pode cadastrar alunos em suas próprias turmas.');

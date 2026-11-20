@@ -122,6 +122,14 @@ export function DisciplinaCombobox({
     setIsTyping(true);
     setSearchTerm(val);
     if (!isOpen) setIsOpen(true);
+
+    // Se o usuário digitou exatamente o nome de uma disciplina cadastrada, atualiza o valor
+    const correspondente = disciplinas.find(
+      d => d.nome.trim().toLowerCase() === val.trim().toLowerCase()
+    );
+    if (correspondente) {
+      onChange(correspondente.id, correspondente);
+    }
   };
 
   // Seleção de uma disciplina na lista suspensa
@@ -186,7 +194,6 @@ export function DisciplinaCombobox({
           onFocus={handleInputFocus}
           placeholder={disciplinas.length === 0 ? 'Nenhuma disciplina cadastrada...' : placeholder}
           disabled={disabled || disciplinas.length === 0}
-          required={required && !value}
           autoComplete="off"
           className={`w-full pl-3 pr-9 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold transition outline-none ${
             hasError

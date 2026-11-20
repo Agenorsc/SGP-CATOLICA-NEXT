@@ -594,7 +594,15 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
     }
 
     const raTrim = formAluno.ra.trim();
-    if (!formAluno.nome.trim() || !raTrim) return;
+    if (!formAluno.nome.trim() || !raTrim) {
+      setAlertaVisual({
+        aberto: true,
+        tipo: 'erro',
+        titulo: 'Validação de Cadastro',
+        mensagem: 'Preencha o Nome Completo e o Registro Acadêmico (RA).'
+      });
+      return;
+    }
 
     const raDuplicado = alunosVisiveis.some(aluno => {
       const raExistente = aluno.ra ? String(aluno.ra).trim() : '';
@@ -639,14 +647,30 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
       }
     });
 
-    const saved = await alunoService.salvarAluno(alunoFormatado, session);
+    try {
+      const saved = await alunoService.salvarAluno(alunoFormatado);
 
-    if (alunoEmEdicaoId) {
-      setAlunos(prev => prev.map(a => a.id === alunoEmEdicaoId ? saved : a));
-    } else {
-      setAlunos(prev => [...prev, saved]);
+      if (alunoEmEdicaoId) {
+        setAlunos(prev => prev.map(a => a.id === alunoEmEdicaoId ? saved : a));
+      } else {
+        setAlunos(prev => [...prev, saved]);
+      }
+      setModalAlunoAberto(false);
+      setAlertaVisual({
+        aberto: true,
+        tipo: 'sucesso',
+        titulo: 'Cadastro Acadêmico',
+        mensagem: alunoEmEdicaoId ? 'Aluno atualizado com sucesso!' : 'Aluno cadastrado com sucesso!'
+      });
+    } catch (err: any) {
+      console.error('Erro ao salvar aluno:', err);
+      setAlertaVisual({
+        aberto: true,
+        tipo: 'erro',
+        titulo: 'Erro ao Salvar Aluno',
+        mensagem: err?.message || 'Falha ao salvar dados do aluno.'
+      });
     }
-    setModalAlunoAberto(false);
   };
 
   // Handlers de Turmas

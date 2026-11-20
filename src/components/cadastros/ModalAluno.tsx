@@ -59,7 +59,16 @@ export function ModalAluno({
     e.preventDefault();
     setErroValidacao(null);
 
-    // 1. Validação Obrigatória de Turma
+    // 1. Validação Obrigatória de Nome
+    const nomeTrim = formAluno.nome.trim();
+    if (!nomeTrim) {
+      const msg = 'Informe o Nome Completo.';
+      setErroValidacao(msg);
+      if (onAlertaErro) onAlertaErro(msg);
+      return;
+    }
+
+    // 2. Validação Obrigatória de Turma
     if (turmas.length === 0 || !formAluno.turmaId || formAluno.turmaId.trim() === '') {
       const msg = 'Cadastre a turma antes!';
       setErroValidacao(msg);
@@ -67,7 +76,7 @@ export function ModalAluno({
       return;
     }
 
-    // 2. Validação de RA Duplicado
+    // 3. Validação de RA Duplicado
     const raTrim = formAluno.ra.trim();
     if (!raTrim) {
       const msg = 'Informe o Registro Acadêmico (RA).';
@@ -139,7 +148,7 @@ export function ModalAluno({
           </div>
         )}
 
-        <form onSubmit={handleValidarESubmeter} className="space-y-4">
+        <form onSubmit={handleValidarESubmeter} noValidate className="space-y-4">
           <div className="border-b pb-3">
             <span className="text-xs font-bold text-catolica-primary uppercase block mb-2">
               Dados Acadêmicos & Identificação
