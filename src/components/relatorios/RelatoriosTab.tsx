@@ -26,12 +26,14 @@ import {
   Question, 
   ProvaMontadaRegistro,
   AvaliacaoCiclo,
-  RelatorioIndividualAluno
+  RelatorioIndividualAluno,
+  QuestaoHistoricoAluno
 } from '@/types';
 import { RelatoriosService } from '@/services/RelatoriosService';
 import { GraficoDificuldadeQuestoes } from './GraficoDificuldadeQuestoes';
 import { PainelAnaliseDistratores } from './PainelAnaliseDistratores';
 import { ModalDetalheAluno } from './ModalDetalheAluno';
+import { ModalStatusProvaOmr } from './ModalStatusProvaOmr';
 
 interface RelatoriosTabProps {
   alunos: AlunoModel[];
@@ -91,6 +93,35 @@ export function RelatoriosTab({
 
   // Estado do Drilldown / Modal Individual do Aluno
   const [alunoSelecionadoDetalhe, setAlunoSelecionadoDetalhe] = useState<RelatorioIndividualAluno | null>(null);
+
+  // Estado do Modal de Status da Prova OMR Corrigida (Padrão Mobile / Print 1)
+  const [statusProvaOmrModal, setStatusProvaOmrModal] = useState<{
+    alunoNome: string;
+    alunoRa: string;
+    turmaNome: string;
+    etapa: 'N1' | 'N2' | 'N3' | 'N-1';
+    nota: number;
+    leitura?: LeituraOMRRegistro | null;
+    questoesHistorico?: QuestaoHistoricoAluno[];
+  } | null>(null);
+
+  const abrirModalStatusProva = (item: RelatorioIndividualAluno, etapa: 'N1' | 'N2' | 'N3' | 'N-1') => {
+    const nota = etapa === 'N1' ? item.n1 : etapa === 'N2' ? item.n2 : etapa === 'N3' ? item.n3 : item.mediaFinal;
+    const leitura = leiturasAtivas.find(l => 
+      (l.ra?.trim() === item.ra.trim() || l.alunoId === item.alunoId) &&
+      (l.stage === etapa || (l as any).ciclo === etapa)
+    ) || null;
+
+    setStatusProvaOmrModal({
+      alunoNome: item.alunoNome,
+      alunoRa: item.ra,
+      turmaNome: item.turmaNome,
+      etapa,
+      nota,
+      leitura,
+      questoesHistorico: item.mapaDeQuestoes || []
+    });
+  };
 
   // Modo de visualização analítica de itens e distratores
   const [modoVisualizacaoItens, setModoVisualizacaoItens] = useState<'distratores' | 'dificuldade' | 'ambos'>('ambos');
@@ -554,9 +585,62 @@ export function RelatoriosTab({
                       </td>
                       <td className="py-3 font-mono text-slate-600">{item.ra}</td>
                       <td className="py-3 text-slate-500 max-w-[140px] truncate">{item.turmaNome}</td>
-                      <td className="py-3 text-center font-bold text-slate-700">{item.n1.toFixed(1)}</td>
-                      <td className="py-3 text-center font-bold text-slate-700">{item.n2.toFixed(1)}</td>
-                      <td className="py-3 text-center font-bold text-slate-700">{item.n3.toFixed(1)}</td>
+                      {/* N1 (Clicável para abrir status detalhado da prova OMR) */}
+                      <td className="py-3 text-center">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            abrirModalStatusProva(item, 'N1');
+                          }}
+                          className={`inline-flex items-center justify-center min-w-[42px] px-2 py-1 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer ${
+                            item.n1 > 0 
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-600 hover:text-white'
+                              : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'
+                          }`}
+                          title={`Ver conferência e gabarito da Etapa N1 de ${item.alunoNome}`}
+                        >
+                          {item.n1.toFixed(1)}
+                        </button>
+                      </td>
+
+                      {/* N2 (Clicável para abrir status detalhado da prova OMR) */}
+                      <td className="py-3 text-center">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            abrirModalStatusProva(item, 'N2');
+                          }}
+                          className={`inline-flex items-center justify-center min-w-[42px] px-2 py-1 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer ${
+                            item.n2 > 0 
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-600 hover:text-white'
+                              : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'
+                          }`}
+                          title={`Ver conferência e gabarito da Etapa N2 de ${item.alunoNome}`}
+                        >
+                          {item.n2.toFixed(1)}
+                        </button>
+                      </td>
+
+                      {/* N3 (Clicável para abrir status detalhado da prova OMR) */}
+                      <td className="py-3 text-center">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            abrirModalStatusProva(item, 'N3');
+                          }}
+                          className={`inline-flex items-center justify-center min-w-[42px] px-2 py-1 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer ${
+                            item.n3 > 0 
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-600 hover:text-white'
+                              : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'
+                          }`}
+                          title={`Ver conferência e gabarito da Etapa N3 de ${item.alunoNome}`}
+                        >
+                          {item.n3.toFixed(1)}
+                        </button>
+                      </td>
                       <td className="py-3 text-center font-black text-slate-900 text-sm">
                         {item.mediaFinal.toFixed(1)}
                       </td>
@@ -707,7 +791,20 @@ export function RelatoriosTab({
       <ModalDetalheAluno
         aluno={alunoSelecionadoDetalhe}
         onClose={() => setAlunoSelecionadoDetalhe(null)}
+        onVerProvaEtapa={(etapa) => {
+          if (alunoSelecionadoDetalhe) {
+            abrirModalStatusProva(alunoSelecionadoDetalhe, etapa);
+          }
+        }}
       />
+
+      {/* 10. MODAL DE STATUS DA PROVA CORRIGIDA (PADRÃO MOBILE OMR / PRINT 1) */}
+      {statusProvaOmrModal && (
+        <ModalStatusProvaOmr
+          {...statusProvaOmrModal}
+          onClose={() => setStatusProvaOmrModal(null)}
+        />
+      )}
 
     </div>
   );

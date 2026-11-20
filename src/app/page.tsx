@@ -32,6 +32,7 @@ import {
   AlternativaCadastro, 
   LeituraOMRRegistro,
   AvaliacaoCiclo,
+  EvaluationStage,
   UserSession,
   ProvaMontadaRegistro
 } from '@/types';
@@ -955,17 +956,46 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
               setProvaParaScannerMobile(undefined);
             }}
             onNotaSalva={(resultado) => {
+              const ciclo = (resultado.ciclo || provaParaScannerMobile?.ciclo || 'N2').toUpperCase();
               if (resultado.alunoRa) {
                 setAlunos(prev => prev.map(a => {
                   if (a.ra === resultado.alunoRa) {
+                    const up: Partial<AlunoModel> = {};
+                    if (ciclo === 'N1') up.n1 = resultado.notaFinal;
+                    else if (ciclo === 'N2') up.n2 = resultado.notaFinal;
+                    else if (ciclo === 'N3') up.n3 = resultado.notaFinal;
                     return new AlunoModel({
                       ...a,
-                      n2: resultado.notaFinal
+                      ...up
                     });
                   }
                   return a;
                 }));
               }
+
+              // Adiciona aos registros de leitura OMR em memória para visualização instantânea em Relatórios
+              if (resultado.alunoRa) {
+                const novaLeitura: LeituraOMRRegistro = {
+                  id: resultado.id || `omr_${Date.now()}`,
+                  alunoId: '',
+                  alunoNome: resultado.alunoNome || 'Estudante',
+                  ra: resultado.alunoRa,
+                  turmaId: provaParaScannerMobile?.turmaId || '',
+                  turmaNome: provaParaScannerMobile?.turmaNome || 'Turma',
+                  stage: ciclo as EvaluationStage,
+                  materia: provaParaScannerMobile?.disciplina || 'Avaliação',
+                  versao: resultado.codigoVersao || 'A',
+                  acertos: resultado.acertos ?? 0,
+                  totalQuestoes: resultado.totalQuestoes ?? 10,
+                  notaCalculada: resultado.notaFinal ?? 0,
+                  dataLeitura: new Date().toLocaleDateString('pt-BR'),
+                  respostasDetectadas: resultado.respostasMarcadasJson || {},
+                  gabaritoOficial: resultado.gabaritoOficial || {},
+                  detalhesQuestoes: resultado.detalhesQuestoes || []
+                };
+                setLeiturasOMR(prev => [novaLeitura, ...prev.filter(l => !(l.ra === novaLeitura.ra && l.stage === novaLeitura.stage))]);
+              }
+
               examService.listarProvas().then(setProvasMontadas);
             }}
           />

@@ -137,4 +137,30 @@ describe('Frontend Integration — RelatoriosTab (TSK-37)', () => {
       expect(defaultProps.onExcluirNota).toHaveBeenCalledWith('leit-1');
     });
   });
+
+  it('abre ModalDetalheAluno (Print 2) ao clicar no nome do aluno', () => {
+    render(<RelatoriosTab {...defaultProps} />);
+
+    // Clicar no nome do aluno Carlos Silva ou no botão Detalhes
+    const elAluno = screen.getByText('Carlos Silva');
+    fireEvent.click(elAluno);
+
+    // ModalDetalheAluno deve exibir a evolução temporal e mapa de calor
+    expect(screen.getByText(/Evolução Temporal do Desempenho/i)).toBeInTheDocument();
+    expect(screen.getByText(/Mapa de Calor das Questões Realizadas/i)).toBeInTheDocument();
+  });
+
+  it('abre ModalStatusProvaOmr (Print 1) ao clicar na nota N1 do aluno', () => {
+    render(<RelatoriosTab {...defaultProps} />);
+
+    // O badge da nota N1 de Carlos Silva tem title 'Ver conferência e gabarito da Etapa N1 de Carlos Silva'
+    const badgeN1 = screen.getByTitle('Ver conferência e gabarito da Etapa N1 de Carlos Silva');
+    fireEvent.click(badgeN1);
+
+    // ModalStatusProvaOmr deve exibir o cabeçalho idêntico ao scanner móvel
+    expect(screen.getByText(/Leitor OMR Unificado/i)).toBeInTheDocument();
+    expect(screen.getByText(/Prova corrigida e nota registrada/i)).toBeInTheDocument();
+    expect(screen.getByText('Duplicadas')).toBeInTheDocument();
+    expect(screen.getByText('Em Branco')).toBeInTheDocument();
+  });
 });

@@ -21,9 +21,10 @@ import { RelatorioIndividualAluno, QuestaoHistoricoAluno } from '@/types';
 interface ModalDetalheAlunoProps {
   aluno: RelatorioIndividualAluno | null;
   onClose: () => void;
+  onVerProvaEtapa?: (etapa: 'N1' | 'N2' | 'N3' | 'N-1') => void;
 }
 
-export function ModalDetalheAluno({ aluno, onClose }: ModalDetalheAlunoProps) {
+export function ModalDetalheAluno({ aluno, onClose, onVerProvaEtapa }: ModalDetalheAlunoProps) {
   const [questaoAtiva, setQuestaoAtiva] = useState<QuestaoHistoricoAluno | null>(null);
 
   if (!aluno) return null;
@@ -124,7 +125,32 @@ export function ModalDetalheAluno({ aluno, onClose }: ModalDetalheAlunoProps) {
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
               <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Média Final</span>
               <strong className="text-2xl font-black text-slate-900">{aluno.mediaFinal.toFixed(1)}</strong>
-              <span className="text-[10px] text-slate-500 block mt-0.5">N1: {aluno.n1} | N2: {aluno.n2} | N3: {aluno.n3}</span>
+              <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => onVerProvaEtapa?.('N1')}
+                  className="px-1.5 py-0.5 rounded bg-slate-200 hover:bg-emerald-600 hover:text-white transition cursor-pointer"
+                  title="Ver folha corrigida da Etapa N1"
+                >
+                  N1: {aluno.n1.toFixed(1)}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onVerProvaEtapa?.('N2')}
+                  className="px-1.5 py-0.5 rounded bg-slate-200 hover:bg-emerald-600 hover:text-white transition cursor-pointer"
+                  title="Ver folha corrigida da Etapa N2"
+                >
+                  N2: {aluno.n2.toFixed(1)}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onVerProvaEtapa?.('N3')}
+                  className="px-1.5 py-0.5 rounded bg-slate-200 hover:bg-emerald-600 hover:text-white transition cursor-pointer"
+                  title="Ver folha corrigida da Etapa N3"
+                >
+                  N3: {aluno.n3.toFixed(1)}
+                </button>
+              </div>
             </div>
 
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
@@ -237,6 +263,7 @@ export function ModalDetalheAluno({ aluno, onClose }: ModalDetalheAlunoProps) {
                         fill="#780016"
                         stroke="#ffffff"
                         strokeWidth="2.5"
+                        onClick={() => onVerProvaEtapa?.(e.etapa as any)}
                         className="transition hover:r-8 cursor-pointer"
                       />
                       <text

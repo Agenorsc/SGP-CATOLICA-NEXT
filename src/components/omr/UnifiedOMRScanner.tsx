@@ -615,7 +615,28 @@ export function UnifiedOMRScanner({
       }
 
       const salvo = await res.json();
-      if (onNotaSalva) onNotaSalva(salvo);
+      if (onNotaSalva) {
+        const provaLocal = provasDisponiveis.find(p => p.id === provaDetectadaId) || null;
+        onNotaSalva({
+          ...salvo,
+          ciclo: (provaLocal?.ciclo || (provaDetectadaId.endsWith('-N1') ? 'N1' : provaDetectadaId.endsWith('-N3') ? 'N3' : provaDetectadaId.endsWith('-N-1') ? 'N-1' : 'N2')).toUpperCase(),
+          turmaId: provaLocal?.turmaId,
+          turmaNome: provaLocal?.turmaNome,
+          materia: provaLocal?.disciplina,
+          codigoVersao: codigoVersao,
+          gabaritoOficial: leituraRef.current.gabarito,
+          respostasMarcadasJson: omrResult.respostasMarcadasJson,
+          detalhesQuestoes: omrResult.questoes.map(q => ({
+            numero: q.numero,
+            respostaMarcada: q.respostaMarcada,
+            respostaCorreta: q.gabaritoOficial,
+            correta: q.status === 'ACERTO',
+            status: q.status === 'ACERTO' ? 'CORRETA' : q.status === 'ERRO' ? 'INCORRETA' : q.status === 'DUPLICADA' ? 'ANULADA' : 'EM_BRANCO',
+            score: q.pontuacao,
+            maxScore: q.maxPontuacao
+          }))
+        });
+      }
 
       // Sucesso auditivo e háptico
       tocarSom(1600, 0.2, 'sine');
