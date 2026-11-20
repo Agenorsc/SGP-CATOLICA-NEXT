@@ -292,8 +292,13 @@ describe('TSK-60 — Testes do Montador: Caderno Impresso x Gabarito/OMR, Pontua
         id: 'prova_invalida_pts',
         titulo: 'Prova com Nota Inválida',
         turmaId: 't1',
+        ciclo: 'N-1',
         totalQuestoes: 2,
         pontuacaoTotal: 6.0,
+        shuffleQuestoes: false,
+        shuffleAlternativas: false,
+        nominalQrCode: false,
+        createdAt: new Date().toISOString(),
         questoesSnapshot: [
           criarQuestaoObjetiva('q1', 'Q1', 3.0),
           criarQuestaoObjetiva('q2', 'Q2', 3.0)
@@ -347,8 +352,13 @@ describe('TSK-60 — Testes do Montador: Caderno Impresso x Gabarito/OMR, Pontua
         id: 'prova_excedente_32q',
         titulo: 'Prova com 32 questões',
         turmaId: 't1',
+        ciclo: 'N-1',
         totalQuestoes: 32,
         pontuacaoTotal: 10.0,
+        shuffleQuestoes: false,
+        shuffleAlternativas: false,
+        nominalQrCode: false,
+        createdAt: new Date().toISOString(),
         questoesSnapshot: maisDe30Questoes
       };
 
@@ -473,6 +483,10 @@ describe('TSK-60 — Testes do Montador: Caderno Impresso x Gabarito/OMR, Pontua
         turmaId: 't1',
         totalQuestoes: 5,
         pontuacaoTotal: 10.0,
+        shuffleQuestoes: false,
+        shuffleAlternativas: false,
+        nominalQrCode: false,
+        createdAt: new Date().toISOString(),
         questoesSnapshot: questoesExameN1
       };
 
