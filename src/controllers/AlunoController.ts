@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { AlunoService } from '@/services/AlunoService';
 import { sessionFromRequest } from '@/lib/session';
 import { HttpError } from '@/lib/errors';
+import { revalidatePath } from 'next/cache';
 
 export class AlunoController {
   constructor(private alunoService: AlunoService = new AlunoService()) {}
@@ -24,6 +25,10 @@ export class AlunoController {
       const session = request ? sessionFromRequest(request) : null;
       const body = await request.json();
       const saved = await this.alunoService.salvarAluno(body, session);
+      try {
+        revalidatePath('/');
+        revalidatePath('/cadastros');
+      } catch (_) {}
       return NextResponse.json(saved, { status: 201 });
     } catch (error: any) {
       return this.handleError(error);
@@ -54,6 +59,10 @@ export class AlunoController {
       const session = request ? sessionFromRequest(request) : null;
       const { id } = await context.params;
       const success = await this.alunoService.excluirAluno(id, session);
+      try {
+        revalidatePath('/');
+        revalidatePath('/cadastros');
+      } catch (_) {}
       return NextResponse.json({ success }, { status: 200 });
     } catch (error: any) {
       return this.handleError(error);

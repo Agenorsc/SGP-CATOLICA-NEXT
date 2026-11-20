@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { X, AlertTriangle, AlertCircle } from 'lucide-react';
 import { TurmaModel } from '@/models/TurmaModel';
 import { AlunoModel } from '@/models/AlunoModel';
+import { DisciplinaCombobox } from './DisciplinaCombobox';
 
 export interface FormAlunoState {
   nome: string;
@@ -179,27 +180,26 @@ export function ModalAluno({
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">
-                  Disciplina / Turma <span className="text-red-500">*</span>
+                <label htmlFor="combobox-disciplina-input" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">
+                  Disciplina <span className="text-red-500">*</span>
                 </label>
-                <select
-                  required
+                <DisciplinaCombobox
+                  id="combobox-disciplina-input"
+                  disciplinas={turmas}
                   value={formAluno.turmaId}
-                  onChange={e => {
+                  onChange={(turmaId, turma) => {
                     setErroValidacao(null);
-                    setFormAluno({ ...formAluno, turmaId: e.target.value });
+                    setFormAluno(prev => ({
+                      ...prev,
+                      turmaId,
+                      curso: turma?.curso && turma.curso.trim() ? turma.curso.trim() : prev.curso
+                    }));
                   }}
-                  className={`w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-bold focus:border-catolica-primary outline-none ${
-                    erroValidacao === 'Cadastre a turma antes!' ? 'border-red-500 bg-red-50/50' : 'border-slate-200'
-                  }`}
-                >
-                  <option value="">Selecione uma turma obrigatória...</option>
-                  {turmas.map(t => (
-                    <option key={t.id} value={t.id}>
-                      {t.nome} ({t.semestre})
-                    </option>
-                  ))}
-                </select>
+                  hasError={erroValidacao === 'Cadastre a turma antes!'}
+                  disabled={turmas.length === 0}
+                  placeholder="Selecione ou busque a disciplina..."
+                  required
+                />
                 {turmas.length === 0 && (
                   <p className="mt-1 text-[10px] font-bold text-red-600">
                     Cadastre a turma antes!

@@ -58,11 +58,18 @@ export class PrismaAlunoRepository implements IBaseRepository<AlunoModel> {
       endereco: (aluno.endereco as any) || null
     };
 
+    // Garante integridade relacional no PostgreSQL procurando por ID ou por RA único
+    let existing = await prisma.aluno.findUnique({ where: { id: aluno.id } });
+    if (!existing && aluno.ra) {
+      existing = await prisma.aluno.findUnique({ where: { ra: aluno.ra } });
+    }
+    const targetId = existing ? existing.id : aluno.id;
+
     const saved = await prisma.aluno.upsert({
-      where: { id: aluno.id },
+      where: { id: targetId },
       update: dataToSave,
       create: {
-        id: aluno.id,
+        id: targetId,
         ...dataToSave
       }
     });

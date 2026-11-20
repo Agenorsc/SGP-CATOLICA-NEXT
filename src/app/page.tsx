@@ -639,7 +639,7 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
       }
     });
 
-    const saved = await alunoService.salvarAluno(alunoFormatado);
+    const saved = await alunoService.salvarAluno(alunoFormatado, session);
 
     if (alunoEmEdicaoId) {
       setAlunos(prev => prev.map(a => a.id === alunoEmEdicaoId ? saved : a));
