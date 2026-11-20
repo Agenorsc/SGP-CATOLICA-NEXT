@@ -32,6 +32,7 @@ import {
 import { RelatoriosService } from '@/services/RelatoriosService';
 import { GraficoDificuldadeQuestoes } from './GraficoDificuldadeQuestoes';
 import { PainelAnaliseDistratores } from './PainelAnaliseDistratores';
+import { CockpitAnaliseQuestoes } from './CockpitAnaliseQuestoes';
 import { ModalDetalheAluno } from './ModalDetalheAluno';
 import { ModalStatusProvaOmr } from './ModalStatusProvaOmr';
 
@@ -486,21 +487,13 @@ export function RelatoriosTab({
         </div>
       </div>
 
-      {/* 5. PAINEL DE ANÁLISE DE DISTRATORES (ALTERNATIVA MAIS MARCADA POR QUESTÃO) */}
-      {(modoVisualizacaoItens === 'distratores' || modoVisualizacaoItens === 'ambos') && (
-        <PainelAnaliseDistratores
-          questoes={relatorioTurma.rankingQuestoes}
-          turmaNome={relatorioTurma.turmaNome}
-        />
-      )}
-
-      {/* 6. GRÁFICO ANALÍTICO POR QUESTÕES (TAXA DE ACERTO / DIFICULDADE COM BARRAS) */}
-      {(modoVisualizacaoItens === 'dificuldade' || modoVisualizacaoItens === 'ambos') && (
-        <GraficoDificuldadeQuestoes
-          questoes={relatorioTurma.rankingQuestoes}
-          turmaNome={relatorioTurma.turmaNome}
-        />
-      )}
+      {/* 5. RAIO-X PEDAGÓGICO INTEGRADO (HISTOGRAMA INTERATIVO, HOVER & CLIQUE) */}
+      <CockpitAnaliseQuestoes
+        key={modoVisualizacaoItens}
+        questoes={relatorioTurma.rankingQuestoes}
+        turmaNome={relatorioTurma.turmaNome}
+        modoInicial={modoVisualizacaoItens === 'ambos' ? 'integrado' : modoVisualizacaoItens}
+      />
 
       {/* 7. QUADRO CONSOLIDADO DE NOTAS & LANÇAMENTOS OMR */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 space-y-4">
