@@ -138,7 +138,21 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
       });
       setAlunos(unicos);
     });
-    questionService.listarQuestoes().then(setBancoQuestoes);
+    questionService.listarQuestoes().then(lista => {
+      const vistos = new Set<string>();
+      const unicos = lista.filter(q => {
+        const chaveId = q.id ? `id:${q.id}` : null;
+        const normalizado = q.enunciado ? q.enunciado.trim().replace(/\s+/g, ' ') : '';
+        const chaveEnunciado = normalizado ? `enunc:${q.turmaId || ''}_${normalizado}` : null;
+        if ((chaveId && vistos.has(chaveId)) || (chaveEnunciado && vistos.has(chaveEnunciado))) {
+          return false;
+        }
+        if (chaveId) vistos.add(chaveId);
+        if (chaveEnunciado) vistos.add(chaveEnunciado);
+        return true;
+      });
+      setBancoQuestoes(unicos);
+    });
     professorService.listarProfessores().then(setProfessores);
     examService.listarProvas().then(setProvasMontadas);
   }, [turmaService, alunoService, questionService, professorService, examService]);
@@ -173,15 +187,32 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
     return unicos;
   }, [session, alunos, turmasVisiveis]);
 
-  // Banco de Questões do Professor: apenas associadas ao professor ou às suas turmas
+  // Banco de Questões do Professor: apenas associadas ao professor ou às suas turmas (com deduplicação defensiva estrita)
   const bancoQuestoesVisiveis = useMemo(() => {
     if (!session) return bancoQuestoes;
-    if (session.role === 'ADMIN') return bancoQuestoes;
     const turmasIds = new Set(turmasVisiveis.map(t => t.id));
-    return bancoQuestoes.filter(q => 
-      (q.teacherId && q.teacherId === session.id) ||
-      (q.turmaId && turmasIds.has(q.turmaId))
-    );
+    const filtrados = session.role === 'ADMIN'
+      ? bancoQuestoes
+      : bancoQuestoes.filter(q => 
+          (q.teacherId && q.teacherId === session.id) ||
+          (q.turmaId && turmasIds.has(q.turmaId))
+        );
+
+    // Deduplicação defensiva por ID e por Enunciado+Turma
+    const vistos = new Set<string>();
+    const unicos: Question[] = [];
+    for (const q of filtrados) {
+      const chaveId = q.id ? `id:${q.id}` : null;
+      const normalizado = q.enunciado ? q.enunciado.trim().replace(/\s+/g, ' ') : '';
+      const chaveEnunciado = normalizado ? `enunc:${q.turmaId || ''}_${normalizado}` : null;
+      if ((chaveId && vistos.has(chaveId)) || (chaveEnunciado && vistos.has(chaveEnunciado))) {
+        continue;
+      }
+      if (chaveId) vistos.add(chaveId);
+      if (chaveEnunciado) vistos.add(chaveEnunciado);
+      unicos.push(q);
+    }
+    return unicos;
   }, [session, bancoQuestoes, turmasVisiveis]);
 
   // Ajusta a turma selecionada para a primeira turma válida do professor
@@ -527,16 +558,47 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
         })) : undefined
     };
 
-    const saved = await questionService.salvarQuestao(questaoFormatada);
+    try {
+      const saved = await questionService.salvarQuestao(questaoFormatada);
 
-    if (questaoEmEdicaoId) {
-      setBancoQuestoes(prev => prev.map(q => q.id === questaoEmEdicaoId ? saved : q));
-      setQuestoesSelecionadas(prev => prev.map(q => q.id === questaoEmEdicaoId ? saved : q));
-    } else {
-      setBancoQuestoes(prev => [saved, ...prev]);
+      setBancoQuestoes(prev => {
+        const index = prev.findIndex(q => 
+          (questaoEmEdicaoId && q.id === questaoEmEdicaoId) ||
+          q.id === saved.id ||
+          (Boolean(q.enunciado) && Boolean(saved.enunciado) &&
+           q.enunciado.trim().replace(/\s+/g, ' ') === saved.enunciado.trim().replace(/\s+/g, ' ') &&
+           (q.turmaId || '') === (saved.turmaId || ''))
+        );
+
+        if (index >= 0) {
+          const atualizados = [...prev];
+          atualizados[index] = saved;
+          return atualizados;
+        }
+
+        return [saved, ...prev];
+      });
+
+      if (questaoEmEdicaoId) {
+        setQuestoesSelecionadas(prev => prev.map(q => q.id === questaoEmEdicaoId ? saved : q));
+      }
+
+      setModalAberto(false);
+      setAlertaVisual({
+        aberto: true,
+        tipo: 'sucesso',
+        titulo: 'Banco de Questões',
+        mensagem: questaoEmEdicaoId ? 'Questão atualizada com sucesso!' : 'Questão salva no banco com sucesso!'
+      });
+    } catch (err: any) {
+      console.error('Erro ao salvar questão:', err);
+      setAlertaVisual({
+        aberto: true,
+        tipo: 'erro',
+        titulo: 'Erro ao Salvar Questão',
+        mensagem: err?.message || 'Falha ao salvar questão no banco.'
+      });
     }
-
-    setModalAberto(false);
   };
 
   // Handlers de Alunos
@@ -797,7 +859,18 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
           professorId: profAtribuido
         });
         const saved = await turmaService.salvarTurma(novaTurma);
-        setTurmas(prev => [...prev, saved]);
+        setTurmas(prev => {
+          const index = prev.findIndex(t => 
+            t.id === saved.id || 
+            (t.nome.toLowerCase() === saved.nome.toLowerCase() && t.semestre === saved.semestre)
+          );
+          if (index >= 0) {
+            const up = [...prev];
+            up[index] = saved;
+            return up;
+          }
+          return [...prev, saved];
+        });
       }
       setModalTurmaAberto(false);
       setAlertaVisual({

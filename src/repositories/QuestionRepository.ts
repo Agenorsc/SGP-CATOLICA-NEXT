@@ -183,7 +183,12 @@ export class QuestionRepository implements IBaseRepository<Question> {
         });
         if (res.ok) {
           const savedData = await res.json();
-          const idx = this.fallbackQuestions.findIndex(q => q.id === savedData.id);
+          const idx = this.fallbackQuestions.findIndex(q => 
+            q.id === savedData.id ||
+            (Boolean(q.enunciado) && Boolean(savedData.enunciado) &&
+             q.enunciado.trim().replace(/\s+/g, ' ') === savedData.enunciado.trim().replace(/\s+/g, ' ') &&
+             (q.turmaId || '') === (savedData.turmaId || ''))
+          );
           if (idx >= 0) {
             this.fallbackQuestions[idx] = savedData;
           } else {
@@ -196,7 +201,12 @@ export class QuestionRepository implements IBaseRepository<Question> {
       }
     }
 
-    const index = this.fallbackQuestions.findIndex(q => q.id === question.id);
+    const index = this.fallbackQuestions.findIndex(q => 
+      q.id === question.id ||
+      (Boolean(q.enunciado) && Boolean(question.enunciado) &&
+       q.enunciado.trim().replace(/\s+/g, ' ') === question.enunciado.trim().replace(/\s+/g, ' ') &&
+       (q.turmaId || '') === (question.turmaId || ''))
+    );
     if (index >= 0) {
       this.fallbackQuestions[index] = question;
     } else {
