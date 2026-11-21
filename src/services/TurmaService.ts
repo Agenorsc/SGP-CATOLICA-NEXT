@@ -1,10 +1,13 @@
 import { PrismaTurmaRepository } from '@/repositories/prisma/PrismaTurmaRepository';
+import { TurmaRepository } from '@/repositories/TurmaRepository';
 import { TurmaModel } from '@/models/TurmaModel';
 import { UserSession } from '@/lib/session';
 import { ForbiddenError, NotFoundError } from '@/lib/errors';
 
 export class TurmaService {
-  constructor(private turmaRepository: any = new PrismaTurmaRepository()) {}
+  constructor(
+    private turmaRepository: any = typeof window !== 'undefined' ? new TurmaRepository() : new PrismaTurmaRepository()
+  ) {}
 
   async listarTurmas(session?: UserSession | null): Promise<TurmaModel[]> {
     if (session?.role === 'PROFESSOR') {

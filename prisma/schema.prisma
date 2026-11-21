@@ -33,6 +33,7 @@ model Turma {
   nome           String
   curso          String         @default("Engenharia de Software")
   semestre       String         @default("2026/2")
+  fase           String?        @default("1ª Fase")
   codigoConvite  String         @unique
   professorId    String?
   professor      Usuario?       @relation(fields: [professorId], references: [id], onDelete: SetNull)

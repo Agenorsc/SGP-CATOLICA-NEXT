@@ -25,9 +25,16 @@ export function TurmasGrid({
         return (
           <div key={t.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex justify-between items-start">
-              <span className="text-xs font-bold bg-catolica-light text-catolica-primary px-3 py-1 rounded-lg border border-catolica-primary/20">
-                {t.semestre}
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                {t.fase && (
+                  <span className="text-xs font-bold bg-blue-50 text-blue-700 px-3 py-1 rounded-lg border border-blue-200">
+                    {t.fase}
+                  </span>
+                )}
+                <span className="text-xs font-bold bg-catolica-light text-catolica-primary px-3 py-1 rounded-lg border border-catolica-primary/20">
+                  {t.semestre}
+                </span>
+              </div>
 
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono bg-slate-100 px-3 py-1 rounded-lg border text-slate-700">

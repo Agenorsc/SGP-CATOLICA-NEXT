@@ -3,6 +3,7 @@ export class TurmaModel {
   nome: string;
   curso: string;
   semestre: string;
+  fase?: string;
   codigoConvite: string;
   professorId?: string | null;
   professorNome?: string | null;
@@ -12,6 +13,7 @@ export class TurmaModel {
     this.nome = data.nome || '';
     this.curso = data.curso || 'Engenharia de Software';
     this.semestre = data.semestre || '2026/2';
+    this.fase = data.fase || '1ª Fase';
     this.codigoConvite = data.codigoConvite || `CAT-${Math.floor(1000 + Math.random() * 9000)}`;
     this.professorId = data.professorId || undefined;
     this.professorNome = data.professorNome || undefined;

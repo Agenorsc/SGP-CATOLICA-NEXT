@@ -8,8 +8,22 @@ export interface FormTurmaState {
   nome: string;
   curso: string;
   semestre: string;
+  fase?: string;
   professorId?: string;
 }
+
+export const OPCOES_FASES_DISCIPLINA = [
+  '1ª Fase',
+  '2ª Fase',
+  '3ª Fase',
+  '4ª Fase',
+  '5ª Fase',
+  '6ª Fase',
+  '7ª Fase',
+  '8ª Fase',
+  '9ª Fase',
+  '10ª Fase'
+] as const;
 
 interface ModalTurmaProps {
   isOpen: boolean;
@@ -69,6 +83,23 @@ export function ModalTurma({
               onChange={e => setFormTurma({ ...formTurma, curso: e.target.value })}
               className="w-full p-2.5 bg-slate-50 border rounded-xl text-xs"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Fase da Disciplina
+            </label>
+            <select
+              value={formTurma.fase || '1ª Fase'}
+              onChange={e => setFormTurma({ ...formTurma, fase: e.target.value })}
+              className="w-full p-2.5 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 focus:border-catolica-primary outline-none"
+            >
+              {OPCOES_FASES_DISCIPLINA.map(fase => (
+                <option key={fase} value={fase}>
+                  {fase}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

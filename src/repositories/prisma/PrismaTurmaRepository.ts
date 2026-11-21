@@ -17,6 +17,7 @@ export class PrismaTurmaRepository implements IBaseRepository<TurmaModel> {
       nome: r.nome,
       curso: r.curso,
       semestre: r.semestre,
+      fase: (r as any).fase || '1ª Fase',
       codigoConvite: r.codigoConvite,
       professorId: r.professorId || undefined,
       professorNome: r.professor?.nome || undefined
@@ -36,6 +37,7 @@ export class PrismaTurmaRepository implements IBaseRepository<TurmaModel> {
       nome: r.nome,
       curso: r.curso,
       semestre: r.semestre,
+      fase: (r as any).fase || '1ª Fase',
       codigoConvite: r.codigoConvite,
       professorId: r.professorId || undefined,
       professorNome: r.professor?.nome || undefined
@@ -54,6 +56,7 @@ export class PrismaTurmaRepository implements IBaseRepository<TurmaModel> {
       nome: record.nome,
       curso: record.curso,
       semestre: record.semestre,
+      fase: (record as any).fase || '1ª Fase',
       codigoConvite: record.codigoConvite,
       professorId: record.professorId || undefined,
       professorNome: record.professor?.nome || undefined
@@ -67,6 +70,7 @@ export class PrismaTurmaRepository implements IBaseRepository<TurmaModel> {
         nome: turma.nome,
         curso: turma.curso,
         semestre: turma.semestre,
+        fase: turma.fase || '1ª Fase',
         codigoConvite: turma.codigoConvite,
         professorId: turma.professorId || null
       },
@@ -75,6 +79,7 @@ export class PrismaTurmaRepository implements IBaseRepository<TurmaModel> {
         nome: turma.nome,
         curso: turma.curso,
         semestre: turma.semestre,
+        fase: turma.fase || '1ª Fase',
         codigoConvite: turma.codigoConvite,
         professorId: turma.professorId || null
       },
@@ -87,6 +92,7 @@ export class PrismaTurmaRepository implements IBaseRepository<TurmaModel> {
       nome: saved.nome,
       curso: saved.curso,
       semestre: saved.semestre,
+      fase: (saved as any).fase || turma.fase || '1ª Fase',
       codigoConvite: saved.codigoConvite,
       professorId: saved.professorId || undefined,
       professorNome: saved.professor?.nome || (saved as any).professorNome || undefined

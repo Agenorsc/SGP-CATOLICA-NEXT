@@ -57,7 +57,8 @@ export function DisciplinaCombobox({
       const matchNome = (d.nome || '').toLowerCase().includes(query);
       const matchCurso = (d.curso || '').toLowerCase().includes(query);
       const matchSemestre = (d.semestre || '').toLowerCase().includes(query);
-      return matchNome || matchCurso || matchSemestre;
+      const matchFase = (d.fase || '').toLowerCase().includes(query);
+      return matchNome || matchCurso || matchSemestre || matchFase;
     });
   }, [disciplinas, searchTerm, isTyping]);
 
@@ -259,6 +260,7 @@ export function DisciplinaCombobox({
                       {disciplina.nome}
                     </span>
                     <span className="text-[10px] text-slate-500 font-normal truncate">
+                      {disciplina.fase ? `${disciplina.fase} • ` : ''}
                       {disciplina.curso ? `${disciplina.curso} • ` : ''}
                       {disciplina.semestre || 'Semestre vigente'}
                     </span>

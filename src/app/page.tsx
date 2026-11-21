@@ -274,6 +274,7 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
     nome: '',
     curso: 'Engenharia de Software',
     semestre: '2026/2',
+    fase: '1ª Fase',
     professorId: undefined
   });
 
@@ -708,6 +709,7 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
       nome: '',
       curso: 'Engenharia de Software',
       semestre: '2026/2',
+      fase: '1ª Fase',
       professorId: session?.role === 'PROFESSOR' ? session.id : undefined
     });
     setModalTurmaAberto(true);
@@ -719,6 +721,7 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
       nome: turma.nome,
       curso: turma.curso,
       semestre: turma.semestre,
+      fase: turma.fase || '1ª Fase',
       professorId: turma.professorId || undefined
     });
     setModalTurmaAberto(true);
@@ -738,27 +741,45 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
     e.preventDefault();
     const profAtribuido = formTurma.professorId || (session?.role === 'PROFESSOR' ? session.id : undefined);
 
-    if (turmaEmEdicaoId) {
-      const turmaAtualizada = new TurmaModel({
-        id: turmaEmEdicaoId,
-        nome: formTurma.nome,
-        curso: formTurma.curso,
-        semestre: formTurma.semestre,
-        professorId: profAtribuido
+    try {
+      if (turmaEmEdicaoId) {
+        const turmaAtualizada = new TurmaModel({
+          id: turmaEmEdicaoId,
+          nome: formTurma.nome,
+          curso: formTurma.curso,
+          semestre: formTurma.semestre,
+          fase: formTurma.fase || '1ª Fase',
+          professorId: profAtribuido
+        });
+        const saved = await turmaService.salvarTurma(turmaAtualizada);
+        setTurmas(prev => prev.map(t => t.id === turmaEmEdicaoId ? saved : t));
+      } else {
+        const novaTurma = new TurmaModel({
+          nome: formTurma.nome,
+          curso: formTurma.curso,
+          semestre: formTurma.semestre,
+          fase: formTurma.fase || '1ª Fase',
+          professorId: profAtribuido
+        });
+        const saved = await turmaService.salvarTurma(novaTurma);
+        setTurmas(prev => [...prev, saved]);
+      }
+      setModalTurmaAberto(false);
+      setAlertaVisual({
+        aberto: true,
+        tipo: 'sucesso',
+        titulo: 'Turma Salva',
+        mensagem: turmaEmEdicaoId ? 'Turma atualizada com sucesso!' : 'Turma cadastrada com sucesso!'
       });
-      const saved = await turmaService.salvarTurma(turmaAtualizada);
-      setTurmas(prev => prev.map(t => t.id === turmaEmEdicaoId ? saved : t));
-    } else {
-      const novaTurma = new TurmaModel({
-        nome: formTurma.nome,
-        curso: formTurma.curso,
-        semestre: formTurma.semestre,
-        professorId: profAtribuido
+    } catch (err: any) {
+      console.error('Erro ao salvar turma:', err);
+      setAlertaVisual({
+        aberto: true,
+        tipo: 'erro',
+        titulo: 'Erro ao Salvar Turma',
+        mensagem: err?.message || 'Falha ao salvar dados da turma.'
       });
-      const saved = await turmaService.salvarTurma(novaTurma);
-      setTurmas(prev => [...prev, saved]);
     }
-    setModalTurmaAberto(false);
   };
 
   // Handlers de Professores (Exclusivo Admin)
