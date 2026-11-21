@@ -3,25 +3,63 @@ import { AlunoModel } from '@/models/AlunoModel';
 import { IBaseRepository } from '@/repositories/base/IBaseRepository';
 
 export class PrismaAlunoRepository implements IBaseRepository<AlunoModel> {
+  private mapRecordToModel(r: any): AlunoModel {
+    const contato = (r.contato && typeof r.contato === 'object') ? r.contato : {};
+    const filiacao = r.filiacao || contato.filiacao || {
+      mae: contato.mae || '',
+      pai: contato.pai || ''
+    };
+
+    return new AlunoModel({
+      id: r.id,
+      nome: r.nome,
+      ra: r.ra,
+      curso: r.curso,
+      turno: r.turno,
+      turmaId: r.turmaId,
+      n1: r.n1 ?? 0,
+      n2: r.n2 ?? 0,
+      n3: r.n3 ?? 0,
+      dataNascimento: r.dataNascimento || contato.dataNascimento || '',
+      naturalidade: r.naturalidade || contato.naturalidade || '',
+      estadoNatal: r.estadoNatal || contato.estadoNatal || '',
+      filiacao: {
+        mae: filiacao.mae || contato.mae || '',
+        pai: filiacao.pai || contato.pai || ''
+      },
+      contato: {
+        celular: contato.celular || ''
+      },
+      endereco: r.endereco || {
+        cep: '',
+        logradouro: '',
+        numero: '',
+        bairro: '',
+        cidade: '',
+        estado: ''
+      }
+    });
+  }
+
   async findAll(): Promise<AlunoModel[]> {
     const records = await prisma.aluno.findMany({
       orderBy: { nome: 'asc' }
     });
-    return records.map(r => new AlunoModel(r as any));
+    return records.map(r => this.mapRecordToModel(r));
   }
 
   async findById(id: string): Promise<AlunoModel | undefined> {
     const record = await prisma.aluno.findUnique({
       where: { id }
     });
-    return record ? new AlunoModel(record as any) : undefined;
+    return record ? this.mapRecordToModel(record) : undefined;
   }
 
   async findByRa(ra: string): Promise<AlunoModel | undefined> {
     const record = await prisma.aluno.findUnique({
       where: { ra }
     });
-    return record ? new AlunoModel(record as any) : undefined;
+    return record ? this.mapRecordToModel(record) : undefined;
   }
 
   async findByTurmaId(turmaId: string): Promise<AlunoModel[]> {
@@ -29,7 +67,7 @@ export class PrismaAlunoRepository implements IBaseRepository<AlunoModel> {
       where: { turmaId },
       orderBy: { nome: 'asc' }
     });
-    return records.map(r => new AlunoModel(r as any));
+    return records.map(r => this.mapRecordToModel(r));
   }
 
   async findByProfessorId(professorId: string): Promise<AlunoModel[]> {
@@ -41,10 +79,24 @@ export class PrismaAlunoRepository implements IBaseRepository<AlunoModel> {
       },
       orderBy: { nome: 'asc' }
     });
-    return records.map(r => new AlunoModel(r as any));
+    return records.map(r => this.mapRecordToModel(r));
   }
 
   async save(aluno: AlunoModel): Promise<AlunoModel> {
+    const contatoJson = {
+      ...(typeof aluno.contato === 'object' && aluno.contato ? aluno.contato : {}),
+      celular: aluno.contato?.celular || '',
+      dataNascimento: aluno.dataNascimento || '',
+      naturalidade: aluno.naturalidade || '',
+      estadoNatal: aluno.estadoNatal || '',
+      filiacao: {
+        mae: aluno.filiacao?.mae || '',
+        pai: aluno.filiacao?.pai || ''
+      },
+      mae: aluno.filiacao?.mae || '',
+      pai: aluno.filiacao?.pai || ''
+    };
+
     const dataToSave = {
       nome: aluno.nome,
       ra: aluno.ra,
@@ -54,7 +106,7 @@ export class PrismaAlunoRepository implements IBaseRepository<AlunoModel> {
       n1: aluno.n1 ?? 0,
       n2: aluno.n2 ?? 0,
       n3: aluno.n3 ?? 0,
-      contato: (aluno.contato as any) || null,
+      contato: contatoJson,
       endereco: (aluno.endereco as any) || null
     };
 
@@ -73,7 +125,7 @@ export class PrismaAlunoRepository implements IBaseRepository<AlunoModel> {
         ...dataToSave
       }
     });
-    return new AlunoModel(saved as any);
+    return this.mapRecordToModel(saved);
   }
 
   async createMany(alunos: AlunoModel[]): Promise<number> {
@@ -90,7 +142,19 @@ export class PrismaAlunoRepository implements IBaseRepository<AlunoModel> {
         n1: aluno.n1 ?? 0,
         n2: aluno.n2 ?? 0,
         n3: aluno.n3 ?? 0,
-        contato: (aluno.contato as any) || null,
+        contato: {
+          ...(typeof aluno.contato === 'object' && aluno.contato ? aluno.contato : {}),
+          celular: aluno.contato?.celular || '',
+          dataNascimento: aluno.dataNascimento || '',
+          naturalidade: aluno.naturalidade || '',
+          estadoNatal: aluno.estadoNatal || '',
+          filiacao: {
+            mae: aluno.filiacao?.mae || '',
+            pai: aluno.filiacao?.pai || ''
+          },
+          mae: aluno.filiacao?.mae || '',
+          pai: aluno.filiacao?.pai || ''
+        },
         endereco: (aluno.endereco as any) || null
       }))
     });

@@ -551,6 +551,25 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
   };
 
   const abrirModalEditarAluno = (aluno: AlunoModel) => {
+    // Normaliza para o formato YYYY-MM-DD para compatibilidade perfeita com <input type="date">
+    const formatarDataInput = (dataVal?: string | Date | null): string => {
+      if (!dataVal) return '';
+      const str = String(dataVal).trim();
+      if (!str) return '';
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+      if (str.includes('T')) return str.split('T')[0];
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
+        const [dia, mes, ano] = str.split('/');
+        return `${ano}-${mes}-${dia}`;
+      }
+      return str.slice(0, 10);
+    };
+
+    const dataNasc = aluno.dataNascimento || (aluno.contato as any)?.dataNascimento || '';
+    const maeNome = aluno.filiacao?.mae || (aluno.contato as any)?.mae || (aluno.contato as any)?.filiacao?.mae || '';
+    const paiNome = aluno.filiacao?.pai || (aluno.contato as any)?.pai || (aluno.contato as any)?.filiacao?.pai || '';
+    const celularContato = aluno.contato?.celular || (aluno.contato as any)?.celular || '';
+
     setAlunoEmEdicaoId(aluno.id);
     setFormAluno({
       nome: aluno.nome,
@@ -558,12 +577,12 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
       curso: aluno.curso,
       turno: aluno.turno,
       turmaId: aluno.turmaId,
-      dataNascimento: aluno.dataNascimento ? String(aluno.dataNascimento) : '',
-      naturalidade: aluno.naturalidade || '',
-      estadoNatal: aluno.estadoNatal || '',
-      mae: aluno.filiacao?.mae || '',
-      pai: aluno.filiacao?.pai || '',
-      celular: aluno.contato?.celular || '',
+      dataNascimento: formatarDataInput(dataNasc),
+      naturalidade: aluno.naturalidade || (aluno.contato as any)?.naturalidade || '',
+      estadoNatal: aluno.estadoNatal || (aluno.contato as any)?.estadoNatal || '',
+      mae: maeNome,
+      pai: paiNome,
+      celular: celularContato,
       cep: aluno.endereco?.cep || '',
       logradouro: aluno.endereco?.logradouro || '',
       numero: aluno.endereco?.numero || '',
@@ -631,12 +650,21 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
       naturalidade: formAluno.naturalidade,
       estadoNatal: formAluno.estadoNatal,
       filiacao: {
-        mae: formAluno.mae,
-        pai: formAluno.pai
+        mae: formAluno.mae || '',
+        pai: formAluno.pai || ''
       },
       contato: {
-        celular: formAluno.celular
-      },
+        celular: formAluno.celular || '',
+        dataNascimento: formAluno.dataNascimento || '',
+        naturalidade: formAluno.naturalidade || '',
+        estadoNatal: formAluno.estadoNatal || '',
+        mae: formAluno.mae || '',
+        pai: formAluno.pai || '',
+        filiacao: {
+          mae: formAluno.mae || '',
+          pai: formAluno.pai || ''
+        }
+      } as any,
       endereco: {
         cep: formAluno.cep,
         logradouro: formAluno.logradouro,

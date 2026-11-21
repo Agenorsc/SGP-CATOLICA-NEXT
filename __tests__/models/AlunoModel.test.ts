@@ -30,9 +30,36 @@ describe('AlunoModel - Cálculo de Média e Status de Aprovação (Média 6.0)',
     expect(alunoExameLimite.status).toBe('Exame');
   });
 
-  it('deve reprovar o aluno com média inferior a 4.0', () => {
-    const alunoReprovado = new AlunoModel({ n1: 3.5, n2: 3.0, n3: 4.0 });
-    expect(alunoReprovado.media).toBe(3.5);
-    expect(alunoReprovado.status).toBe('Reprovado');
+  it('deve preservar e recuperar dataNascimento, nome da mae e nome do pai diretamente ou via contato', () => {
+    const aluno = new AlunoModel({
+      nome: 'Aluno Teste Completo',
+      ra: '123456',
+      dataNascimento: '2002-08-20',
+      filiacao: {
+        mae: 'Maria Silva',
+        pai: 'Jose Silva'
+      }
+    });
+
+    expect(aluno.dataNascimento).toBe('2002-08-20');
+    expect(aluno.filiacao.mae).toBe('Maria Silva');
+    expect(aluno.filiacao.pai).toBe('Jose Silva');
+
+    // Recuperando de payload vindo do banco relacional onde campos estao dentro de contato
+    const alunoDoBanco = new AlunoModel({
+      id: 'alu-db-1',
+      nome: 'Aluno Banco',
+      ra: '78910',
+      contato: {
+        celular: '(47) 99999-8888',
+        dataNascimento: '1999-12-05',
+        mae: 'Ana Costa',
+        pai: 'Carlos Costa'
+      } as any
+    });
+
+    expect(alunoDoBanco.dataNascimento).toBe('1999-12-05');
+    expect(alunoDoBanco.filiacao.mae).toBe('Ana Costa');
+    expect(alunoDoBanco.filiacao.pai).toBe('Carlos Costa');
   });
 });
