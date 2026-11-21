@@ -154,7 +154,10 @@ export class AlunoRepository implements IBaseRepository<AlunoModel> {
         if (res.ok) {
           const savedData = await res.json();
           const savedModel = new AlunoModel(savedData);
-          const idx = this.fallbackAlunos.findIndex(a => a.id === savedModel.id);
+          const idx = this.fallbackAlunos.findIndex(a => 
+            a.id === savedModel.id || 
+            (Boolean(a.ra) && Boolean(savedModel.ra) && a.ra.trim().toLowerCase() === savedModel.ra.trim().toLowerCase())
+          );
           if (idx >= 0) {
             this.fallbackAlunos[idx] = savedModel;
           } else {
@@ -167,7 +170,10 @@ export class AlunoRepository implements IBaseRepository<AlunoModel> {
       }
     }
 
-    const index = this.fallbackAlunos.findIndex(a => a.id === aluno.id);
+    const index = this.fallbackAlunos.findIndex(a => 
+      a.id === aluno.id || 
+      (Boolean(a.ra) && Boolean(aluno.ra) && a.ra.trim().toLowerCase() === aluno.ra.trim().toLowerCase())
+    );
     if (index >= 0) {
       this.fallbackAlunos[index] = aluno;
     } else {

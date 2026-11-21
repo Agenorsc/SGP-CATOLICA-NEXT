@@ -32,7 +32,7 @@ interface ModalAlunoProps {
   isEditing: boolean;
   formAluno: FormAlunoState;
   setFormAluno: React.Dispatch<React.SetStateAction<FormAlunoState>>;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (e: React.FormEvent) => void | Promise<void>;
   turmas: TurmaModel[];
   alunosExistentes?: AlunoModel[];
   alunoEmEdicaoId?: string | null;
@@ -52,11 +52,13 @@ export function ModalAluno({
   onAlertaErro
 }: ModalAlunoProps) {
   const [erroValidacao, setErroValidacao] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleValidarESubmeter = (e: React.FormEvent) => {
+  const handleValidarESubmeter = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (salvando) return;
     setErroValidacao(null);
 
     // 1. Validação Obrigatória de Nome
@@ -98,8 +100,13 @@ export function ModalAluno({
       return;
     }
 
-    // Se passar por todas as validações, prossegue com o envio
-    onSubmit(e);
+    // Se passar por todas as validações, prossegue com o envio com bloqueio anti-duplo clique
+    setSalvando(true);
+    try {
+      await onSubmit(e);
+    } finally {
+      setSalvando(false);
+    }
   };
 
   return (
@@ -294,19 +301,28 @@ export function ModalAluno({
           <div className="flex justify-end gap-3 border-t pt-4">
             <button
               type="button"
+              disabled={salvando}
               onClick={() => {
                 setErroValidacao(null);
                 onClose();
               }}
-              className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+              className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 bg-catolica-primary text-white rounded-xl text-xs font-bold shadow-md hover:bg-catolica-dark transition cursor-pointer"
+              disabled={salvando}
+              className="px-5 py-2.5 bg-catolica-primary text-white rounded-xl text-xs font-bold shadow-md hover:bg-catolica-dark transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {isEditing ? 'Atualizar Aluno' : 'Salvar Aluno'}
+              {salvando ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                  <span>Salvando...</span>
+                </>
+              ) : (
+                isEditing ? 'Atualizar Aluno' : 'Salvar Aluno'
+              )}
             </button>
           </div>
         </form>

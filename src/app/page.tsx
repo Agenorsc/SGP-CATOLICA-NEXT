@@ -128,7 +128,16 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
 
   useEffect(() => {
     turmaService.listarTurmas().then(setTurmas);
-    alunoService.listarAlunos().then(setAlunos);
+    alunoService.listarAlunos().then(lista => {
+      const vistos = new Set<string>();
+      const unicos = lista.filter(a => {
+        const chave = a.ra ? `ra:${a.ra.trim().toLowerCase()}` : `id:${a.id}`;
+        if (vistos.has(chave)) return false;
+        vistos.add(chave);
+        return true;
+      });
+      setAlunos(unicos);
+    });
     questionService.listarQuestoes().then(setBancoQuestoes);
     professorService.listarProfessores().then(setProfessores);
     examService.listarProvas().then(setProvasMontadas);
@@ -142,12 +151,26 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
     return turmas.filter(t => t.professorId === session.id);
   }, [session, turmas]);
 
-  // Alunos do Professor: apenas matriculados nas turmas do professor
+  // Alunos do Professor: apenas matriculados nas turmas do professor (com deduplicação defensiva estrita)
   const alunosVisiveis = useMemo(() => {
     if (!session) return alunos;
-    if (session.role === 'ADMIN') return alunos;
-    const turmasIds = new Set(turmasVisiveis.map(t => t.id));
-    return alunos.filter(a => turmasIds.has(a.turmaId));
+    const turmasIds = session.role === 'ADMIN' ? null : new Set(turmasVisiveis.map(t => t.id));
+    const filtrados = turmasIds ? alunos.filter(a => turmasIds.has(a.turmaId)) : alunos;
+
+    // Deduplicação defensiva por RA e por ID para prevenir qualquer duplicação visual na tabela
+    const vistos = new Set<string>();
+    const unicos: AlunoModel[] = [];
+    for (const a of filtrados) {
+      const chaveRa = a.ra ? `ra:${a.ra.trim().toLowerCase()}` : null;
+      const chaveId = a.id ? `id:${a.id}` : null;
+      if ((chaveRa && vistos.has(chaveRa)) || (chaveId && vistos.has(chaveId))) {
+        continue;
+      }
+      if (chaveRa) vistos.add(chaveRa);
+      if (chaveId) vistos.add(chaveId);
+      unicos.push(a);
+    }
+    return unicos;
   }, [session, alunos, turmasVisiveis]);
 
   // Banco de Questões do Professor: apenas associadas ao professor ou às suas turmas
@@ -679,11 +702,23 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
     try {
       const saved = await alunoService.salvarAluno(alunoFormatado);
 
-      if (alunoEmEdicaoId) {
-        setAlunos(prev => prev.map(a => a.id === alunoEmEdicaoId ? saved : a));
-      } else {
-        setAlunos(prev => [...prev, saved]);
-      }
+      setAlunos(prev => {
+        // Encontra se já existe pelo alunoEmEdicaoId, pelo id do objeto salvo ou pelo RA único
+        const index = prev.findIndex(a => 
+          (alunoEmEdicaoId && a.id === alunoEmEdicaoId) ||
+          a.id === saved.id ||
+          (Boolean(a.ra) && Boolean(saved.ra) && a.ra.trim().toLowerCase() === saved.ra.trim().toLowerCase())
+        );
+
+        if (index >= 0) {
+          const atualizados = [...prev];
+          atualizados[index] = saved;
+          return atualizados;
+        }
+
+        return [...prev, saved];
+      });
+
       setModalAlunoAberto(false);
       setAlertaVisual({
         aberto: true,
@@ -862,7 +897,17 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
             onOpenNovaTurma={abrirModalNovaTurma}
             onEditAluno={abrirModalEditarAluno}
             onDeleteAluno={excluirAluno}
-            onImportComplete={async () => setAlunos(await alunoService.listarAlunos())}
+            onImportComplete={async () => {
+              const lista = await alunoService.listarAlunos();
+              const vistos = new Set<string>();
+              const unicos = lista.filter(a => {
+                const chave = a.ra ? `ra:${a.ra.trim().toLowerCase()}` : `id:${a.id}`;
+                if (vistos.has(chave)) return false;
+                vistos.add(chave);
+                return true;
+              });
+              setAlunos(unicos);
+            }}
             onEditTurma={abrirModalEditarTurma}
             onDeleteTurma={excluirTurma}
           />
