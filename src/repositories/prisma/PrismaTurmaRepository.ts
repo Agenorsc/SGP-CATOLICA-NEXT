@@ -64,24 +64,8 @@ export class PrismaTurmaRepository implements IBaseRepository<TurmaModel> {
   }
 
   async save(turma: TurmaModel): Promise<TurmaModel> {
-    let existing = await prisma.turma.findUnique({ where: { id: turma.id } });
-    if (!existing && turma.nome) {
-      // Procura se já existe turma com mesmo nome, semestre e professor no banco
-      const existingList = await prisma.turma.findMany({
-        where: {
-          nome: { equals: turma.nome, mode: 'insensitive' },
-          semestre: turma.semestre,
-          ...(turma.professorId ? { professorId: turma.professorId } : {})
-        }
-      });
-      if (existingList.length > 0) {
-        existing = existingList[0];
-      }
-    }
-    const targetId = existing ? existing.id : turma.id;
-
     const saved = await prisma.turma.upsert({
-      where: { id: targetId },
+      where: { id: turma.id },
       update: {
         nome: turma.nome,
         curso: turma.curso,
@@ -91,7 +75,7 @@ export class PrismaTurmaRepository implements IBaseRepository<TurmaModel> {
         professorId: turma.professorId || null
       },
       create: {
-        id: targetId,
+        id: turma.id,
         nome: turma.nome,
         curso: turma.curso,
         semestre: turma.semestre,
