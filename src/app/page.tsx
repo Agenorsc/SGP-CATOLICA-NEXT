@@ -127,7 +127,20 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState<string>('t1');
 
   useEffect(() => {
-    turmaService.listarTurmas().then(setTurmas);
+    turmaService.listarTurmas().then(lista => {
+      const vistos = new Set<string>();
+      const unicos = lista.filter(t => {
+        const chaveId = t.id ? `id:${t.id}` : null;
+        const chaveNome = t.nome ? `nome:${t.nome.trim().toLowerCase()}_${(t.semestre || '').trim()}_${t.professorId || ''}` : null;
+        if ((chaveId && vistos.has(chaveId)) || (chaveNome && vistos.has(chaveNome))) {
+          return false;
+        }
+        if (chaveId) vistos.add(chaveId);
+        if (chaveNome) vistos.add(chaveNome);
+        return true;
+      });
+      setTurmas(unicos);
+    });
     alunoService.listarAlunos().then(lista => {
       const vistos = new Set<string>();
       const unicos = lista.filter(a => {
@@ -157,12 +170,28 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
     examService.listarProvas().then(setProvasMontadas);
   }, [turmaService, alunoService, questionService, professorService, examService]);
 
-  // 1. ISOLAMENTO TOTAL POR PROFESSOR (MULTI-TENANCY / ESCOPO DE USUÁRIO)
+  // 1. ISOLAMENTO TOTAL POR PROFESSOR (MULTI-TENANCY / ESCOPO DE USUÁRIO) COM DEDUPLICAÇÃO DEFENSIVA ESTRITA
   // Turmas do Professor: apenas onde professorId === session.id (turmas sem professor são exclusivas do ADMIN)
   const turmasVisiveis = useMemo(() => {
     if (!session) return turmas;
-    if (session.role === 'ADMIN') return turmas;
-    return turmas.filter(t => t.professorId === session.id);
+    const filtrados = session.role === 'ADMIN'
+      ? turmas
+      : turmas.filter(t => t.professorId === session.id);
+
+    // Deduplicação defensiva por ID e por Nome+Semestre+ProfessorId para garantir que nenhuma turma apareça duplicada
+    const vistos = new Set<string>();
+    const unicos: TurmaModel[] = [];
+    for (const t of filtrados) {
+      const chaveId = t.id ? `id:${t.id}` : null;
+      const chaveNome = t.nome ? `nome:${t.nome.trim().toLowerCase()}_${(t.semestre || '').trim()}_${t.professorId || ''}` : null;
+      if ((chaveId && vistos.has(chaveId)) || (chaveNome && vistos.has(chaveNome))) {
+        continue;
+      }
+      if (chaveId) vistos.add(chaveId);
+      if (chaveNome) vistos.add(chaveNome);
+      unicos.push(t);
+    }
+    return unicos;
   }, [session, turmas]);
 
   // Alunos do Professor: apenas matriculados nas turmas do professor (com deduplicação defensiva estrita)
@@ -842,19 +871,33 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
       if (turmaEmEdicaoId) {
         const turmaAtualizada = new TurmaModel({
           id: turmaEmEdicaoId,
-          nome: formTurma.nome,
-          curso: formTurma.curso,
-          semestre: formTurma.semestre,
+          nome: formTurma.nome.trim(),
+          curso: formTurma.curso.trim(),
+          semestre: formTurma.semestre.trim(),
           fase: formTurma.fase || '1ª Fase',
           professorId: profAtribuido
         });
         const saved = await turmaService.salvarTurma(turmaAtualizada);
-        setTurmas(prev => prev.map(t => t.id === turmaEmEdicaoId ? saved : t));
+        setTurmas(prev => {
+          const index = prev.findIndex(t => 
+            t.id === turmaEmEdicaoId ||
+            t.id === saved.id || 
+            (t.nome.trim().toLowerCase() === saved.nome.trim().toLowerCase() && 
+             (t.semestre || '').trim() === (saved.semestre || '').trim() &&
+             (t.professorId || '') === (saved.professorId || ''))
+          );
+          if (index >= 0) {
+            const up = [...prev];
+            up[index] = saved;
+            return up;
+          }
+          return [...prev, saved];
+        });
       } else {
         const novaTurma = new TurmaModel({
-          nome: formTurma.nome,
-          curso: formTurma.curso,
-          semestre: formTurma.semestre,
+          nome: formTurma.nome.trim(),
+          curso: formTurma.curso.trim(),
+          semestre: formTurma.semestre.trim(),
           fase: formTurma.fase || '1ª Fase',
           professorId: profAtribuido
         });
@@ -862,7 +905,9 @@ function Painel({ session, onLogout }: { session: UserSession; onLogout: () => v
         setTurmas(prev => {
           const index = prev.findIndex(t => 
             t.id === saved.id || 
-            (t.nome.toLowerCase() === saved.nome.toLowerCase() && t.semestre === saved.semestre)
+            (t.nome.trim().toLowerCase() === saved.nome.trim().toLowerCase() && 
+             (t.semestre || '').trim() === (saved.semestre || '').trim() &&
+             (t.professorId || '') === (saved.professorId || ''))
           );
           if (index >= 0) {
             const up = [...prev];

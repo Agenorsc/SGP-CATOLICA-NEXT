@@ -38,7 +38,15 @@ export class TurmaRepository implements IBaseRepository<TurmaModel> {
         const res = await fetch('/api/turmas', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
-          this.fallbackTurmas = data.map((d: any) => new TurmaModel(d));
+          const vistos = new Set<string>();
+          this.fallbackTurmas = data
+            .map((d: any) => new TurmaModel(d))
+            .filter((t: TurmaModel) => {
+              const chave = t.id || `${t.nome.trim().toLowerCase()}_${(t.semestre || '').trim()}`;
+              if (vistos.has(chave)) return false;
+              vistos.add(chave);
+              return true;
+            });
           return this.fallbackTurmas;
         }
       } catch (err) {
@@ -69,7 +77,12 @@ export class TurmaRepository implements IBaseRepository<TurmaModel> {
         if (res.ok) {
           const savedData = await res.json();
           const savedModel = new TurmaModel(savedData);
-          const idx = this.fallbackTurmas.findIndex(t => t.id === savedModel.id);
+          const idx = this.fallbackTurmas.findIndex(t => 
+            t.id === savedModel.id ||
+            (t.nome.trim().toLowerCase() === savedModel.nome.trim().toLowerCase() &&
+             (t.semestre || '').trim() === (savedModel.semestre || '').trim() &&
+             (t.professorId || '') === (savedModel.professorId || ''))
+          );
           if (idx >= 0) {
             this.fallbackTurmas[idx] = savedModel;
           } else {
@@ -82,7 +95,12 @@ export class TurmaRepository implements IBaseRepository<TurmaModel> {
       }
     }
 
-    const index = this.fallbackTurmas.findIndex(t => t.id === turma.id);
+    const index = this.fallbackTurmas.findIndex(t => 
+      t.id === turma.id ||
+      (t.nome.trim().toLowerCase() === turma.nome.trim().toLowerCase() &&
+       (t.semestre || '').trim() === (turma.semestre || '').trim() &&
+       (t.professorId || '') === (turma.professorId || ''))
+    );
     if (index >= 0) {
       this.fallbackTurmas[index] = turma;
     } else {
