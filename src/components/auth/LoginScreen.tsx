@@ -170,7 +170,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               <div className="flex flex-col gap-1.5">
                 <button
                   type="button"
-                  onClick={() => preencherCredenciais('admin@admin.com', 'Admin@Catolica2026!')}
+                  onClick={() => preencherCredenciais('admin@admin.com', 'admin')}
                   className="w-full text-left px-3 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs transition flex justify-between items-center group cursor-pointer"
                 >
                   <div>
@@ -184,12 +184,12 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
                 <button
                   type="button"
-                  onClick={() => preencherCredenciais('prof.agenor@catolica.edu.br', 'Agenor@Catolica2026!')}
+                  onClick={() => preencherCredenciais('samuel@catolicasc.edu.br', 'samuel123')}
                   className="w-full text-left px-3 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs transition flex justify-between items-center group cursor-pointer"
                 >
                   <div>
-                    <span className="font-bold text-slate-800">Prof. Agenor:</span>{' '}
-                    <span className="text-slate-600 font-mono">prof.agenor@catolica.edu.br</span>
+                    <span className="font-bold text-slate-800">Prof. Samuel:</span>{' '}
+                    <span className="text-slate-600 font-mono">samuel@catolicasc.edu.br</span>
                   </div>
                   <span className="text-[10px] bg-slate-200 text-slate-700 font-bold px-1.5 py-0.5 rounded group-hover:bg-catolica-primary group-hover:text-white transition">
                     Usar

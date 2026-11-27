@@ -44,14 +44,14 @@ describe('Frontend Integration — LoginScreen (TSK-37)', () => {
     fireEvent.click(btnAdmin!);
 
     expect(emailInput.value).toBe('admin@admin.com');
-    expect(passInput.value).toBe('Admin@Catolica2026!');
+    expect(passInput.value).toBe('admin');
 
-    const btnProf = screen.getByText('Prof. Agenor:').closest('button');
+    const btnProf = screen.getByText('Prof. Samuel:').closest('button');
     expect(btnProf).not.toBeNull();
     fireEvent.click(btnProf!);
 
-    expect(emailInput.value).toBe('prof.agenor@catolica.edu.br');
-    expect(passInput.value).toBe('Agenor@Catolica2026!');
+    expect(emailInput.value).toBe('samuel@catolicasc.edu.br');
+    expect(passInput.value).toBe('samuel123');
   });
 
   it('efetua login com sucesso chamando POST /api/auth/login e notificando onLogin', async () => {

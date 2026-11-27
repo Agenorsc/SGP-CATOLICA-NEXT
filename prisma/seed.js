@@ -13,7 +13,7 @@ async function main() {
       id: 'usr-admin-01',
       nome: 'Administrador SGP',
       email: 'admin@admin.com',
-      senha: bcrypt.hashSync('Admin@Catolica2026!', 10),
+      senha: bcrypt.hashSync('admin', 10),
       role: 'ADMIN',
       disciplina: 'Gestão Acadêmica'
     },
@@ -36,8 +36,8 @@ async function main() {
     {
       id: 'usr-prof-03',
       nome: 'Prof. Me. Samuel',
-      email: 'prof.samuel@catolica.edu.br',
-      senha: bcrypt.hashSync('Samuel@Catolica2026!', 10),
+      email: 'samuel@catolicasc.edu.br',
+      senha: bcrypt.hashSync('samuel123', 10),
       role: 'PROFESSOR',
       disciplina: 'Direito Civil'
     }
